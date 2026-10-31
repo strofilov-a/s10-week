@@ -1,0 +1,12 @@
+{
+  "name": "s10-week",
+  "private": true,
+  "description": "S10 «Моя неделя» page; package.json only for the browser checks",
+  "scripts": {
+    "serve": "python3 -m http.server 8766 --bind 127.0.0.1",
+    "test": "node tests/check.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}
