@@ -6,8 +6,10 @@ the long run and the days to the race; under it three tabs (Неделя / Пл�
   schedule computed by the S10 server → edit or move any day → «Поставить задачи»).
 - **План до старта**: choose the master plan (versions saved by the coach in calc5, the user's own calc4 library when it is not empty, or a new one
   generated from a prompt with calc4's generator), see every week to the race laid over the dates with your paces, set the first-week
-  volume and which day holds which workout, then «Заполнить календарь» writes the whole plan into the diary (optionally
-  leaving days that already have a task). «Сохранить версию» saves it where calc5 sees it.
+  volume and which day holds which workout, then «Заполнить календарь» writes two running weeks (S10's week starts, from
+  calc.php `dselect`, usually Wednesday) or everything to the race, keeping days that already have a task. The plan used,
+  with the first-week volume, the day layout, the paces and the filled range, is stored in the athlete's profile
+  (`studentPlans<ID>`, the list calc5 keeps; marked `active`), so every device opens the same plan.
 - **Мои темпа**: T5/T10/T21/T42 from the chosen plan, the S10 forecast, or your own; every workout on the page uses them.
   The four paces are edited at the top; below, the time per 1 km and per 400 m lap for each zone and the easy-run range.
 - Each day shows the fact next to the plan: distance and average pace from the diary tracks, and for pace-only tasks
