@@ -9,7 +9,8 @@ the long run and the days to the race; under it three tabs (Неделя / Пл�
   volume and which day holds which workout, then «Заполнить календарь» writes two running weeks (S10's week starts, from
   calc.php `dselect`, usually Wednesday) or everything to the race, keeping days that already have a task. The plan used,
   with the first-week volume, the day layout, the paces and the filled range, is stored in the athlete's profile
-  (`studentPlans<ID>`, the list calc5 keeps; marked `active`), so every device opens the same plan.
+  (`studentPlans<ID>`, the list calc5 keeps; marked `active`), so every device opens the same plan. «Вернуть как было»
+  undoes the last fill, leaving days that were changed after it.
 - **Мои темпа**: T5/T10/T21/T42 from the chosen plan, the S10 forecast, or your own; every workout on the page uses them.
   The four paces are edited at the top; below, the time per 1 km and per 400 m lap for each zone and the easy-run range.
 - Each day shows the fact next to the plan: distance and average pace from the diary tracks, and for pace-only tasks
@@ -23,7 +24,10 @@ Colours: palette №3 «Лист, синяя и красная ручка» is t
 | File | What it is |
 |---|---|
 | `week.js` | The whole page (no build step, no dependencies). Live data on s10.run, demo mode anywhere else. |
-| `index.html` | The live page shell for s10.run. Loads `/t5/week/week.js`. |
+| `index.html` | GitHub Pages root: redirects to the demo outside s10.run. |
+| `deploy/week.html`, `deploy/ЗАДАНИЕ.md` | The page shell for s10.run and the one-page brief for the S10 developer. |
+| `tests/check.cjs` | Browser checks against the demo (`tests/README.md`). |
+| `CLAUDE.md` | Context, decisions and rules for Claude Code. |
 | `demo/index.html`, `demo/fixtures.js` | Demo with an anonymised snapshot of real data (31.10.2026; no name, email or GPS). Live demo: https://strofilov-a.github.io/s10-week/demo/. For GitHub Pages or any static host. Nothing is sent anywhere. `?open=plan` opens the planner with a computed schedule. |
 
 ## Going live on s10.run (for the developer)
