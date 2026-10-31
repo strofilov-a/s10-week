@@ -243,16 +243,16 @@
   function applyPalette() {
     const P = PALETTES.find((x) => x.id === palId) || PALETTES.find((x) => x.id === DEFAULT_PAL);
     const mix = (a, pct, b) => `color-mix(in srgb, ${a} ${pct}%, ${b})`;
-    const ground = P.bg, panel = P.surface.toLowerCase() === P.bg.toLowerCase() ? mix(P.ink, 4, P.bg) : P.surface;
-    const primary = P.dark ? P.ink : (P.id === 'white-link-blue' ? '#111111' : P.ink);
+    const card = P.id === 's10' ? '#ffffff' : P.dark ? P.surface : (P.bg.toLowerCase() === '#ffffff' ? '#ffffff' : mix(P.bg, 30, '#ffffff'));
+    const ground = P.id === 's10' ? P.bg : P.dark ? P.bg : (P.bg.toLowerCase() === '#ffffff' ? P.surface : P.bg);
     const v = {
-      '--ground': ground, '--panel': panel, '--raised': P.dark ? mix(P.ink, 10, panel) : '#ffffff',
-      '--rule': mix(P.ink, 11, ground), '--rule-p': mix(P.ink, 11, panel), '--control': mix(P.ink, 22, ground),
-      '--text': P.ink, '--muted': P.muted, '--faint': P.muted, '--pen': P.accent, '--pen-soft': mix(P.accent, P.dark ? 16 : 6, ground), '--key': P.keyData || P.key,
-      '--primary': primary, '--primary-ink': P.dark ? P.bg : '#ffffff', '--primary-hover': mix(primary, 84, ground),
-      '--chip': mix(P.ink, 8, ground), '--chip-hover': mix(P.ink, 13, ground), '--field': P.dark ? mix(P.ink, 6, panel) : '#ffffff',
-      '--bar': mix(P.ink, 22, panel), '--bar-past': mix(P.ink, 11, panel), '--bad': P.dark ? '#ff9aa9' : '#b42318',
-      '--warn-bg': P.dark ? mix('#d9a441', 16, ground) : '#fffbeb', '--warn-line': P.dark ? mix('#d9a441', 40, ground) : '#fde68a', '--warn-ink': P.dark ? '#f0c36a' : '#92400e',
+      '--ground': ground, '--surface': card, '--field': P.dark ? mix(P.ink, 6, card) : '#ffffff', '--soft': mix(P.ink, 3, card),
+      '--border': mix(P.ink, 13, card), '--rule': mix(P.ink, 7, card), '--control': mix(P.ink, 24, card),
+      '--text': P.ink, '--muted': P.muted, '--faint': P.muted, '--accent': P.accent, '--accent-bg': mix(P.accent, P.dark ? 22 : 12, card), '--accent-soft': mix(P.accent, P.dark ? 10 : 5, card),
+      '--glyph-off': mix(P.ink, 16, card), '--primary': P.key, '--primary-ink': P.keyInk, '--primary-hover': mix(P.key, 86, P.dark ? '#ffffff' : '#000000'), '--key': P.keyData || P.key,
+      '--ok-bg': P.dark ? mix('#3fc07a', 20, card) : '#dcfae5', '--ok': P.dark ? '#86e3ae' : '#04250e',
+      '--bad-bg': P.dark ? mix('#e5566f', 22, card) : '#ffedea', '--bad': P.dark ? '#ff9aa9' : '#831c1e',
+      '--neutral-bg': mix(P.ink, 9, card), '--neutral': P.ink, '--warn-bg': P.dark ? mix('#d9a441', 16, card) : '#fffbeb',
     };
     for (const [k, val] of Object.entries(v)) root.style.setProperty(k, val);
     root.style.colorScheme = P.dark ? 'dark' : 'light';
@@ -261,7 +261,7 @@
   function colorsPanel() {
     const cur = PALETTES.find((x) => x.id === palId) || PALETTES[0];
     return `<section class="w-card w-colors" aria-labelledby="w-col-h">
-      <div class="w-ch"><h2 id="w-col-h">Цвета страницы</h2><span class="w-muted">Сейчас: ${esc(cur.name)}. В каждой палитре три цвета: фон, акцент (вкладки, сегодня, ссылки) и третий цвет (главные кнопки и полоски нагрузки). «Совет» отмечает мои фавориты.</span><button class="w-btn sm" data-act="colors">Готово</button></div>
+      <div class="w-ch"><h2 id="w-col-h">Цвета страницы</h2><span class="w-muted">Сейчас: ${esc(cur.name)}. В каждой палитре три цвета: фон, акцент (вкладки, сегодня, ссылки) и третий цвет (главные кнопки и полоски нагрузки). «Совет» — мои фавориты.</span><button class="w-btn sm" data-act="colors">Готово</button></div>
       <ul class="w-pals">${PALETTES.map((x, i) => `<li><button class="w-pal ${x.id === palId ? 'on' : ''}" data-act="pal" data-id="${x.id}" aria-pressed="${x.id === palId}">
         <span class="w-pal-prev" style="background:${x.bg}" aria-hidden="true"><i style="background:${x.dark ? x.surface : '#ffffff'}"><b style="background:${x.ink}"></b><b style="background:${x.muted};width:60%"></b><em style="background:${x.accent}"></em><em class="k" style="background:${x.key}"></em></i></span>
         <span class="w-pal-n"><span class="num">${i + 1}.</span> ${esc(x.name)}</span>${x.rec ? '<span class="w-pill now w-rec">совет</span>' : ''}<small>${x.dark ? 'тёмная' : 'светлая'}${x.id === 's10' ? ', фирменная' : ''}</small></button></li>`).join('')}</ul>
@@ -406,29 +406,152 @@
     gen.busy = false; render();
   }
 
-  /* ================= markup =================
-     Direction (taste-skill, app screen, style «editorial greeting», brand palette №3 kept):
-     the page is a training diary. The sheet is white and printed in ink; what the athlete ran is written in the blue pen;
-     the coach's red pen marks only the key sessions (intervals, repeats, the race). Grey panels carry the structure, no borders,
-     figures at regular weight. Grid: a centred 1100px column, 12 columns of 77px with 16px gutters (12·77 + 11·16 = 1100). */
-  const NB = ' ';
-  const KEY = (t) => t === 3 || t === 4 || t === 6;
-  const typeLabel = (t, tag = 'span', run = !!+t) => `<${tag} class="w-type${run && KEY(+t) ? ' key' : ''}${run ? '' : ' rest'}">${run ? TYPES[+t] || 'Тренировка' : 'Отдых'}</${tag}>`;
-  const dash = '<span class="w-dash">—</span>';
+  /* ================= markup ================= */
   const typeSelect = (v, attrs) => `<select ${attrs}>${[1, 2, 3, 4, 5, 6, 0].map((t) => `<option value="${t}" ${+v === t ? 'selected' : ''}>${t ? TYPES[t] : 'Отдых'}</option>`).join('')}</select>`;
   const kmField = (v, attrs) => `<label class="w-kmf"><input ${attrs} class="num" inputmode="decimal" value="${v || 0}"> км</label>`;
   const ROLE = { easy: 'Лёгкая', rest: 'Отдых', w1: 'Работа 1', w2: 'Работа 2', long: 'Длительная' };
-  const btn = (act, label, kind = '', extra = '') => `<button class="w-btn ${kind}" data-act="${act}" ${extra}>${label}</button>`;
-  // one line of a workout, for the greeting: «Разминка 3 км · 3×2000 м по 4:02, отдых 400 м · Заминка 3 км»
-  function taskLine(t) {
-    if (!String(t || '').trim()) return '';
-    if (isPaceOnly(t)) return `Темп <b>${esc(t.trim().replace(/\s*-\s*/, '–'))}</b>${NB}мин/км`;
-    return structure(plain(t)).map((p) => nb(esc(p.charAt(0).toUpperCase() + p.slice(1))).replace(new RegExp(`(${PACE_RX})`, 'g'), (m) => `<b>${m.replace(/\s*-\s*/, '–')}</b>`)).join(' · ');
-  }
-  const planWeekOf = (k) => { const n = weekNo(k); const pw = planWeek(n); return n != null && n < 0 ? { n, period: pw?.period || '' } : null; };
-  const weekTag = (k) => { const w = planWeekOf(k); return w ? `неделя плана ${String(w.n).replace('-', '−')}${w.period ? `, ${esc(w.period)}` : ''}` : ''; };
 
-  /* ---- what was actually run ---- */
+  function chooserHTML() {
+    const rows = (list, src) => list.length ? `<ul class="w-plans">${list.map((p) => {
+      const on = sel && sel.src === src && sel.id === p.id, n = p.plan?.weeks?.length || 0, peak = Math.max(...(p.plan?.weeks || []).map((w) => +w.km || 0));
+      return `<li class="${on ? 'on' : ''}"><div class="w-pl"><b>${esc(p.name || 'Без названия')}</b><span class="w-muted num">${esc((p.distance || '').split(' · ')[0])}${p.distance ? ' · ' : ''}${n} ${plural(n, 'неделя', 'недели', 'недель')} · пик ${n1(peak)} км · ${p.savedAt ? `сохранён ${dayLbl(String(p.savedAt).slice(0, 10))}` : ''}${p.student?.t42 ? ` · свои темпа, T42 ${hms(p.student.t42)}` : ''}</span></div>${on ? '<span class="w-pill neutral">Выбран</span>' : `<button class="w-btn sm" data-act="psel" data-src="${src}" data-id="${esc(p.id)}">Выбрать</button>`}</li>`;
+    }).join('')}</ul>` : `<p class="w-note">${src === 'version' ? 'Сохранённых версий пока нет. Выберите план из библиотеки или сделайте новый.' : 'В библиотеке пока пусто.'}</p>`;
+    return `<div class="w-chooser">
+      <div class="w-tabs" role="tablist" aria-label="Откуда взять план">
+        ${[['version', `Мои версии (${versions.length})`], ['library', `Библиотека (${library.length})`], ['new', 'Новый по описанию']].map(([k, l]) => `<button role="tab" aria-selected="${chooserTab === k}" tabindex="${chooserTab === k ? 0 : -1}" data-act="ptab" data-k="${k}">${l}</button>`).join('')}
+      </div>
+      ${chooserTab === 'version' ? rows(versions, 'version') : chooserTab === 'library' ? rows(library, 'library') : `
+        <div class="w-gen">
+          <label class="w-f"><span>Дистанция</span><select data-g="distance">${DISTANCES.map((d) => `<option ${d === gen.distance ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
+          <label class="w-f w-f-s"><span>Недель</span><input data-g="weeks" class="num" inputmode="numeric" value="${gen.weeks}"></label>
+          <label class="w-f w-f-wide"><span>Бегун и цель</span><textarea data-g="prompt" rows="3" placeholder="Марафон 3 декабря на 3:20. 5 км 18:59, полумарафон 1:38. Сейчас ~40 км в неделю, 6 тренировок, четверг отдых, среда стадион, воскресенье длительная.">${esc(gen.prompt)}</textarea></label>
+          <div class="w-go"><button class="w-btn primary" data-act="gen" ${gen.busy ? 'disabled' : ''}>${gen.busy ? 'Генерирую…' : 'Сгенерировать план'}</button><span class="w-muted" id="w-gen-status">${gen.busy ? 'Модель думает…' : `${gen.weeks} ${plural(gen.weeks, 'неделя', 'недели', 'недель')} до старта. Генерация занимает до минуты.`}</span></div>
+          ${gen.err ? `<p class="w-err" role="alert">${esc(gen.err)}</p>` : ''}
+        </div>`}
+    </div>`;
+  }
+  function planCard() {
+    const p = plan();
+    const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
+    if (!race) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. Выберите его на странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
+    if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите сохранённую версию, шаблон из библиотеки или сгенерируйте новый.</p>${chooserHTML()}</section>`;
+    const f = fillPreview(), src = sel.src === 'version' ? 'ваша версия' : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
+    const ws = f.weeks, first = ws[0], last = ws.at(-1);
+    const curMon = monday(today);
+    return `<section class="w-card" aria-labelledby="w-plan2-h">${head}
+      ${chooser ? chooserHTML() : ''}
+      <div class="w-step">
+        <div class="w-pmeta"><span class="w-muted num">${src} · ${ws.length} ${plural(ws.length, 'неделя', 'недели', 'недель')} · ${range(first.mon, add(last.mon, 6))} · темпа ${esc(paceLabel())}</span></div>
+        <div class="w-pset">
+          <label class="w-f w-f-s"><span>Объём первой недели</span><span class="w-inl"><input data-p="volume" class="num" inputmode="numeric" value="${volume || firstKm(p)}"> км</span></label>
+          <div class="w-f w-f-wide"><span>Дни недели</span><div class="w-roles">${layout.map((r, i) => `<label class="w-role"><small>${DN[i]}</small><select data-p="role" data-i="${i}" aria-label="${DNF[i]}">${Object.entries(ROLE).map(([k, l]) => `<option value="${k}" ${r === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div></div>
+        </div>
+      </div>
+      <ol class="w-weeks">${ws.map((w, n) => {
+        const src2 = p.plan.weeks.slice().sort((a, b) => a.week - b.week)[n];
+        const past = add(w.mon, 6) < today, now = w.mon === curMon, isOpen = openWeek === src2.week || (openWeek == null && now);
+        const works = w.days.filter((d) => d.typtrain >= 2);
+        return `<li class="w-wk ${past ? 'past' : ''} ${now ? 'now' : ''}">
+          <button class="w-wkh" data-act="wopen" data-w="${src2.week}" aria-expanded="${isOpen}">
+            <span class="num w-wn">${src2.week}</span><span class="num">${range(w.mon, add(w.mon, 6))}</span><span class="w-per">${esc(src2.period || '')}</span>
+            <span class="w-wworks">${works.map((d) => `<span>${glyph(LEVEL[d.typtrain], d.typtrain === 6)}${SHORT[d.typtrain]} ${n1(d.prekm)}</span>`).join('')}</span>
+            <span class="num w-wkm">${n1(w.total)} км</span>${past ? '<span class="w-pill neutral">Прошла</span>' : now ? '<span class="w-pill now">Сейчас</span>' : '<span class="w-pill-sp"></span>'}
+          </button>
+          ${isOpen ? `<ol class="w-wdays">${w.days.map((d) => { const ex = days.get(d.d); const keep = keepExisting && d.d > today && isRun(ex);
+            return `<li class="${d.d <= today ? 'gone' : ''}"><span class="w-wdd"><b>${DN[dow(d.d)]}</b><small class="num">${dayLbl(d.d)}</small></span>
+              <div class="w-wdb"><span class="w-name ${d.typtrain ? '' : 'w-muted'}">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}${keep ? `<span class="w-muted">В дневнике уже стоит: ${esc(TYPES[ex.type] || 'тренировка').toLowerCase()} ${n1(+ex.target || 0)} км, её не трогаем</span>` : ''}</div>
+              <span class="num w-wdk">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`; }).join('')}</ol>` : ''}
+        </li>`;
+      }).join('')}</ol>
+      <div class="w-sum">
+        <div><span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, f.write.at(-1).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>
+          <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label></div>
+        <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy ? '' : 'disabled'}>Заполнить календарь</button></div>
+      </div>
+      ${fill.confirm ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')} в дневник?</b> ${range(f.write[0].d, f.write.at(-1).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'}</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? 'Записываю…' : 'Записать'}</button></div></div>` : ''}
+      ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}
+    </section>`;
+  }
+  function pacesCard() {
+    const P = PACE;
+    const opts = [studentPaces(plan()) ? ['plan', `Из плана «${plan().name}»`] : null, PACE_S10 ? ['s10', `Прогноз S10${race?.prediction ? `, ${raceName} ${hms(race.prediction)}` : ''}`] : null, ['own', 'Свои']].filter(Boolean);
+    const cur = (paceSrc === 'own' && PACE_OWN) ? 'own' : (paceSrc === 's10' && PACE_S10) ? 's10' : studentPaces(plan()) ? 'plan' : PACE_S10 ? 's10' : 'own';
+    return `<section class="w-card" aria-labelledby="w-pace-h">
+      <div class="w-ch"><h2 id="w-pace-h">Темпа для заданий, мин/км</h2><label class="w-inl w-muted">Откуда <select data-p="pacesrc" aria-label="Откуда брать темпа">${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label></div>
+      <div class="w-paces num">${[['5', 'темп на 5 км'], ['10', 'темп на 10 км'], ['21', 'полумарафон'], ['42', 'марафон']].map(([k, l]) => `<label><span><b>T${k}</b><small>${l}</small></span><input data-p="pace" data-k="${k}" value="${P?.[k] || ''}" inputmode="numeric" aria-label="T${k}, мин/км" placeholder="4:30"></label>`).join('')}</div>
+      ${paceTable(P)}
+      <p class="w-note">Все задания на странице считаются по этим темпам: «T21+8» — это ваш T21 плюс 8 секунд. Если поменять цифру, темпа станут «своими» и сохранятся на этом устройстве.</p>
+    </section>`;
+  }
+  function paceTable(P) {
+    if (!P?.[42]) return '';
+    const easy = [toSec(P[42]) + 55, toSec(P[42]) + 75];
+    const rows = [['Лёгкий бег', easy], ['T42', [toSec(P[42])], 'марафон'], ['T21', [toSec(P[21])], 'полумарафон'], ['T10', [toSec(P[10])], '10 км'], ['T5', [toSec(P[5])], '5 км']];
+    const cell = (r, m) => (r.length > 1 && m < 1000 ? '<span class="w-muted">—</span>' : r.map((v) => fmtSec(v * m / 1000)).join('–')); // easy runs are not timed on the track
+    return `<div class="w-ptab-wrap"><table class="w-ptab num"><caption>Время на отрезок</caption>
+      <thead><tr><th scope="col">Зона</th><th scope="col">1 км</th><th scope="col">400 м</th></tr></thead>
+      <tbody>${rows.map(([n, r, sub]) => `<tr><th scope="row"><b>${n}</b>${sub ? `<small>${sub}</small>` : ''}</th><td>${cell(r, 1000)}</td><td>${cell(r, 400)}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+  function workCard(w, i) {
+    const groups = [...new Set(PL.opts.map((o) => o.group))];
+    const s = PL.opts.findIndex((o) => o.txt === w.txt && o.km === w.km);
+    return `<div class="w-work">
+      <div class="w-wh"><span class="w-name">${glyph(LEVEL[w.t] || 1)}Работа ${i + 1}: ${w.txt ? TYPES[w.t] : 'не выбрана'}</span>${w.txt ? `<span class="num">${n1(w.km)} км</span>` : ''}</div>
+      ${w.txt ? taskHTML(w.txt) : '<p class="w-tx w-muted">Выберите работу из плана или шаблонов.</p>'}
+      <div class="w-wa">
+        <select data-w="${i}" data-f="pick" aria-label="Работа ${i + 1}: выбрать другую"><option value="-1" selected>${w.txt ? 'Заменить на…' : 'Выбрать…'}</option>${groups.map((g) => `<optgroup label="${esc(g)}">${PL.opts.map((o, k) => (o.group === g && k !== s ? `<option value="${k}">${esc(o.name)}</option>` : '')).join('')}</optgroup>`).join('')}</select>
+        <button class="w-link" data-act="wedit" data-w="${i}" aria-expanded="${w.edit}">${w.edit ? 'Готово' : 'Изменить текст'}</button>
+      </div>
+      ${w.edit ? `<div class="w-edit">${typeSelect(w.t, `data-w="${i}" data-f="t" aria-label="Тип работы ${i + 1}"`)}${kmField(w.km, `data-w="${i}" data-f="km" aria-label="Километры работы ${i + 1}"`)}<textarea data-w="${i}" data-f="txt" rows="3" aria-label="Задание работы ${i + 1}">${esc(w.txt)}</textarea></div>` : ''}
+    </div>`;
+  }
+  function dayRow(r, i) {
+    const moveOpts = PL.rows.map((o, j) => (j === i ? '' : `<option value="${j}">на ${DNS[dow(o.d)]} ${dayLbl(o.d)}${o.typtrain && +o.prekm ? `, там ${TYPES[o.typtrain].toLowerCase()} ${n1(o.prekm)} км` : ', там отдых'}</option>`)).join('');
+    const rest = !r.typtrain && !+r.prekm;
+    return `<li class="w-pday ${rest ? 'rest' : ''}">
+      <div class="w-pd"><b>${DNF[dow(r.d)]}</b><small class="num">${dayLbl(r.d)}</small></div>
+      <div class="w-pbody">
+        <div class="w-ph"><span class="w-name">${rest ? 'Отдых' : glyph(LEVEL[r.typtrain] || 1, r.typtrain === 6) + TYPES[r.typtrain]}</span>${rest ? '' : `<span class="num w-pkm">${+r.prekm ? `${n1(r.prekm)} км` : 'без расстояния'}</span>`}</div>
+        ${rest ? '' : taskHTML(r.task)}
+        ${r.alt ? `<div class="w-alt" role="radiogroup" aria-label="Длительная: откуда взять"><label><input type="radio" name="alt${i}" data-r="${i}" data-alt="gen" ${r.src === 'gen' ? 'checked' : ''}>Из расчёта S10, ${n1(r.gen.prekm)} км</label><label><input type="radio" name="alt${i}" data-r="${i}" data-alt="alt" ${r.src === 'alt' ? 'checked' : ''}>Из плана, ${n1(r.alt.prekm)} км</label></div>` : ''}
+        ${r.edit ? `<div class="w-edit">${typeSelect(r.typtrain, `data-r="${i}" data-f="typtrain" aria-label="Тип, ${dayLbl(r.d)}"`)}${kmField(r.prekm, `data-r="${i}" data-f="prekm" aria-label="Километры, ${dayLbl(r.d)}"`)}<textarea data-r="${i}" data-f="task" rows="3" aria-label="Задание, ${dayLbl(r.d)}">${esc(r.task)}</textarea>
+          ${r.typtrain === 6 ? `<input data-r="${i}" data-f="location" placeholder="Место старта" value="${esc(r.location)}" aria-label="Место старта"><input data-r="${i}" data-f="prediction" placeholder="Прогноз, например 1:38:00" value="${esc(r.prediction)}" aria-label="Прогноз на старт">` : ''}</div>` : ''}
+      </div>
+      <div class="w-pa">
+        <select data-r="${i}" data-f="move" aria-label="Перенести тренировку с ${dayLbl(r.d)} на другой день"><option value="-1" selected>Перенести…</option>${moveOpts}</select>
+        <button class="w-link" data-act="redit" data-r="${i}" aria-expanded="${r.edit}">${r.edit ? 'Готово' : 'Изменить'}</button>
+      </div>
+    </li>`;
+  }
+  function plannerHTML() {
+    const head = () => `<div class="w-ch"><h2 id="w-plan-h">Запланировать неделю</h2><button class="w-btn sm" data-act="close">Закрыть</button></div>`;
+    if (!PL || PL.loading) return `<section class="w-card" aria-labelledby="w-plan-h">${head()}<p class="w-note">Загружаю ваши ограничения и шаблоны…</p></section>`;
+    if (!PL.base) return `<section class="w-card" aria-labelledby="w-plan-h">${head()}<p class="w-note w-err" role="alert">${esc(PL.err)}</p></section>`;
+    const p = PL.base.param || {}, n = weekNo(windowStart()), pw = planWeek(n);
+    return `<section class="w-card" aria-labelledby="w-plan-h">${head()}
+      <div class="w-step">
+        <div class="w-steph"><h3>Начало недели</h3><span class="num">Лимиты: объём до ${p.maxweek?.v ?? '—'} км, длительная до ${p.maxlong?.v ?? '—'} км</span></div>
+        <div class="w-seg" role="radiogroup" aria-label="Первый день недели">${PL.dsels.map((x) => `<button role="radio" aria-checked="${x.k === PL.dsel}" data-act="dsel" data-k="${x.k}">${DNF[dow(x.date)]}, ${dayLbl(x.date)}</button>`).join('')}</div>
+      </div>
+      <div class="w-step">
+        <div class="w-steph"><h3>Две ключевые работы</h3><span>${pw ? `Из выбранного плана «${esc(plan().name)}», неделя ${n}` : plan() ? `В плане «${esc(plan().name)}» нет недели ${n}, выберите из шаблонов` : 'Из шаблонов или своё'}</span></div>
+        <div class="w-works">${PL.works.map(workCard).join('')}</div>
+        <div class="w-go"><button class="w-btn ${PL.rows && !PL.stale ? '' : 'primary'}" data-act="wgen" ${PL.busy ? 'disabled' : ''}>${PL.busy && !PL.rows ? 'Считаю расписание…' : PL.rows ? 'Пересчитать расписание' : 'Рассчитать расписание'}</button><span class="w-muted">${PL.stale ? 'Работы изменились, пересчитайте расписание.' : 'Остальные дни подберёт S10 по вашим лимитам.'}</span></div>
+      </div>
+      ${PL.err ? `<p class="w-note w-err" role="alert">${esc(PL.err)}</p>` : ''}
+      ${PL.rows ? `<div class="w-step w-step-list"><div class="w-steph"><h3>Расписание</h3><span class="num">${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}, ${dayLbl(PL.rows[0].d)} – ${dayLbl(PL.rows.at(-1).d)}</span></div></div>
+        <ol class="w-plist">
+          ${PL.pre.map((x) => `<li class="w-pday locked"><div class="w-pd"><b>${DNF[dow(x.d)]}</b><small class="num">${dayLbl(x.d)}</small></div><div class="w-pbody"><div class="w-ph"><span class="w-name">${glyph(LEVEL[+x.typtrain] || 1)}${TYPES[+x.typtrain] || 'Тренировка'}</span><span class="num w-pkm">${n1(+x.prekm || 0)} км</span></div>${taskHTML(x.task)}</div><div class="w-pa"><span class="w-pill neutral">Уже в дневнике</span></div></li>`).join('')}
+          ${PL.rows.map(dayRow).join('')}
+        </ol>
+        <div class="w-sum">
+          <div><span class="w-lb">Итого за ${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}</span><b class="num" id="w-total">${n1(planTotal())} км</b>${PL.sum?.['за последние 7 дней'] ? `<span class="w-muted num">Последние 7 дней: пробежано ${PL.sum['за последние 7 дней'].km0} из ${PL.sum['за последние 7 дней'].km1} км</span>` : ''}</div>
+          <button class="w-btn primary" data-act="wsave" ${PL.busy || PL.stale ? 'disabled' : ''}>${PL.busy ? 'Ставлю задачи…' : 'Поставить задачи'}</button>
+        </div>` : ''}
+    </section>`;
+  }
+  // what was actually run: km and average pace from the diary tracks, compared with a pace-only task
   const tSec = (t) => String(t || '').split(':').reduce((a, v) => a * 60 + (+v || 0), 0);
   function runFact(x) {
     const tr = (x?.tracks || []).filter((t) => t.type === 'run' && +t.km > 0);
@@ -440,20 +563,54 @@
   function paceVerdict(task, pace) {
     if (!pace || !isPaceOnly(task)) return '';
     const [lo, hi = lo] = task.trim().split(/\s*[-–]\s*/).map(toSec);
-    return pace < lo - 5 ? 'быстрее задания' : pace > hi + 5 ? 'медленнее задания' : 'в задании';
+    if (pace < lo - 5) return '<span class="w-pill neutral">быстрее задания</span>';
+    if (pace > hi + 5) return '<span class="w-pill neutral">медленнее задания</span>';
+    return '<span class="w-pill ok">в задании</span>';
   }
-  function factCell(r) {
-    const x = r.x, run = isRun(x), f = runFact(x);
-    if (f) {
-      const v = run ? paceVerdict(x.comment, f.pace) : 'вне плана';
-      return `<b class="w-pen num">${n1(f.km)}${NB}км</b>${f.pace ? `<span class="num">${fmtSec(f.pace)}${NB}мин/км</span>` : ''}${v ? `<span>${v}</span>` : ''}`;
+  function factHTML(x, planned) {
+    const f = runFact(x); if (!f) return '';
+    const what = planned ? 'Факт' : 'Пробежка вне плана';
+    return `<p class="w-fact"><span>${what}:</span><span class="w-nw"><b class="num">${n1(f.km)} км</b>${f.pace ? ` · <b class="num">${fmtSec(f.pace)}</b> мин/км` : ''}</span>${planned ? paceVerdict(x.comment, f.pace) : ''}</p>`;
+  }
+  function statusPill(r) {
+    const x = r.x, km = runKm(x);
+    if (!isRun(x)) return '';
+    if (r.d > today) return '';
+    if (km > 0) return '<span class="w-pill ok">Сделано</span>';
+    if (r.d === today) return '<span class="w-pill neutral">Сегодня</span>';
+    return '<span class="w-pill bad">Не выполнено</span>';
+  }
+  function todayCard(W) {
+    const r = W.list.find((q) => q.d === today);
+    if (!r) {
+      const next = [...days.values()].filter((x) => x.date >= today && isRun(x)).sort((a, b) => a.date.localeCompare(b.date))[0];
+      return `<div class="w-today"><span class="w-lb">Ближайшая тренировка</span>${next ? `<div class="w-type">${glyph(LEVEL[next.type] || 1, next.type === 6)}${TYPES[next.type] || 'Тренировка'}, ${DNF[dow(next.date)]} ${dayLbl(next.date)}</div><div class="w-big num">${n1(+next.target)}<small>км</small></div>${taskHTML(next.comment)}` : '<div class="w-type">Не запланирована</div>'}</div>`;
     }
-    if (!run) return '';
-    if (r.d === today) return '<span class="w-pen">сегодня</span>';
-    return r.d < today ? '<span class="w-miss">пропущено</span>' : '';
+    const x = r.x, d = d8(today), km = runKm(x);
+    const head = `<span class="w-lb">Сегодня, ${DNF[r.i]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}</span>`;
+    if (!isRun(x)) return `<div class="w-today">${head}<div class="w-big">Отдых</div><p class="w-tx">Тренировки сегодня нет.</p></div>`;
+    return `<div class="w-today">${head}<div class="w-type">${glyph(LEVEL[x.type] || 1, x.type === 6)}${TYPES[x.type] || 'Тренировка'}</div>
+      <div class="w-big num">${n1(+x.target)}<small>км</small></div>${taskHTML(x.comment)}${factHTML(x, true)}</div>`;
   }
-
-  /* ---- week ---- */
+  function weekSection(W) {
+    if (mode === 'plan') return plannerHTML();
+    return `<section class="w-card" aria-labelledby="w-days-h">
+        <div class="w-ch"><h2 id="w-days-h">По дням</h2><span class="w-muted num">План ${n1(W.plan)} км</span><button class="w-btn sm" data-act="plan">Запланировать неделю</button></div>
+        <ol class="w-days">${W.list.map((r) => {
+          const x = r.x, run = isRun(x), o = others(x);
+          return `<li class="w-day ${r.d === today ? 'today' : ''}">
+            <div class="w-dn"><b>${DN[r.i]}</b><small class="num">${dayLbl(r.d)}</small></div>
+            <div class="w-what ${run ? '' : 'rest'}">
+              <span class="w-name">${run ? glyph(LEVEL[x.type] || 1, x.type === 6) + (TYPES[x.type] || 'Тренировка') : 'Отдых'}</span>
+              ${run ? taskHTML(x.comment) : ''}
+              ${factHTML(x, run)}
+              ${o.length ? `<span class="w-muted">${o.map(esc).join(' · ')}</span>` : ''}
+            </div>
+            <div class="w-km">${run ? `<span class="num">${n1(+x.target)} км</span>` : ''}${statusPill(r)}</div>
+          </li>`;
+        }).join('')}</ol>
+      </section>`;
+  }
   function weekRel() {
     const n = Math.round((d8(wk) - d8(monday(today))) / 6048e5);
     if (!n) return 'Эта неделя';
@@ -462,219 +619,6 @@
     const k = Math.abs(n), w = `${k} ${plural(k, 'неделя', 'недели', 'недель')}`;
     return n < 0 ? `${w} назад` : `Через ${w}`;
   }
-  function weekNav() {
-    const cur = wk === monday(today);
-    return `<div class="w-navs"><div class="w-nav" role="group" aria-label="Выбор недели">
-        <button data-w="-1" aria-label="Предыдущая неделя">‹</button><span>${weekRel()}</span><button data-w="1" aria-label="Следующая неделя">›</button>
-      </div><button class="w-btn w-tonow" data-act="today" ${cur ? 'aria-hidden="true" tabindex="-1" disabled' : ''}>К этой неделе</button></div>`;
-  }
-  function weekHead(W) {
-    const cur = wk === monday(today), r = cur ? W.list.find((q) => q.d === today) : null, tag = weekTag(wk);
-    if (!r) return `<div class="w-head"><div class="w-hgroup"><h1>Неделя ${wLabel(wk)}</h1><p class="w-meta">${weekRel()}${tag ? ` · ${tag}` : ''}</p></div>${weekNav()}</div>`;
-    const x = r.x, run = isRun(x), f = runFact(x), d = d8(today);
-    const title = run ? `Сегодня ${(TYPES[x.type] || 'тренировка').toLowerCase()}, ${n1(+x.target)}${NB}км` : 'Сегодня отдых';
-    const sub = run ? taskLine(x.comment) : 'Тренировки сегодня нет.';
-    return `<div class="w-head"><div class="w-hgroup">
-        <h1>${title}</h1>
-        ${sub ? `<p class="w-sub">${sub}</p>` : ''}
-        ${f ? `<p class="w-sub w-pen">Сделано: ${n1(f.km)}${NB}км${f.pace ? ` · ${fmtSec(f.pace)}${NB}мин/км` : ''}</p>` : ''}
-        <p class="w-meta">${DNF[r.i].charAt(0).toUpperCase() + DNF[r.i].slice(1)}, ${d.getUTCDate()} ${MON[d.getUTCMonth()]}${tag ? ` · ${tag}` : ''}</p>
-      </div>${weekNav()}</div>`;
-  }
-  function weekTiles(W) {
-    const n = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
-    const f = W.plan ? Math.min(100, (W.done / W.plan) * 100) : 0;
-    return `<section class="w-tiles" aria-label="Итоги недели">
-      <div class="w-tile"><span class="w-lb">Объём недели</span><span class="w-v num">${n1(W.done)}<small>из ${n1(W.plan)}${NB}км</small></span>
-        ${W.plan ? `<span class="w-scale" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${f}%"></i></span>` : '<span class="w-cap">ничего не запланировано</span>'}</div>
-      <div class="w-tile"><span class="w-lb">Длительная</span><span class="w-v num">${W.long ? `${n1(+W.long.x.target)}<small>км</small>` : dash}</span><span class="w-cap">${W.long ? `${DNF[W.long.i]}, ${dayLbl(W.long.d)}` : 'на этой неделе нет'}</span></div>
-      <div class="w-tile"><span class="w-lb">До старта</span><span class="w-v num">${n != null ? `${n}<small>${plural(n, 'день', 'дня', 'дней')}</small>` : dash}</span><span class="w-cap">${race ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}` : 'старт не выбран'}</span></div>
-    </section>`;
-  }
-  function weekLog(W) {
-    if (mode === 'plan') return plannerHTML();
-    const rows = W.list.map((r) => {
-      const x = r.x, run = isRun(x), o = others(x);
-      return `<tr class="${r.d === today ? 'today' : ''}${run ? '' : ' rest'}">
-        <th scope="row" class="w-d"><b>${DN[r.i]}</b><span class="num">${dayLbl(r.d)}</span></th>
-        <td class="w-t">${typeLabel(x?.type || 0, 'span', run)}${run ? taskHTML(x.comment) : ''}${o.length ? `<span class="w-oth">${o.map(esc).join(' · ')}</span>` : ''}</td>
-        <td class="w-n num">${run ? `${n1(+x.target)}${NB}км` : ''}</td>
-        <td class="w-fc">${factCell(r)}</td>
-      </tr>`;
-    }).join('');
-    return `<section class="w-sec" aria-labelledby="w-log-h">
-      <div class="w-sech"><h2 id="w-log-h">Дневник недели</h2><span class="w-meta num">${range(wk, add(wk, 6))}</span>${btn('plan', 'Запланировать неделю', 'quiet')}</div>
-      <table class="w-log">
-        <thead><tr><th scope="col">День</th><th scope="col">Тренировка</th><th scope="col" class="w-n">План</th><th scope="col" class="w-fc">Факт</th></tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot><tr><th scope="row" colspan="2">Итого за неделю</th><td class="w-n num">${n1(W.plan)}${NB}км</td><td class="w-fc"><b class="w-pen num">${n1(W.done)}${NB}км</b></td></tr></tfoot>
-      </table>
-    </section>`;
-  }
-
-  /* ---- plan to the race ---- */
-  function chooserHTML() {
-    const rows = (list, src) => list.length ? `<ul class="w-plans">${list.map((p) => {
-      const on = sel && sel.src === src && sel.id === p.id, n = p.plan?.weeks?.length || 0, peak = Math.max(...(p.plan?.weeks || []).map((w) => +w.km || 0));
-      return `<li class="${on ? 'on' : ''}"><div class="w-pl"><b>${esc(p.name || 'Без названия')}</b><span class="w-meta num">${esc((p.distance || '').split(' · ')[0])}${p.distance ? ' · ' : ''}${n} ${plural(n, 'неделя', 'недели', 'недель')} · пик ${n1(peak)}${NB}км${p.savedAt ? ` · сохранён ${dayLbl(String(p.savedAt).slice(0, 10))}` : ''}${p.student?.t42 ? ` · свои темпа, T42 ${hms(p.student.t42)}` : ''}</span></div>${on ? '<span class="w-meta">выбран</span>' : `<button class="w-btn quiet" data-act="psel" data-src="${src}" data-id="${esc(p.id)}">Выбрать</button>`}</li>`;
-    }).join('')}</ul>` : `<p class="w-note">${src === 'version' ? 'Сохранённых версий пока нет. Выберите план из библиотеки или сделайте новый.' : 'В библиотеке пока пусто.'}</p>`;
-    return `<section class="w-panel-sec w-chooser" aria-label="Выбор мастер-плана">
-      <div class="w-seg" role="tablist" aria-label="Откуда взять план">
-        ${[['version', `Мои версии (${versions.length})`], ['library', `Библиотека (${library.length})`], ['new', 'Новый по описанию']].map(([k, l]) => `<button role="tab" aria-selected="${chooserTab === k}" tabindex="${chooserTab === k ? 0 : -1}" data-act="ptab" data-k="${k}">${l}</button>`).join('')}
-      </div>
-      ${chooserTab === 'version' ? rows(versions, 'version') : chooserTab === 'library' ? rows(library, 'library') : `
-        <div class="w-gen">
-          <label class="w-f"><span>Дистанция</span><select data-g="distance">${DISTANCES.map((d) => `<option ${d === gen.distance ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
-          <label class="w-f"><span>Недель</span><input data-g="weeks" class="num" inputmode="numeric" value="${gen.weeks}"></label>
-          <label class="w-f w-f-wide"><span>Бегун и цель</span><textarea data-g="prompt" rows="3" placeholder="Марафон 3 декабря на 3:20. 5 км 18:59, полумарафон 1:38. Сейчас ~40 км в неделю, 6 тренировок, четверг отдых, среда стадион, воскресенье длительная.">${esc(gen.prompt)}</textarea></label>
-          <div class="w-go">${btn('gen', gen.busy ? 'Генерирую…' : 'Сгенерировать план', 'primary', gen.busy ? 'disabled' : '')}<span class="w-meta" id="w-gen-status">${gen.busy ? 'Модель думает…' : `${gen.weeks} ${plural(gen.weeks, 'неделя', 'недели', 'недель')} до старта. Генерация занимает до минуты.`}</span></div>
-          ${gen.err ? `<p class="w-err" role="alert">${esc(gen.err)}</p>` : ''}
-        </div>`}
-    </section>`;
-  }
-  // the signature of the page: the build to the race as one row of weekly volumes, grouped by training period
-  function volumeChart(ws, src, curMon) {
-    const max = Math.max(...ws.map((w) => w.total), 1);
-    const groups = []; src.forEach((s, i) => { const g = groups.at(-1); if (g && g.name === (s.period || '')) g.n++; else groups.push({ name: s.period || '', n: 1, i }); });
-    return `<section class="w-panel-sec w-vchart" aria-labelledby="w-vc-h">
-      <div class="w-sech"><h2 id="w-vc-h">Объём по неделям</h2><span class="w-meta">км в неделю, синим текущая, красным неделя старта</span></div>
-      <div class="w-bars" style="--n:${ws.length}">
-        ${ws.map((w, i) => { const now = w.mon === curMon, past = add(w.mon, 6) < today, raceW = i === ws.length - 1;
-          return `<button class="w-col ${now ? 'now' : ''} ${past ? 'past' : ''} ${raceW ? 'race' : ''}" data-act="wopen" data-w="${src[i].week}" aria-label="Неделя ${src[i].week}, ${range(w.mon, add(w.mon, 6))}, ${n1(w.total)} километров">
-            <span class="w-bv num">${n1(w.total)}</span><span class="w-bar"><i style="height:${Math.max(4, Math.round((w.total / max) * 100))}%"></i></span>
-            <span class="w-bn num">${String(src[i].week).replace('-', '−')}</span><span class="w-bd num">${dayLbl(w.mon)}</span></button>`; }).join('')}
-        ${groups.map((g) => `<span class="w-phase" style="grid-column:${g.i + 1} / span ${g.n}">${esc(g.name)}</span>`).join('')}
-      </div>
-    </section>`;
-  }
-  function planView() {
-    const p = plan();
-    if (!race) return `<p class="w-note">Главный старт не выбран. Выберите его на странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p>`;
-    if (!p) return `<p class="w-note">План ещё не выбран. Возьмите сохранённую версию, шаблон из библиотеки или сгенерируйте новый.</p>${chooserHTML()}`;
-    const f = fillPreview(), ws = f.weeks, curMon = monday(today);
-    const src = p.plan.weeks.slice().sort((a, b) => a.week - b.week);
-    const weekRows = ws.map((w, n) => {
-      const s = src[n], past = add(w.mon, 6) < today, now = w.mon === curMon, isOpen = openWeek === s.week || (openWeek == null && now);
-      const works = w.days.filter((d) => d.typtrain >= 2);
-      const head = `<tr class="w-wk ${past ? 'past' : ''} ${now ? 'now' : ''}">
-          <th scope="row"><button class="w-wkb" data-act="wopen" data-w="${s.week}" aria-expanded="${isOpen}"><span class="num">${String(s.week).replace('-', '−')}</span>${now ? '<span class="w-pen">сейчас</span>' : ''}</button></th>
-          <td class="num">${range(w.mon, add(w.mon, 6))}</td><td>${esc(s.period || '')}</td>
-          <td class="w-wworks">${works.map((d) => `<span class="${KEY(d.typtrain) ? 'key' : ''}">${SHORT[d.typtrain]}${NB}${n1(d.prekm)}</span>`).join('')}</td>
-          <td class="w-n num">${n1(w.total)}${NB}км</td></tr>`;
-      if (!isOpen) return head;
-      return head + `<tr class="w-wkd"><td colspan="5"><div class="w-mini-w"><table class="w-mini">${w.days.map((d) => { const ex = days.get(d.d); const keep = keepExisting && d.d > today && isRun(ex);
-        return `<tr class="${d.d <= today ? 'gone' : ''}"><th scope="row"><b>${DN[dow(d.d)]}</b><span class="num">${dayLbl(d.d)}</span></th>
-          <td>${typeLabel(d.typtrain)}${d.typtrain ? taskHTML(d.task) : ''}${keep ? `<span class="w-oth">В дневнике уже стоит: ${esc(TYPES[ex.type] || 'тренировка').toLowerCase()} ${n1(+ex.target || 0)}${NB}км, её не трогаем</span>` : ''}</td>
-          <td class="w-n num">${d.prekm ? `${n1(d.prekm)}${NB}км` : ''}</td></tr>`; }).join('')}</table></div></td></tr>`;
-    }).join('');
-    return `${chooser ? chooserHTML() : ''}
-      ${volumeChart(ws, src, curMon)}
-      <section class="w-set" aria-labelledby="w-lay-h">
-        <div class="w-set-l"><h2 id="w-lay-h">Как разложить</h2><p>Объём первой недели масштабирует весь план. Дни недели говорят, куда ставить две работы, длительную и отдых; лёгкие дни делят оставшийся объём.</p></div>
-        <div class="w-panel-sec w-lay">
-          <label class="w-f"><span>Объём первой недели</span><span class="w-inl"><input data-p="volume" class="num" inputmode="numeric" value="${volume || firstKm(p)}"> км</span></label>
-          <div class="w-f"><span>Дни недели</span><div class="w-roles">${layout.map((r, i) => `<label class="w-role"><small>${DN[i]}</small><select data-p="role" data-i="${i}" aria-label="${DNF[i]}">${Object.entries(ROLE).map(([k, l]) => `<option value="${k}" ${r === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div></div>
-        </div>
-      </section>
-      <section class="w-sec" aria-labelledby="w-wk-h">
-        <div class="w-sech"><h2 id="w-wk-h">Недели до старта</h2><span class="w-meta">нажмите на неделю, чтобы увидеть дни</span></div>
-        <table class="w-log w-weeks"><thead><tr><th scope="col">Неделя</th><th scope="col">Даты</th><th scope="col">Период</th><th scope="col">Ключевые тренировки</th><th scope="col" class="w-n">Объём</th></tr></thead><tbody>${weekRows}</tbody></table>
-      </section>
-      <section class="w-panel-sec w-commit" aria-label="Запись в дневник">
-        <div class="w-cm"><span class="w-lb">Запишется в дневник</span><span class="w-v num">${f.write.length}<small>${plural(f.write.length, 'день', 'дня', 'дней')}</small></span>
-          <span class="w-cap num">${f.write.length ? `${range(f.write[0].d, f.write.at(-1).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))}${NB}км` : 'все дни плана уже прошли или заняты'}</span>
-          <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label></div>
-        <div class="w-acts">${btn('pversion', 'Сохранить версию', 'quiet')}${btn('fillask', 'Заполнить календарь', 'primary', f.write.length && !fill.busy ? '' : 'disabled')}</div>
-        ${fill.confirm ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')} в дневник?</b> ${range(f.write[0].d, f.write.at(-1).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'}</p><div class="w-acts">${btn('fillno', 'Отмена', 'quiet')}${btn('fillyes', fill.busy ? 'Записываю…' : 'Записать', 'primary', fill.busy ? 'disabled' : '')}</div></div>` : ''}
-        ${fill.err ? `<p class="w-err" role="alert">${esc(fill.err)}</p>` : ''}
-      </section>`;
-  }
-
-  /* ---- paces ---- */
-  function pacesView() {
-    const P = PACE;
-    const opts = [studentPaces(plan()) ? ['plan', `Из плана «${plan().name}»`] : null, PACE_S10 ? ['s10', `Прогноз S10${race?.prediction ? `, ${raceName} ${hms(race.prediction)}` : ''}`] : null, ['own', 'Свои']].filter(Boolean);
-    const cur = (paceSrc === 'own' && PACE_OWN) ? 'own' : (paceSrc === 's10' && PACE_S10) ? 's10' : studentPaces(plan()) ? 'plan' : PACE_S10 ? 's10' : 'own';
-    const zones = [['5', 'T5', 'темп на 5 км'], ['10', 'T10', 'темп на 10 км'], ['21', 'T21', 'полумарафон'], ['42', 'T42', 'марафон']];
-    const lap = (sec) => fmtSec(sec * 0.4); // 400 m, one stadium lap
-    const easy = P?.[42] ? [toSec(P[42]) + 55, toSec(P[42]) + 75] : null;
-    return `<section class="w-set" aria-labelledby="w-pace-h">
-      <div class="w-set-l">
-        <h2 id="w-pace-h">Темпа по зонам</h2>
-        <p>«T21+8» в задании означает ваш T21 плюс 8 секунд. Если поменять цифру в таблице, темпа станут «своими» и сохранятся на этом устройстве.</p>
-        <label class="w-f"><span>Откуда брать</span><select data-p="pacesrc">${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
-      </div>
-      <div class="w-panel-sec w-ptab-p">
-        <table class="w-ptab num">
-          <thead><tr><th scope="col">Зона</th><th scope="col">1${NB}км</th><th scope="col">400${NB}м</th></tr></thead>
-          <tbody>${zones.map(([k, n, sub]) => `<tr><th scope="row"><b>${n}</b><small>${sub}</small></th><td><input data-p="pace" data-k="${k}" value="${P?.[k] || ''}" inputmode="numeric" autocomplete="off" aria-label="${n}, минут на километр" placeholder="4:30"></td><td>${P?.[k] ? lap(toSec(P[k])) : dash}</td></tr>`).join('')}
-            ${easy ? `<tr><th scope="row"><b>Лёгкий бег</b><small>T42 + 55–75${NB}с</small></th><td><span class="w-pv">${fmtSec(easy[0])}–${fmtSec(easy[1])}</span></td><td>${dash}</td></tr>` : ''}</tbody>
-        </table>
-      </div>
-    </section>`;
-  }
-
-  /* ---- planning one week (calc3's flow) ---- */
-  function workCard(w, i) {
-    const groups = [...new Set(PL.opts.map((o) => o.group))];
-    const s = PL.opts.findIndex((o) => o.txt === w.txt && o.km === w.km);
-    return `<div class="w-work">
-      <div class="w-wh"><span class="w-lb">Работа ${i + 1}</span>${w.txt ? `<span class="num">${n1(w.km)}${NB}км</span>` : ''}</div>
-      ${w.txt ? typeLabel(w.t, 'b', true) + taskHTML(w.txt) : '<p class="w-tx w-meta">Выберите работу из плана или шаблонов.</p>'}
-      <div class="w-wa">
-        <select data-w="${i}" data-f="pick" aria-label="Работа ${i + 1}: выбрать другую"><option value="-1" selected>${w.txt ? 'Заменить на…' : 'Выбрать…'}</option>${groups.map((g) => `<optgroup label="${esc(g)}">${PL.opts.map((o, k) => (o.group === g && k !== s ? `<option value="${k}">${esc(o.name)}</option>` : '')).join('')}</optgroup>`).join('')}</select>
-        <button class="w-link" data-act="wedit" data-w="${i}" aria-expanded="${w.edit}">${w.edit ? 'Готово' : 'Изменить текст'}</button>
-      </div>
-      ${w.edit ? `<div class="w-edit">${typeSelect(w.t, `data-w="${i}" data-f="t" aria-label="Тип работы ${i + 1}"`)}${kmField(w.km, `data-w="${i}" data-f="km" aria-label="Километры работы ${i + 1}"`)}<textarea data-w="${i}" data-f="txt" rows="3" aria-label="Задание работы ${i + 1}">${esc(w.txt)}</textarea></div>` : ''}
-    </div>`;
-  }
-  function dayRow(r, i) {
-    const moveOpts = PL.rows.map((o, j) => (j === i ? '' : `<option value="${j}">на ${DNS[dow(o.d)]} ${dayLbl(o.d)}${o.typtrain && +o.prekm ? `, там ${TYPES[o.typtrain].toLowerCase()} ${n1(o.prekm)}${NB}км` : ', там отдых'}</option>`)).join('');
-    const rest = !r.typtrain && !+r.prekm;
-    return `<li class="w-pday ${rest ? 'rest' : ''}">
-      <div class="w-d"><b>${DN[dow(r.d)]}</b><span class="num">${dayLbl(r.d)}</span></div>
-      <div class="w-pbody">
-        <div class="w-ph">${typeLabel(r.typtrain, 'span', !rest)}${rest ? '' : `<span class="num w-pkm">${+r.prekm ? `${n1(r.prekm)}${NB}км` : 'без расстояния'}</span>`}</div>
-        ${rest ? '' : taskHTML(r.task)}
-        ${r.alt ? `<div class="w-alt" role="radiogroup" aria-label="Длительная: откуда взять"><label><input type="radio" name="alt${i}" data-r="${i}" data-alt="gen" ${r.src === 'gen' ? 'checked' : ''}>Из расчёта S10, ${n1(r.gen.prekm)}${NB}км</label><label><input type="radio" name="alt${i}" data-r="${i}" data-alt="alt" ${r.src === 'alt' ? 'checked' : ''}>Из плана, ${n1(r.alt.prekm)}${NB}км</label></div>` : ''}
-        ${r.edit ? `<div class="w-edit">${typeSelect(r.typtrain, `data-r="${i}" data-f="typtrain" aria-label="Тип, ${dayLbl(r.d)}"`)}${kmField(r.prekm, `data-r="${i}" data-f="prekm" aria-label="Километры, ${dayLbl(r.d)}"`)}<textarea data-r="${i}" data-f="task" rows="3" aria-label="Задание, ${dayLbl(r.d)}">${esc(r.task)}</textarea>
-          ${r.typtrain === 6 ? `<input data-r="${i}" data-f="location" placeholder="Место старта" value="${esc(r.location)}" aria-label="Место старта"><input data-r="${i}" data-f="prediction" placeholder="Прогноз, например 1:38:00" value="${esc(r.prediction)}" aria-label="Прогноз на старт">` : ''}</div>` : ''}
-      </div>
-      <div class="w-pa">
-        <select data-r="${i}" data-f="move" aria-label="Перенести тренировку с ${dayLbl(r.d)} на другой день"><option value="-1" selected>Перенести…</option>${moveOpts}</select>
-        <button class="w-link" data-act="redit" data-r="${i}" aria-expanded="${r.edit}">${r.edit ? 'Готово' : 'Изменить'}</button>
-      </div>
-    </li>`;
-  }
-  function plannerHTML() {
-    const head = `<div class="w-sech"><h2 id="w-plan-h">Запланировать неделю</h2>${btn('close', 'Закрыть', 'quiet')}</div>`;
-    if (!PL || PL.loading) return `<section class="w-sec" aria-labelledby="w-plan-h">${head}<p class="w-note">Загружаю ваши ограничения и шаблоны…</p></section>`;
-    if (!PL.base) return `<section class="w-sec" aria-labelledby="w-plan-h">${head}<p class="w-err" role="alert">${esc(PL.err)}</p></section>`;
-    const p = PL.base.param || {}, n = weekNo(windowStart()), pw = planWeek(n);
-    return `<section class="w-sec" aria-labelledby="w-plan-h">${head}
-      <div class="w-step">
-        <div class="w-steph"><h3>Начало недели</h3><span class="w-meta num">Лимиты: объём до ${p.maxweek?.v ?? '—'}${NB}км, длительная до ${p.maxlong?.v ?? '—'}${NB}км</span></div>
-        <div class="w-seg" role="radiogroup" aria-label="Первый день недели">${PL.dsels.map((x) => `<button role="radio" aria-checked="${x.k === PL.dsel}" data-act="dsel" data-k="${x.k}">${DNF[dow(x.date)]}, ${dayLbl(x.date)}</button>`).join('')}</div>
-      </div>
-      <div class="w-step">
-        <div class="w-steph"><h3>Две ключевые работы</h3><span class="w-meta">${pw ? `Из выбранного плана «${esc(plan().name)}», неделя ${String(n).replace('-', '−')}` : plan() ? `В плане «${esc(plan().name)}» нет недели ${n}, выберите из шаблонов` : 'Из шаблонов или своё'}</span></div>
-        <div class="w-works">${PL.works.map(workCard).join('')}</div>
-        <div class="w-go">${btn('wgen', PL.busy && !PL.rows ? 'Считаю расписание…' : PL.rows ? 'Пересчитать расписание' : 'Рассчитать расписание', PL.rows && !PL.stale ? 'quiet' : 'primary', PL.busy ? 'disabled' : '')}<span class="w-meta">${PL.stale ? 'Работы изменились, пересчитайте расписание.' : 'Остальные дни подберёт S10 по вашим лимитам.'}</span></div>
-      </div>
-      ${PL.err ? `<p class="w-err" role="alert">${esc(PL.err)}</p>` : ''}
-      ${PL.rows ? `<div class="w-step"><div class="w-steph"><h3>Расписание</h3><span class="w-meta num">${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}, ${range(PL.rows[0].d, PL.rows.at(-1).d)}</span></div>
-        <ol class="w-plist">
-          ${PL.pre.map((x) => `<li class="w-pday locked"><div class="w-d"><b>${DN[dow(x.d)]}</b><span class="num">${dayLbl(x.d)}</span></div><div class="w-pbody"><div class="w-ph">${typeLabel(+x.typtrain, 'span', true)}<span class="num w-pkm">${n1(+x.prekm || 0)}${NB}км</span></div>${taskHTML(x.task)}</div><div class="w-pa"><span class="w-meta">уже в дневнике</span></div></li>`).join('')}
-          ${PL.rows.map(dayRow).join('')}
-        </ol></div>
-        <div class="w-panel-sec w-commit">
-          <div class="w-cm"><span class="w-lb">Итого за ${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}</span><span class="w-v num" id="w-total">${n1(planTotal())}${NB}км</span>${PL.sum?.['за последние 7 дней'] ? `<span class="w-cap num">Последние 7 дней: пробежано ${PL.sum['за последние 7 дней'].km0} из ${PL.sum['за последние 7 дней'].km1}${NB}км</span>` : ''}</div>
-          <div class="w-acts">${btn('wsave', PL.busy ? 'Ставлю задачи…' : 'Поставить задачи', 'primary', PL.busy || PL.stale ? 'disabled' : '')}</div>
-        </div>` : ''}
-    </section>`;
-  }
-
-  /* ---- address ---- */
   // tab and week live in the address, so a link opens the same view and «назад» works
   function syncURL(push) {
     const u = new URL(location.href);
@@ -689,36 +633,39 @@
     const w = q.get('week'); wk = /^\d{4}-\d{2}-\d{2}$/.test(w || '') ? monday(w) : monday(today);
     if (![...Array(7)].some((_, i) => days.has(add(wk, i)))) await loadUntil(add(wk, 6)).catch(() => {});
   }
-
-  /* ---- the page ---- */
-  function viewHTML(W) {
-    if (tab === 'plan') {
-      const p = plan(), n = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
-      const src = !p ? '' : sel.src === 'version' ? 'ваша версия' : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
-      return `<div class="w-head"><div class="w-hgroup"><h1>План до старта</h1>
-          ${p ? `<p class="w-sub">«${esc(p.name || 'Без названия')}», ${src} · темпа ${paceLabel() === `из плана «${p.name}»` ? 'из этого плана' : esc(paceLabel())}</p>` : ''}
-          <p class="w-meta">${race ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, через ${n}${NB}${plural(n, 'день', 'дня', 'дней')}` : 'Главный старт не выбран'}</p></div>
-        ${p ? btn('pchoose', chooser ? 'Свернуть выбор' : 'Сменить план', 'quiet', `aria-expanded="${chooser}"`) : ''}</div>
-        ${flashHTML()}${planView()}`;
-    }
-    if (tab === 'paces') return `<div class="w-head"><div class="w-hgroup"><h1>Мои темпа</h1><p class="w-sub">По ним считаются все задания на странице.</p></div></div>${flashHTML()}${pacesView()}`;
-    return `${weekHead(W)}${flashHTML()}${weekTiles(W)}${weekLog(W)}`;
-  }
-  const flashHTML = () => (flash ? `<div class="w-flash" role="status" tabindex="-1"><span>${esc(flash)}</span><button data-act="flash" aria-label="Скрыть сообщение">×</button></div>` : '');
   function render() {
-    const W = week(wk);
+    const W = week(wk), cur = wk === monday(today);
+    const daysToRace = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
+    const pct = W.plan ? Math.min(100, (W.done / W.plan) * 100) : 0;
     root.innerHTML = `
+    ${LIVE ? '' : '<div class="w-demo" role="note">Демо на данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</div>'}
     <header class="w-top"><div class="w-topin">
       <a class="w-wm" href="${LIVE ? '/' : 'https://s10.run/'}" aria-label="S10.run, главная" translate="no">S10<span>.run</span></a>
-      <div class="w-tabbar" role="tablist" aria-label="Разделы">
-        ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпа']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
-      </div>
-      <span class="w-who">${LIVE ? '' : '<span class="w-demo">демо, данные от 31 октября</span>'}${esc(me.firstName)} ${esc(me.lastName)}</span>${SHOW_COLORS ? `<button class="w-btn quiet w-colbtn" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}
+      <span class="w-who">${esc(me.firstName)} ${esc(me.lastName)}</span>${SHOW_COLORS ? `<button class="w-btn sm" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}
     </div></header>
     <main class="w-main">
       ${colorsOpen ? colorsPanel() : ''}
-      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-view">${viewHTML(W)}</div>
-      <p class="w-foot">${LIVE ? `Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.` : 'Демо-версия страницы «Моя неделя» для S10.run. Кнопки работают, но ничего не отправляется в S10.'}</p>
+      <div class="w-head">
+        <h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
+        <div class="w-navs"><div class="w-nav" role="group" aria-label="Выбор недели">
+          <button data-w="-1" aria-label="Предыдущая неделя">‹</button><span>${weekRel()}</span><button data-w="1" aria-label="Следующая неделя">›</button>
+        </div><button class="w-btn sm w-tonow" data-act="today" ${cur ? 'aria-hidden="true" tabindex="-1" disabled' : ''}>К этой неделе</button></div>
+      </div>
+      <section class="w-card w-hero" aria-label="Сегодня и итоги недели">
+        ${todayCard(W)}
+        <div class="w-stats">
+          <div class="w-stat w-stat-wide"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span>
+            ${W.plan ? `<div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${pct}%"></i></div><div class="w-track-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)} км</span></div>` : '<span class="s">на этой неделе ничего не запланировано</span>'}</div>
+          <div class="w-stat"><span class="w-lb">Длительная</span><span class="v num">${W.long ? `${n1(+W.long.x.target)}<small>км</small>` : '<span class="w-muted">—</span>'}</span><span class="s">${W.long ? `${DNF[W.long.i]}, ${dayLbl(W.long.d)}` : 'на этой неделе нет'}</span></div>
+          <div class="w-stat"><span class="w-lb">${race ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${race ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : 'не выбран'}</span></div>
+        </div>
+      </section>
+      ${flash ? `<div class="w-flash" role="status" tabindex="-1"><span>${esc(flash)}</span><button data-act="flash" aria-label="Скрыть сообщение">×</button></div>` : ''}
+      <div class="w-tabbar" role="tablist" aria-label="Разделы">
+        ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпа']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
+      </div>
+      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? planCard() : pacesCard()}</div>
+      <p class="w-foot">${LIVE ? `Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.` : 'Демо-версия страницы «Моя неделя» для S10.run.'}</p>
     </main>`;
     root.querySelectorAll('textarea').forEach(fit);
     syncURL(false);
@@ -726,279 +673,228 @@
   }
   function fit(t) { t.style.height = 'auto'; t.style.height = Math.max(64, t.scrollHeight + 2) + 'px'; }
 
-  /* ================= styles: the training diary (taste-skill app screen, editorial greeting, palette №3) ================= */
+  /* ================= styles: light S10 brand on the taste-skill app-screen rules ================= */
   const css = `
-  .w-app{--ground:#ffffff;--panel:#f4f4f4;--raised:#ffffff;--rule:#e6e6e6;--rule-p:#e1e1e1;--control:#cfcfcf;--text:#111111;--muted:#5f5f5f;--faint:#6b6b6b;
-    --pen:#1a4be0;--pen-soft:#f1f4fd;--key:#d62b1f;--primary:#111111;--primary-ink:#ffffff;--primary-hover:#2e2e2e;--chip:#ececec;--chip-hover:#e1e1e1;--field:#ffffff;
-    --bar:#cfcfcf;--bar-past:#e2e2e2;--bad:#b42318;--warn-bg:#fffbeb;--warn-line:#fde68a;--warn-ink:#92400e;
+  .w-app{--ground:#f4f4f4;--surface:#fff;--border:#e1e1e1;--rule:#eeeeee;--control:#c8c8c8;--text:#111111;--muted:#6b6b6b;--faint:#6b6b6b;--accent:#1a4be0;--accent-bg:#e4eafc;--glyph-off:#d6d6d6;--primary:#d62b1f;--primary-hover:#b8251b;--primary-ink:#fff;--key:#d62b1f;--field:#fff;--soft:#f9f9f9;--accent-soft:#f4f6fe;--warn-bg:#fffbeb;
+    --ok-bg:#dcfae5;--ok:#04250e;--bad-bg:#ffedea;--bad:#831c1e;--neutral-bg:#eceef2;--neutral:#3d424b;
     min-height:100vh;background:var(--ground);color:var(--text);font:15px/1.5 Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;text-align:left}
   .w-app.w-over{position:fixed;inset:0;overflow:auto;z-index:2147483000;scrollbar-gutter:stable}
   html:has(.w-app:not(.w-over)){scrollbar-gutter:stable}
   .w-app *{box-sizing:border-box;margin:0;padding:0}
   .w-app .num{font-variant-numeric:tabular-nums}
   .w-app button,.w-app select,.w-app input,.w-app textarea{font:inherit;color:inherit}
-  .w-app :focus-visible{outline:2px solid var(--pen);outline-offset:2px}
-  .w-app a{color:var(--pen)}
-  .w-nw{white-space:nowrap}
-
-  /* shell: the wordmark, the three views, the athlete */
-  .w-top{background:var(--ground);border-bottom:1px solid var(--rule);padding:0 max(24px,env(safe-area-inset-right)) 0 max(24px,env(safe-area-inset-left))}
-  .w-topin{max-width:1100px;margin:0 auto;height:60px;display:flex;align-items:stretch;gap:44px}
-  .w-wm{align-self:center;font-weight:900;font-style:italic;font-size:22px;letter-spacing:-.02em;color:var(--pen)!important;text-decoration:none}
+  .w-app :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .w-app a{color:var(--accent)}
+  .w-demo{background:var(--accent-bg);color:var(--accent);font-size:13px;padding:8px max(24px,env(safe-area-inset-left));text-align:center}
+  .w-top{border-bottom:1px solid var(--border);background:var(--surface);padding:0 max(24px,env(safe-area-inset-right)) 0 max(24px,env(safe-area-inset-left))}
+  .w-topin{max-width:1112px;margin:0 auto;height:56px;display:flex;align-items:center;gap:20px}
+  .w-wm{font-weight:900;font-style:italic;font-size:22px;letter-spacing:-.02em;color:var(--accent)!important;text-decoration:none}
   .w-wm span{font-weight:500}
-  .w-tabbar{display:flex;gap:28px;overflow-x:auto;scrollbar-width:none}
-  .w-tabbar button{border:0;background:none;padding:0 2px;font-size:15px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
-  .w-tabbar button:hover{color:var(--text)}
-  .w-tabbar button[aria-selected="true"]{color:var(--text);font-weight:500;border-bottom-color:var(--text)}
-  .w-who{margin-left:auto;align-self:center;display:flex;align-items:center;gap:16px;color:var(--muted);font-size:14px;white-space:nowrap}
-  .w-demo{font-size:12px;color:var(--faint)}
-  .w-colbtn{align-self:center}
-  .w-main{max-width:1100px;box-sizing:content-box!important;margin:0 auto;padding:40px max(24px,env(safe-area-inset-right)) 64px max(24px,env(safe-area-inset-left));display:grid;gap:48px}
-  .w-view{display:grid;gap:32px;min-width:0}
-
-  /* the greeting */
-  .w-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px 24px;align-items:start}
-  .w-head>.w-btn{margin-top:2px}
-  .w-hgroup{display:grid;gap:6px;min-width:0;max-width:760px}
-  .w-head h1{font-size:32px;line-height:1.2;font-weight:500;letter-spacing:-.015em}
-  .w-sub{font-size:16px;color:var(--muted)}
-  .w-sub b{color:var(--text);font-weight:500}
-  .w-meta{font-size:13px;color:var(--muted)}
-  .w-head .w-meta{margin-top:4px}
-  .w-pen{color:var(--pen)!important}
-  .w-navs{display:flex;align-items:center;gap:8px}
-  .w-tonow{order:-1}.w-tonow:disabled{visibility:hidden}
-  .w-nav{display:flex;align-items:center;height:40px;border-radius:999px;background:var(--chip)}
-  .w-nav button{width:40px;height:40px;border:0;background:none;color:var(--text);cursor:pointer;font-size:18px;border-radius:999px}
-  .w-nav button:hover{background:var(--chip-hover)}
-  .w-nav span{width:148px;text-align:center;font-weight:500;font-size:14px}
-
-  /* three figures of the week on grey panels, 4 columns each */
-  .w-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-  .w-tile{background:var(--panel);border-radius:16px;padding:20px 22px;display:grid;gap:6px;align-content:start;min-height:128px}
-  .w-lb{font-size:13px;color:var(--muted)}
-  .w-v{font-size:28px;line-height:1.15;font-weight:400;letter-spacing:-.01em}
-  .w-v small{font-size:15px;color:var(--muted);margin-left:6px;letter-spacing:0}
-  .w-cap{font-size:13px;color:var(--muted)}
-  .w-scale{display:block;height:6px;border-radius:999px;background:var(--rule-p);margin-top:12px;overflow:hidden}
-  .w-scale i{display:block;height:100%;background:var(--pen);border-radius:999px}
-  .w-dash{color:var(--faint)}
-
-  /* sections */
-  .w-sec{display:grid;min-width:0}
-  .w-sech{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:40px;margin-bottom:12px}
-  .w-sech h2{font-size:18px;font-weight:500}
-  .w-sech>.w-btn{margin-left:auto}
-  .w-panel-sec{background:var(--panel);border-radius:16px;padding:20px 24px;min-width:0}
-
-  /* the diary: a ruled sheet, figures right-aligned */
-  .w-log{width:100%;border-collapse:collapse}
-  .w-log th,.w-log td{padding:16px 12px;border-top:1px solid var(--rule);vertical-align:top;text-align:left;font-weight:400}
-  .w-log thead th{border-top:0;padding-top:0;padding-bottom:10px;font-size:13px;color:var(--muted)}
-  .w-log tr>:first-child{padding-left:0}.w-log tr>:last-child{padding-right:0}
-  .w-log .w-n,.w-log .w-fc{text-align:right;white-space:nowrap}
-  .w-log td.w-n{width:96px;font-size:16px}
-  .w-log td.w-fc{width:160px}
-  .w-d{width:84px}
-  .w-d b{display:block;font-weight:500;font-size:15px}
-  .w-d span{display:block;font-size:13px;color:var(--muted)}
-  tr.today .w-d b,tr.today .w-d span{color:var(--pen)}
-  .w-type{display:block;font-weight:500;font-size:15px}
-  .w-type.key{color:var(--key)}
-  .w-type.rest{color:var(--muted);font-weight:400}
-  .w-t .w-tx{margin-top:4px}
+  .w-who{margin-left:auto;color:var(--muted);font-size:14px}
+  .w-main{max-width:1160px;margin:0 auto;padding:28px max(24px,env(safe-area-inset-right)) 48px max(24px,env(safe-area-inset-left));display:grid;gap:24px}
+  .w-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:12px 16px}
+  .w-head h1{padding-top:3px}
+  .w-head h1{font-size:26px;line-height:1.2;font-weight:500;letter-spacing:-.01em}
+  .w-nav{display:flex;align-items:center;height:38px;border:1px solid var(--control);border-radius:6px;background:var(--surface)}
+  .w-nav button{width:40px;height:36px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;border-radius:6px}
+  .w-nav button:hover{color:var(--text);background:var(--rule)}
+  .w-nav span{width:144px;text-align:center;font-weight:500;font-size:14px}
+  .w-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:0}
+  .w-lb{color:var(--muted);font-size:13px}
+  .w-muted{color:var(--faint);font-size:13px}
+  .w-name{display:inline-flex;align-items:center;gap:8px;font-weight:500}
   .w-tx{color:var(--muted);line-height:1.5}
   .w-tx b{color:var(--text);font-weight:500;white-space:nowrap}
   ul.w-tx{list-style:none;display:grid;gap:2px}
   ul.w-tx li{position:relative;padding-left:14px}
-  ul.w-tx li::before{content:"";position:absolute;left:2px;top:.68em;width:5px;height:5px;border-radius:50%;background:var(--control)}
-  .w-oth{display:block;margin-top:4px;font-size:13px;color:var(--muted)}
-  .w-fc b{display:block;font-weight:500;font-size:16px}
-  .w-fc span{display:block;font-size:13px;color:var(--muted)}
-  .w-miss{color:var(--muted)}
-  .w-log tfoot th,.w-log tfoot td{border-top:1px solid var(--text);padding-top:14px;font-weight:500;font-size:15px}
-
-  /* plan: the build to the race */
-  .w-bars{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));column-gap:12px;row-gap:12px}
-  .w-col{grid-row:1;border:0;background:none;color:inherit;cursor:pointer;display:grid;grid-template-rows:auto 140px auto auto;justify-items:center;gap:6px;padding:0;border-radius:8px}
-  .w-bv{font-size:14px}
-  .w-bar{width:100%;max-width:64px;height:140px;display:flex;align-items:flex-end;border-bottom:1px solid var(--control)}
-  .w-bar i{display:block;width:100%;background:var(--bar);border-radius:4px 4px 0 0;transition:background .15s}
-  .w-col:hover .w-bar i{background:var(--control)}
-  .w-col.past .w-bar i{background:var(--bar-past)}
-  .w-col.past .w-bv,.w-col.past .w-bn{color:var(--muted)}
-  .w-col.now .w-bar i{background:var(--pen)}
-  .w-col.now .w-bv,.w-col.now .w-bn{color:var(--pen);font-weight:500}
-  .w-col.race .w-bar i{background:var(--key)}
-  .w-col.race .w-bv,.w-col.race .w-bn{color:var(--key);font-weight:500}
-  .w-bn{font-size:14px;font-weight:500}
-  .w-bd{font-size:12px;color:var(--muted)}
-  .w-phase{grid-row:2;font-size:13px;color:var(--muted);border-top:1px solid var(--rule-p);padding-top:8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .w-weeks td.w-n{width:96px}
-  .w-wkb{border:0;background:none;padding:0;cursor:pointer;display:inline-flex;gap:10px;align-items:baseline;font-weight:500}
-  .w-wkb:hover .num{text-decoration:underline;text-underline-offset:3px}
-  .w-weeks tr.past>*{color:var(--muted)}
-  .w-wworks span{display:inline-block;margin-right:16px;white-space:nowrap}
-  .w-wworks span.key{color:var(--key)}
-  .w-weeks tr.past .w-wworks span.key{color:var(--muted)}
-  .w-wkd>td{border-top:0;padding-top:0}
-  .w-mini-w{background:var(--panel);border-radius:12px;padding:4px 20px}
-  .w-mini{width:100%;border-collapse:collapse}
-  .w-mini th,.w-mini td{padding:12px 8px;border-top:1px solid var(--rule-p);vertical-align:top;text-align:left;font-weight:400}
-  .w-mini tr:first-child>*{border-top:0}
-  .w-mini tr>:first-child{padding-left:0;width:84px}.w-mini tr>:last-child{padding-right:0}
-  .w-mini th b{display:block;font-weight:500}.w-mini th span{display:block;font-size:13px;color:var(--muted)}
-  .w-mini .w-n{text-align:right;white-space:nowrap;width:80px}
-  .w-mini tr.gone{opacity:.55}
-
-  /* settings rows: label column (4 of 12) beside its panel (8 of 12): 356 + 16 + 728 = 1100 */
-  .w-set{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:16px;align-items:start}
-  .w-set-l{display:grid;gap:10px;align-content:start;padding:20px 24px 0 0}
-  .w-set-l h2{font-size:18px;font-weight:500}
-  .w-set-l p{color:var(--muted);font-size:14px}
-  .w-set-l .w-f{margin-top:8px}
-  .w-lay{display:grid;gap:20px}
-  .w-f{display:grid;gap:8px;min-width:0}
-  .w-f>span{font-size:14px;font-weight:500}
-  .w-inl{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-weight:400}
-  .w-roles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 8px}
-  .w-role{display:grid;gap:4px}
-  .w-role small{font-size:12px;color:var(--muted)}
-  .w-app .w-role select{padding:0 24px 0 10px;font-size:13px;background-position:right 9px center}
-  .w-lay input[data-p=volume]{width:84px;text-align:right}
-  .w-ptab-p{padding:6px 24px}
-  .w-ptab{width:100%;border-collapse:collapse}
-  .w-ptab th,.w-ptab td{padding:14px 0 14px 24px;border-top:1px solid var(--rule-p);text-align:right;white-space:nowrap;vertical-align:middle;font-size:16px;font-weight:400}
-  .w-ptab thead th{border-top:0;color:var(--muted);font-size:13px;padding-top:12px;padding-bottom:10px}
-  .w-ptab th[scope=row],.w-ptab thead th:first-child{text-align:left;width:100%;padding-left:0}
-  .w-ptab th[scope=row] b{font-weight:500;margin-right:10px}
-  .w-ptab th[scope=row] small{color:var(--muted);font-size:13px}
-  .w-ptab td input{width:84px;text-align:right;font-size:16px}
-  .w-ptab td:last-child{min-width:72px}
-  .w-pv{display:inline-block;padding-right:13px}
-
-  /* writing to the diary */
-  .w-commit{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
-  .w-cm{display:grid;gap:4px}
-  .w-acts{display:flex;gap:10px;flex-wrap:wrap}
-  .w-chk{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-top:8px;cursor:pointer}
-  .w-confirm{flex-basis:100%;background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
-  .w-confirm p{max-width:62ch}
-  .w-chooser{display:grid;gap:16px}
-  .w-plans{list-style:none}
-  .w-plans li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--rule-p)}
-  .w-plans li:first-child{border-top:0}
-  .w-pl{display:grid;gap:2px;min-width:0}
-  .w-gen{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:16px}
-  .w-f-wide,.w-gen .w-go{grid-column:1/-1}
-
-  /* planning one week */
-  .w-step{display:grid;gap:14px;padding:20px 0;border-top:1px solid var(--rule)}
+  ul.w-tx li::before{content:"";position:absolute;left:2px;top:.68em;width:5px;height:5px;border-radius:50%;background:var(--glyph-off)}
+  .w-hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+  .w-today{padding:24px;display:grid;gap:10px;align-content:start}
+  .w-today .w-type{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:500}
+  .w-big{font-size:32px;line-height:1.1;font-weight:500;letter-spacing:-.01em}
+  .w-big small{font-size:15px;color:var(--faint);font-weight:400;margin-left:6px;letter-spacing:0}
+  .w-today .w-tx{font-size:16px;max-width:56ch}
+  .w-stats{display:grid;grid-template-columns:1fr 1fr;border-left:1px solid var(--rule)}
+  .w-stat{padding:20px 24px;display:grid;gap:4px;align-content:start;border-top:1px solid var(--rule)}
+  .w-stat-wide{grid-column:1/-1;border-top:0}.w-stat:nth-child(3){border-left:1px solid var(--rule)}
+  .w-stat .v{font-size:24px;line-height:1.2}
+  .w-stat .v small{font-size:13px;color:var(--faint);margin-left:4px}
+  .w-stat .s{color:var(--faint);font-size:13px}
+  .w-track{height:8px;border-radius:999px;background:var(--rule);margin-top:10px;overflow:hidden}
+  .w-track-l{display:flex;justify-content:space-between;color:var(--faint);font-size:12px;margin-top:6px}
+  .w-track i{display:block;height:100%;background:var(--accent);border-radius:999px}
+  .w-ch{display:flex;align-items:center;gap:12px;padding:16px 20px;flex-wrap:wrap}
+  .w-ch h2{font-size:17px;font-weight:500;margin-right:auto}
+  .w-days,.w-plist,.w-weeks,.w-wdays,.w-plans{list-style:none}
+  .w-days,.w-plist,.w-weeks{border-top:1px solid var(--rule)}
+  .w-day{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:16px;padding:16px 20px;border-top:1px solid var(--rule);align-items:start}
+  .w-day:first-child{border-top:0}
+  .w-day.today{background:var(--accent-soft)}
+  .w-dn b,.w-pd b,.w-wdd b{display:block;font-weight:500}
+  .w-dn small,.w-pd small,.w-wdd small{color:var(--faint);font-size:13px}
+  .w-day.today .w-dn b{color:var(--accent)}
+  .w-what{display:grid;gap:4px;min-width:0}
+  .w-what.rest .w-name{color:var(--faint);font-weight:400}
+  .w-km{display:grid;gap:6px;justify-items:end;white-space:nowrap}
+  .w-km .num{font-size:16px}
+  .w-pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:12px;font-weight:500;white-space:nowrap;flex:none}
+  .w-pill.ok{background:var(--ok-bg);color:var(--ok)}.w-pill.bad{background:var(--bad-bg);color:var(--bad)}.w-pill.neutral{background:var(--neutral-bg);color:var(--neutral)}.w-pill.now{background:var(--accent-bg);color:var(--accent)}
+  .w-ig{display:inline-flex;align-items:flex-end;gap:2px;height:16px;flex:none}
+  .w-ig i{width:4px;border-radius:1px;background:var(--glyph-off)}
+  .w-ig i:nth-child(1){height:7px}.w-ig i:nth-child(2){height:11px}.w-ig i:nth-child(3){height:16px}
+  .w-ig[data-l="1"] i:nth-child(-n+1),.w-ig[data-l="2"] i:nth-child(-n+2),.w-ig[data-l="3"] i:nth-child(-n+3){background:var(--key,var(--accent))}
+  .w-ig[data-race] i{background:var(--text)!important}
+  .w-note{padding:8px 20px 18px;color:var(--faint);font-size:13px;line-height:1.45}
+  .w-err{color:var(--bad)!important;font-size:14px}
+  .w-foot{color:var(--faint);font-size:12px}
+  .w-btn{height:38px;padding:0 16px;border-radius:6px;border:1px solid var(--control);background:var(--surface);font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,transform .12s}
+  .w-btn:hover:not(:disabled){background:var(--rule)}
+  .w-btn:active:not(:disabled){transform:translateY(1px)}
+  .w-btn.primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink,#fff)}
+  .w-btn.primary:hover:not(:disabled){background:var(--primary-hover)}
+  .w-btn:disabled{opacity:.55;cursor:default}
+  .w-btn.sm{height:34px;padding:0 12px;font-size:14px}
+  .w-link{border:0;background:none;color:var(--accent);cursor:pointer;font-size:14px;font-weight:500;padding:6px 2px;white-space:nowrap}
+  .w-link:hover{text-decoration:underline}
+  .w-app select,.w-app input,.w-app textarea{border:1px solid var(--control);border-radius:6px;background:var(--field);min-width:0;max-width:100%}
+  .w-app select{height:36px;padding:0 30px 0 10px;font-size:14px;appearance:none;cursor:pointer;
+    background:var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b707a' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 11px center}
+  .w-app input{height:36px;padding:0 10px}
+  .w-app input[type=checkbox],.w-app input[type=radio]{height:16px;width:16px;accent-color:var(--accent)}
+  .w-app textarea{width:100%;padding:8px 10px;line-height:1.5;resize:vertical}
+  .w-inl{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+  .w-step{padding:18px 20px;border-top:1px solid var(--rule);display:grid;gap:14px}
+  .w-step-list{padding-bottom:12px}
   .w-steph{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
-  .w-steph h3{font-size:16px;font-weight:500}
+  .w-steph h3{font-size:16px;font-weight:500}.w-steph span{color:var(--faint);font-size:13px}
+  .w-seg,.w-tabs{display:inline-flex;flex-wrap:wrap;border:1px solid var(--control);border-radius:6px;overflow:hidden;justify-self:start}
+  .w-seg button,.w-tabs button{height:36px;padding:0 16px;border:0;background:var(--field);cursor:pointer;color:var(--muted);font-size:14px}
+  .w-seg button+button,.w-tabs button+button{border-left:1px solid var(--control)}
+  .w-seg button[aria-checked="true"],.w-tabs button[aria-selected="true"]{background:var(--accent-bg);color:var(--accent);font-weight:500}
   .w-works{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .w-work{background:var(--panel);border-radius:16px;padding:20px 22px;display:grid;gap:8px;align-content:start;min-width:0}
-  .w-wh{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-  .w-wh .num{font-size:16px}
-  .w-wa{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px}
-  .w-wa select{flex:1 1 200px}
+  .w-work{display:grid;gap:10px;align-content:start;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--soft);min-width:0}
+  .w-wh,.w-ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .w-wh .num,.w-pkm{font-size:16px;white-space:nowrap}
+  .w-wa{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .w-wa select{flex:1 1 180px}
   .w-edit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
   .w-edit textarea,.w-edit input:not([data-f=prekm]):not([data-f=km]){grid-column:1/-1}
-  .w-kmf{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;white-space:nowrap}
-  .w-kmf input{width:76px;text-align:right}
+  .w-kmf{display:inline-flex;align-items:center;gap:6px;color:var(--faint);font-size:14px;white-space:nowrap}
+  .w-kmf input{width:72px;text-align:right}
   .w-go{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-  .w-plist{list-style:none}
-  .w-pday{display:grid;grid-template-columns:84px minmax(0,1fr) 190px;gap:16px;padding:16px 0;border-top:1px solid var(--rule);align-items:start}
+  .w-pday{display:grid;grid-template-columns:110px minmax(0,1fr) 180px;gap:16px;padding:16px 20px;border-top:1px solid var(--rule);align-items:start}
   .w-pday:first-child{border-top:0}
-  .w-pday.locked{opacity:.7}
-  .w-pbody{display:grid;gap:4px;min-width:0}
-  .w-ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-  .w-pkm{font-size:16px;white-space:nowrap}
-  .w-pa{display:grid;gap:2px;justify-items:start}
-  .w-app .w-pa select{border-color:transparent;background-color:transparent;font-weight:500;padding-left:0;background-position:right 8px center}
-  .w-app .w-pa select:hover{border-color:var(--control);background-color:var(--field);padding-left:10px}
-  .w-alt{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--muted);padding-top:4px}
+  .w-pday.locked{background:var(--soft)}
+  .w-pday.rest .w-name{color:var(--faint);font-weight:400}
+  .w-pd b{text-transform:capitalize}
+  .w-pbody{display:grid;gap:6px;min-width:0}
+  .w-pa{display:grid;gap:4px;justify-items:stretch}
+  .w-pa .w-link,.w-pa .w-pill{justify-self:start}
+  .w-app .w-pa select{border-color:transparent;background-color:transparent;color:var(--accent);font-weight:500;padding-left:2px;background-position:right 8px center}
+  .w-app .w-pa select:hover{border-color:var(--control);background-color:var(--field)}
+  .w-alt{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--muted);padding-top:2px}
   .w-alt label{display:inline-flex;gap:8px;align-items:center;cursor:pointer}
-
-  /* controls: full pills with the soft panels; one ink primary per view */
-  .w-btn{height:40px;padding:0 18px;border-radius:999px;border:0;background:var(--chip);color:var(--text);font-weight:500;font-size:14px;cursor:pointer;white-space:nowrap;transition:background .15s,transform .12s}
-  .w-btn:hover:not(:disabled){background:var(--chip-hover)}
-  .w-btn:active:not(:disabled){transform:translateY(1px)}
-  .w-btn.primary{background:var(--primary);color:var(--primary-ink)}
-  .w-btn.primary:hover:not(:disabled){background:var(--primary-hover)}
-  .w-btn:disabled{opacity:.5;cursor:default}
-  .w-link{border:0;background:none;color:var(--text);cursor:pointer;font-size:14px;font-weight:500;padding:6px 0;white-space:nowrap;text-decoration:underline;text-decoration-color:var(--control);text-underline-offset:3px}
-  .w-link:hover{text-decoration-color:var(--text)}
-  .w-app select,.w-app input,.w-app textarea{border:1px solid var(--control);border-radius:10px;background:var(--field);min-width:0;max-width:100%}
-  .w-app select{height:40px;padding:0 32px 0 12px;font-size:14px;appearance:none;cursor:pointer;
-    background:var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235f5f5f' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center}
-  .w-app input{height:40px;padding:0 12px}
-  .w-app input[type=checkbox],.w-app input[type=radio]{height:16px;width:16px;accent-color:var(--text)}
-  .w-app textarea{width:100%;padding:10px 12px;line-height:1.5;resize:vertical}
-  .w-seg{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;border-radius:999px;background:var(--chip);justify-self:start}
-  .w-seg button{height:32px;padding:0 14px;border:0;border-radius:999px;background:none;color:var(--text);cursor:pointer;font-size:14px}
-  .w-seg button:hover{background:var(--chip-hover)}
-  .w-seg button[aria-checked="true"],.w-seg button[aria-selected="true"]{background:var(--raised);color:var(--text);font-weight:500}
-  .w-panel-sec .w-seg{background:var(--chip-hover)}
-
-  .w-flash{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--pen-soft);border-radius:12px;padding:12px 16px}
-  .w-flash:focus{outline:none}.w-flash:focus-visible{outline:2px solid var(--pen);outline-offset:2px}
+  .w-sum{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 20px;border-top:1px solid var(--rule);background:var(--soft)}
+  .w-card>.w-sum:last-child{border-radius:0 0 8px 8px}
+  .w-sum>div{display:grid;gap:2px}
+  .w-sum b{font-size:24px;font-weight:500;line-height:1.2}
+  .w-acts{display:flex;gap:10px;flex-wrap:wrap}
+  .w-chk{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-top:6px;cursor:pointer}
+  .w-flash{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--ok-bg);color:var(--ok);border-radius:8px;padding:12px 16px}
+  .w-nw{white-space:nowrap}
+  .w-fact{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+  .w-fact b{color:var(--text);font-weight:500}
+  .w-flash:focus{outline:none}.w-flash:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .w-navs{display:flex;align-items:center;gap:8px}
+  .w-tonow{order:-1}.w-tonow:disabled{visibility:hidden}
+  .w-ptab-wrap{padding:0 20px 4px;overflow-x:auto}
+  .w-ptab{width:100%;border-collapse:collapse;font-size:15px}
+  .w-ptab caption{text-align:left;color:var(--muted);font-size:13px;padding:14px 0 8px}
+  .w-ptab th,.w-ptab td{padding:10px 12px;border-top:1px solid var(--rule);text-align:right;white-space:nowrap}
+  .w-ptab thead th{border-top:0;color:var(--muted);font-weight:400;font-size:13px}
+  .w-ptab th[scope=row],.w-ptab thead th:first-child{text-align:left;padding-left:0}
+  .w-ptab th[scope=row] b{font-weight:500;margin-right:8px}
+  .w-ptab th[scope=row] small{color:var(--faint);font-size:13px;font-weight:400}
   .w-flash button{border:0;background:none;color:inherit;cursor:pointer;font-size:18px;width:32px;height:32px}
-  .w-note{color:var(--muted);font-size:14px}
-  .w-err{color:var(--bad);font-size:14px}
-  .w-foot{color:var(--muted);font-size:12px}
-
-  /* the colour picker (?colors) */
-  .w-colors{background:var(--panel);border-radius:16px}
-  .w-ch{display:flex;align-items:center;gap:12px;padding:16px 20px;flex-wrap:wrap}
-  .w-ch h2{margin-right:auto;font-size:18px;font-weight:500}
-  .w-muted{color:var(--muted);font-size:13px}
-  .w-pill{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;background:var(--chip)}
+  .w-chooser{padding:4px 20px 18px;display:grid;gap:12px}
+  .w-plans{border:1px solid var(--border);border-radius:8px}
+  .w-plans li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-top:1px solid var(--rule)}
+  .w-plans li:first-child{border-top:0}
+  .w-plans li.on{background:var(--accent-soft)}
+  .w-pl{display:grid;gap:2px;min-width:0}
+  .w-gen{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:12px}
+  .w-f{display:grid;gap:6px;min-width:0}
+  .w-f>span{color:var(--muted);font-size:13px}
+  .w-f-wide{grid-column:1/-1}
+  .w-gen .w-go{grid-column:1/-1}
+  .w-pmeta{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .w-pset{display:grid;grid-template-columns:180px minmax(0,1fr);gap:16px;align-items:end}
+  .w-pset input[data-p=volume]{width:80px;text-align:right}
+  .w-pset .w-f-wide{grid-column:auto}
+  .w-roles{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+  .w-role{display:grid;gap:4px}
+  .w-role small{color:var(--faint);font-size:12px}
+  .w-app .w-role select{padding:0 22px 0 8px;font-size:13px;background-position:right 7px center}
+  .w-wk{border-top:1px solid var(--rule)}
+  .w-wk:first-child{border-top:0}
+  .w-wkh{width:100%;display:grid;grid-template-columns:44px 120px 120px minmax(0,1fr) 72px 84px;gap:12px;align-items:center;padding:12px 20px;border:0;background:none;cursor:pointer;text-align:left}
+  .w-wkh:hover{background:var(--soft)}
+  .w-wk.past .w-wkh{color:var(--faint)}
+  .w-wk.now .w-wkh{background:var(--accent-soft)}
+  .w-wn{font-weight:500}
+  .w-per{color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .w-wworks{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+  .w-wworks span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .w-wkm{text-align:right;font-size:15px}
+  .w-wkh .w-pill,.w-pill-sp{justify-self:end}
+  .w-wdays{padding:0 20px 12px 76px}
+  .w-wdays>li{display:grid;grid-template-columns:70px minmax(0,1fr) 64px;gap:12px;padding:10px 0;border-top:1px solid var(--rule)}
+  .w-wdays>li.gone{opacity:.55}
+  .w-wdb{display:grid;gap:2px;min-width:0}
+  .w-wdk{text-align:right;white-space:nowrap}
+  .w-confirm{margin:0 20px 18px;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--warn-bg);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .w-confirm p{max-width:62ch;color:var(--text)}
+  .w-paces{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--rule)}
+  .w-paces label{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px;border-left:1px solid var(--rule)}
+  .w-paces label:first-child{border-left:0}
+  .w-paces label>span{display:grid}
+  .w-paces small{color:var(--faint);font-size:13px}
+  .w-paces input{width:76px;text-align:right;font-size:20px;height:40px}
+  .w-tabbar{display:flex;gap:4px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+  .w-tabbar button{border:0;background:none;padding:10px 4px;margin-right:20px;font-size:16px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .w-tabbar button:hover{color:var(--text)}
+  .w-tabbar button[aria-selected="true"]{color:var(--text);font-weight:500;border-bottom-color:var(--accent)}
+  .w-panel{display:grid;gap:24px}
   .w-pals{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;padding:0 20px 20px}
-  .w-pal{width:100%;display:grid;gap:6px;text-align:left;border:1px solid var(--rule-p);border-radius:12px;background:var(--raised);padding:8px 8px 10px;cursor:pointer}
+  .w-pal{width:100%;display:grid;gap:6px;text-align:left;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:8px 8px 10px;cursor:pointer}
   .w-pal:hover{border-color:var(--control)}
-  .w-pal.on{border-color:var(--text);outline:1px solid var(--text)}
-  .w-rec{justify-self:start}
-  .w-pal-prev{display:block;height:64px;border-radius:8px;padding:10px;position:relative}
-  .w-pal-prev i{display:grid;gap:5px;height:100%;border-radius:6px;padding:8px;align-content:start;position:relative}
+  .w-pal.on{border-color:var(--accent);outline:1px solid var(--accent)}
+  .w-rec{justify-self:start;height:20px}
+  .w-pal-prev{display:block;height:64px;border-radius:5px;padding:10px;position:relative}
+  .w-pal-prev i{display:grid;gap:5px;height:100%;border-radius:4px;padding:8px;align-content:start;position:relative}
   .w-pal-prev b{display:block;height:5px;border-radius:2px;width:80%}
   .w-pal-prev em{position:absolute;right:36px;bottom:8px;width:22px;height:10px;border-radius:3px}.w-pal-prev em.k{right:8px}
   .w-pal-n{font-size:14px;font-weight:500}
-  .w-pal small{color:var(--muted);font-size:12px}
-
-  @media (max-width:1000px){.w-head{grid-template-columns:minmax(0,1fr)}.w-head>.w-navs{order:-1}.w-head>.w-btn{justify-self:start}
-    .w-set{grid-template-columns:1fr}.w-set-l{padding:0}
-    .w-weeks th:nth-child(3),.w-weeks td:nth-child(3){display:none}}
-  @media (max-width:760px){.w-works{grid-template-columns:1fr}.w-gen{grid-template-columns:1fr}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}
-    .w-pday{grid-template-columns:minmax(0,1fr);gap:8px}.w-pday .w-d{display:flex;gap:8px;align-items:baseline}.w-pa{grid-template-columns:minmax(0,1fr) auto;align-items:center}
-    .w-tiles{grid-template-columns:1fr;gap:0;background:var(--panel);border-radius:16px}
-    .w-tile{background:none;border-radius:0;min-height:0;padding:14px 20px;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;column-gap:12px;border-top:1px solid var(--rule-p)}
-    .w-tile:first-child{border-top:0}
-    .w-tile .w-lb{grid-row:1}.w-tile .w-v{grid-row:1;grid-column:2;font-size:22px;text-align:right}
-    .w-tile .w-cap,.w-tile .w-scale{grid-column:1/-1}
-    .w-log thead{display:none}
-    .w-log,.w-log tbody,.w-log tfoot{display:block}
-    .w-log tr{display:grid;grid-template-columns:52px minmax(0,1fr) auto;column-gap:12px;row-gap:6px;padding:14px 0;border-top:1px solid var(--rule)}
-    .w-log tbody tr:first-child{border-top:0}
-    .w-log th,.w-log td{border:0!important;padding:0!important;width:auto!important}
-    .w-log .w-d{grid-row:1/span 2}
-    .w-log td.w-n{grid-column:3;grid-row:1}
-    .w-log td.w-fc{grid-column:2/-1;text-align:left;white-space:normal}
-    .w-log .w-fc b,.w-log .w-fc span{display:inline;margin-right:8px}
-    .w-log tfoot tr{border-top:1px solid var(--text)}
-    .w-log tfoot th{grid-column:1/3}.w-log tfoot td.w-fc{grid-column:3;grid-row:2;text-align:right}
-    .w-weeks tr{grid-template-columns:44px minmax(0,1fr) auto;grid-template-areas:"n d v" "n w w"}
-    .w-weeks tr>th{grid-area:n}.w-weeks tr>td:nth-child(2){grid-area:d}.w-weeks tr>td:nth-child(4){grid-area:w}.w-weeks tr>td.w-n{grid-area:v}
-    .w-wkb{flex-direction:column;gap:0}.w-wkb .w-pen{font-size:12px;font-weight:400}
-    .w-weeks tr.w-wkd{display:block;padding-top:0;border-top:0}.w-weeks tr.w-wkd>td{display:block}
-    .w-col{grid-template-rows:auto 110px auto}.w-bar{height:110px}.w-bd{display:none}.w-bars{column-gap:6px}}
-  @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:32px}.w-view{gap:24px}.w-top{padding:0 16px}
-    .w-topin{height:auto;flex-wrap:wrap;gap:0 14px}.w-wm{height:52px;display:flex;align-items:center}.w-demo{display:none}
-    .w-tabbar{order:3;flex-basis:100%;height:44px;gap:24px}.w-tonow{order:0}
-    .w-head h1{font-size:24px}.w-sub{font-size:15px}.w-panel-sec{padding:16px 18px}.w-mini-w{padding:2px 14px}
-    .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-p{padding:4px 16px}.w-ptab th,.w-ptab td{padding-left:16px}.w-ptab th[scope=row] small{display:block}
-    .w-commit .w-acts,.w-commit .w-btn{width:100%}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
-    .w-plans li{flex-wrap:wrap}.w-phase{font-size:12px}}
+  .w-pal small{color:var(--faint);font-size:12px}
+  @media (max-width:1000px){.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
+    .w-wkh{grid-template-columns:40px 110px minmax(0,1fr) 64px;grid-template-areas:"n d w k" "n p w s"}.w-wn{grid-area:n}.w-per{grid-area:p}.w-wworks{grid-area:w}.w-wkm{grid-area:k}.w-wkh>.w-pill,.w-wkh>.w-pill-sp{grid-area:s}
+    .w-wdays{padding-left:20px}}
+  @media (max-width:760px){.w-works{grid-template-columns:1fr}
+    .w-head{grid-template-columns:minmax(0,1fr)}.w-head h1{padding-top:0}.w-navs{order:-1}.w-tonow{order:0}
+    .w-pday{grid-template-columns:minmax(0,1fr);gap:8px}.w-pd{display:flex;gap:8px;align-items:baseline}.w-pa{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+    .w-paces{grid-template-columns:1fr 1fr}.w-paces label:nth-child(3){border-left:0}.w-paces label:nth-child(n+3){border-top:1px solid var(--rule)}
+    .w-pset{grid-template-columns:1fr}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .w-wkh{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w" "n p s"}.w-wkh>span:nth-child(2){grid-area:d}
+    .w-gen{grid-template-columns:1fr}}
+  @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-top{padding:0 16px}.w-topin{gap:14px}.w-demo{padding:8px 16px}
+    .w-head h1{font-size:22px}.w-today{padding:20px}.w-stat{padding:16px}
+    .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
+    .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
+    .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
+    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
+    .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
+    .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
+    .w-paces label{flex-direction:column;align-items:flex-start;gap:8px}.w-paces input{width:100%}.w-ptab th[scope=row] small{display:block}}
   @media (prefers-reduced-motion:reduce){.w-app *{transition:none!important}}
   `;
 
