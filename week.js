@@ -73,8 +73,10 @@
   const TYPE_BY_NAME = { 'интервальная': 3, 'развивающая': 2, 'повторная': 4, 'длительная': 5, 'восстановительная': 1, 'соревнование': 6, 'силовая': 1 };
   const DISTANCES = ['Марафон · 42.2 км', 'Полумарафон · 21.1 км', '10 км', '5 км', 'Паркран · 5 км'];
   const DN = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const LOGO = '<svg viewBox="0 0 89 27" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M23 17.9L22.6 17.6L22.5 17.7L22.4 17.5L22 17.7L21.6 17.3L21.2 17.5L20.7 17.3L20.1 16.8L20.2 16.1L20.6 15L20.7 14.1L21.2 14.1L21.4 13.9L21.4 13.5L21.2 13.1L21.5 12.3L22.6 11.5L22.5 11.3L22.9 10.9L22.7 10.7L23.3 10.3L23.6 9.7L23.6 9.6L23.2 10L22.5 10.2L22.1 10.8L22.1 10.4L22.7 8.9L23.1 7L23.3 6.8L24 4.6L24.8 3L24.7 2.5L25.6 1L25.6 .7L25.4 .4L25.8 0L26.3 .2L26.9 .1L28.8 1.4L28.9 2.1L28.4 3.3L28.5 3.4L28.4 3.8L28.6 3.9L27.5 6L27.4 6.3L27.6 6.3L27.3 7L27.2 7.8L26.8 8.3L26.8 8.8L26.3 9.2L26.3 10.6L26 10.9L26 11.1L25.1 13.2L25.2 14.2L24.9 14.9L24.7 15.5L24.9 15.9L24.4 17.6L23.9 18.3L23.2 18.1L23 17.9ZM20.6 15.3L20.7 15.6L20.8 15.3L20.6 15.3ZM20.8 15.1L21 15.1L21.1 14.9L20.9 14.8L20.8 15.1ZM21.7 11.6L21.9 11.4L22.1 11.4L21.9 11.8L21.7 11.9L21.7 11.6ZM22.1 12.7L21.8 13L21.8 13.3L22.3 13L22.5 13L22.5 13.2L22.9 12.8L22.1 12.7ZM22.3 12.5L22.8 12.4L23 11.7L22.3 12.5ZM24.6 16L24.2 16.2L24.6 16.1L24.6 16Z" fill="white"/><path d="M37.1 16.9L36.7 17.1L34.6 17L33.1 16.5L32.2 15.9L31.7 15.2L31.6 14.5L31.4 14.4L31.4 14.2L31.2 14.4L31.6 13.2L31.5 13.1L31.3 13.2L31.3 13.1L31.4 12.6L31.3 12.5L31.3 12.6L31.3 11.8L31.6 11.4L31.3 11.5L31.6 10.9L31.8 9.6L32 9.4L31.9 9.6L32.3 9.4L32.2 9.2L32.6 7.9L32.7 7.6L32.5 7.7L32.7 7L34.1 5L34 4.6L34.3 4.5L34.5 3.3L35.7 1.8L36.7 1.5L36.7 1.8L37.6 1.7L38 1.4L38.4 1.5L41.4 2.1L43 3.5L43.1 3.9L43.3 4L43.4 5.2L43.9 5.9L43.7 6.6L43.8 7L43.9 9L43.8 9.4L43.7 9.5L43.6 9.3L43.4 9.6L43.3 10.3L43.1 10.6L43.3 11.1L42.7 12.2L42.4 12.3L42.1 13.5L41.9 13.4L41.9 13.9L41.3 14.3L41.2 14.2L41.2 14.6L40.7 14.8L40.6 15.2L38.9 16.7L37.6 17.1L37.1 16.9ZM32.4 8.2L32.2 8.7L31.8 9.1L32.1 8.4L32.4 8.2ZM32.2 11L32.1 11.5L32.4 11.2L32.2 11ZM34.5 13.3L34.7 14.2L35.1 14.8L35.7 15L36.4 14.9L37.1 14.6L37.9 13.9L39.2 11.8L39.6 9.9L40.3 7.8L40.4 5.5L40.6 5L40 4.2L39.9 4.3L39.5 4.2L39.5 3.8L39.4 3.7L38.6 3.7L38.2 3.9L36.5 6.5L35.8 8.4L35.6 8.6L34.9 11.2L34.5 12L34.6 12.1L34.5 12.3L34.5 13.3ZM38.2 3.2L39.5 3.3L39.3 3.1L38.7 2.9L38.6 3.1L38.2 3.2ZM41 14L41.3 14L41.3 13.6L41 14ZM43.3 7.5L43.5 7.8L43.6 7.5L43.4 6.9L43.3 7.5Z" fill="white"/><path d="M43.4 18.1L43.6 16.2L45.3 15.5L46.5 15.7L47 16L47 16.6L46.7 17.6L46.7 18.8L46.1 19.3L45.3 19.5L44.2 19.4L43.6 18.8L43.4 18.1Z" fill="white"/><path d="M53.6 14.3L53.7 15.2L53.6 15.6L53.4 17.2L52.6 17.3L52.6 17.1L52.5 17.6L51.3 17.3L50.7 17.3L50.7 17L50.4 16.3L50 16.1L50.2 15.4L50.1 13.9L50.4 13.6L50.3 13.2L50.5 12.8L50.5 11.3L50.8 7L51.5 6.9L52.9 7.4L54 9L56.1 7.7L58.6 6.4L59.8 6.9L60.5 7.6L60.1 8.3L59.6 8.5L59.5 8.8L59.3 8.9L58.4 9.1L58.3 9.2L55.9 10.1L53.7 11.9L53.6 12.3L53.9 12.6L53.6 14.3ZM55.1 8.9L54.2 9.5L55.3 8.9L55.3 8.7L55.1 8.9ZM57.1 8L55.8 8.7L57.6 8L57.1 8Z" fill="white"/><path d="M70.8 9.4L71 9L71.1 9.6L71.3 9.6L71.6 8.8L71.6 8.6L71.3 8.7L71.2 8.1L71.6 7.1L71.6 6.6L71.9 6.5L74.2 6.5L75.2 7.3L75.4 7.7L75.5 8L74.6 10.8L74.1 13.7L74 13.7L73.8 14L73.6 15.2L73.8 16.5L73.7 17.1L72.3 17.3L71.6 17.5L71.1 17.5L69.9 16.7L69.9 15.5L68.4 16.4L66.2 16.7L66 16.5L64.7 16.3L63.6 15.4L63.2 14.8L62.9 13.6L63.6 9.5L64 8.7L64.2 7.7L64.4 7.3L65 7.3L65.6 7.7L66.4 8.4L66.7 9.1L65.8 13.4L66.1 14.3L66.3 14.5L67.6 14.4L68.9 13.9L69.9 13.1L70.2 12.4L70.4 12.4L71.1 11.9L71 11.7L70.4 11.7L70.9 10.8L70.4 10.6L70.9 10L70.8 9.4ZM70.9 10.3L70.7 10.4L70.8 10.5L70.9 10.3ZM71 11.5L71.2 11.4L71.5 10.7L71 11.5ZM71.2 10.2L71.2 10L71.2 10.2Z" fill="white"/><path d="M78.1 12.6L78.5 11.7L78.5 10.9L78.8 10.1L80.1 7.6L80.3 7.4L81.3 7.6L82.2 8.2L82.8 8.9L82.8 9.5L85.6 8.3L86.6 8.1L88.5 9L88.5 9.6L88.3 9.7L88.5 9.9L88.5 10.9L88.3 11.6L88 12.1L88.2 12.1L88.2 12.6L87.7 14.7L87.7 15.4L87.5 15.9L87.5 16.4L86.8 17L85.8 16.9L85.2 15.8L85.1 13.3L85.3 11.2L85.2 10.3L83.1 11.3L82.2 12.3L82 13L82 13.8L82.3 13.6L82.2 13.9L81.6 14.9L81.9 16L81.8 16.9L80.9 17.2L79.3 17L77.9 16.4L78.2 16L77.9 16L78 15.7L78.1 15.9L78.2 15.8L78.7 15.1L78.6 15L78.4 15.1L78 15L78.3 14.1L77.8 13.9L78.2 13.2L78.1 12.6ZM78.2 13.6L78.1 13.7L78.2 13.8L78.2 13.6ZM78.3 14.6L78.3 14.4L78.3 14.6ZM78.5 13.5L78.5 13.3L78.5 13.5ZM78.6 14.7L78.7 14.7L78.8 14L78.6 14.3L78.6 14.7Z" fill="white"/><path d="M5.4 2.8L5.7 2.2L5.4 2.3L5.4 2.8Z" fill="#FF6F61"/><path d="M5 4.3L5.2 3.3L4.9 4.1L5 4.3Z" fill="#FF6F61"/><path d="M15.3 9L15 8.7L14.4 8.5L14.1 8.1L14.7 8.2L15.2 8.5L15.4 8.7L15.3 9Z" fill="white"/><path d="M10.3 14.8L10.3 14.6L10.7 14.5L10.3 14.8Z" fill="white"/><path d="M19.4 1.5L17.5 .4L16.6 .3L12.6 .1L9.9 .4L7.4 .8L6.7 1.2L5.7 2.5L4.7 5.8L4.2 6.3L4.2 6.9L4 7.3L4.1 7.9L5.1 9.6L6.4 10.3L8.4 10.9L9.7 11.1L12.2 10.7L12.6 10.1L12.2 9.7L10.4 9.1L9.8 9.1L9.3 8.7L8.2 8.4L7.9 8.1L7.6 7.6L7.6 7L8 5.7L8.5 4.6L9.9 3.7L12.4 3.2L14.5 3.3L16.4 3.1L18.1 3.6L18.6 3.6L19.1 3.4L19.4 2.9L19.4 2.1L19.6 1.8L19.4 1.5ZM12.9 2.6L10.8 2.9L12.4 2.5L12.9 2.6ZM17.2 2.6L16.7 2.4L15.5 2.4L16.4 2.2L17.4 2.5L17.2 2.6Z" fill="#F9625A"/><path d="M16.1 9.2L15.8 8.7L15.2 8.1L14.2 7.6L11.4 7.2L9.3 7.2L8.7 7.7L8.8 7.9L10.4 8.6L12.3 9L12.9 9.3L13.2 9.7L13.3 11.8L11.7 13.8L11.2 14.1L9.7 14.5L3.8 14.2L1.8 13.8L.9 13.8L.4 14.1L.4 15.8L0 15.9L.2 16.1L0 16.3L3.8 17L8.4 17.3L11.5 17L13.1 16.5L13.9 15.9L16.2 13.1L16.4 11.2L16.1 9.2ZM.8 16.2L.7 15.9L1 16.1L.8 16.2ZM1.1 16.5L1.1 16.3L1.1 16.5ZM1.7 14.6L1.6 14.4L1 14.6L1.3 14.2L2 14.2L1.7 14.6ZM15.7 9.2L15.6 9.4L15.4 9.1L15.5 9L15.7 9.2Z" fill="white"/><path d="M6.2 19.1L5.8 19.1L6 19.3L5.3 19.1L6.1 19.9L5.8 19.9L9.6 22.7L13.4 25L15.4 25.9L17.5 26.5L19.7 26.9L21.8 27L23.9 26.8L26.1 26.3L28.3 25.5L30.5 24.4L32.7 22.9L34.7 21.3L34.7 21.1L33.3 22L35.3 20.3L35.1 20.4L35.3 20.2L35.3 19.7L34.9 19.9L36.1 18.8L31.9 21.7L28.2 23.5L25 24.4L23 24.7L21.1 24.8L17.7 24.5L15.6 24L13.8 23.4L11.5 22.3L8.2 20.1L8.2 20.3L6.2 19.1ZM34.3 21.5L34.1 21.6L34.3 21.5Z" fill="#F9625A"/><path d="M10.4 22.7L9.8 22.6L8.3 21.5L10.4 22.7Z" fill="white"/><path d="M26 25.9L26.8 25.7L27 25.3L26 25.9Z" fill="white"/><path d="M27.6 25.3L28.9 24.7L29.4 24.3L27.6 25.3Z" fill="white"/><path d="M10.6 23L10.8 23.2L11.1 23.2L10.6 23Z" fill="white"/><path d="M31 22.4L31.5 22.2L31 22.4Z" fill="white"/></svg>'; // the logo of the s10.run header, simplified
   const DNF = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье'];
   const DNS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+  const DNIN = ['в понедельник', 'во вторник', 'в среду', 'в четверг', 'в пятницу', 'в субботу', 'в воскресенье'];
   const MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
   const MONS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -100,12 +102,13 @@
     return 'S10 «Моя неделя»: нужен вход';
   }
   const id = new URLSearchParams(location.search).get('id') || me.id;
-  const [main, startParam, results, spRes, libRes] = await Promise.all([
+  const [main, startParam, results, spRes, libRes, calcBase] = await Promise.all([
     get(`/apiweb/task.php?action=main&id=${id}`).catch(() => ({})),
     get(`/apiweb/userparam.php?action=get&id=${id}&param[]=studentMainStart`).catch(() => ({})),
     get(`/apiweb/planresults.php?action=list&id=${id}&limit=31`).catch(() => []),
     get(`/apiweb/userparam.php?action=get&param[]=studentPlans${id}`).catch(() => ({})),
     get('/apiweb/userparam.php?action=get&param[]=planTemplates').catch(() => ({})),
+    get(`/apiweb/calc.php?id=${id}`).catch(() => null),
   ]);
   const parseList = (v) => { try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
   let versions = parseList(spRes.param?.[`studentPlans${id}`]).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
@@ -117,6 +120,8 @@
   const paceRow = results.find((r) => r.i === startId) || results.find((r) => r.prehms) || results[0] || null;
   const PACE_S10 = paceRow?.t ? Object.fromEntries(Object.entries(paceRow.t).map(([k, v]) => [k, hms(v)])) : null;
   const today = iso(new Date(((me.nowmsk || Date.now() / 1000) + 3 * 3600) * 1000)); // the site counts days in Moscow time
+  // S10 plans in running weeks; calc.php gives their start days (dselect), on s10.run usually Wednesdays
+  const runStart = (() => { const ds = Object.values(calcBase?.dselect || {}).map((v) => v.date).filter(Boolean).sort(); let d = ds.find((x) => x > today); if (!d && ds.length) { d = last(ds); while (d <= today) d = add(d, 7); } return d || add(today, 1); })();
   const days = new Map();
   const loadedWeeks = new Set(); // Mondays of the weeks whose every diary day is in `days`
   // the diary API gives up to `limit` days with date <= last_date, newest first, and diaryTasksisMoreExist = the
@@ -146,6 +151,8 @@
   let fresh = null;
   let sel = store.get(`plan.${id}`, null);
   const findPlan = (s) => !s ? null : s.src === 'version' ? versions.find((v) => v.id === s.id) : s.src === 'library' ? library.find((v) => v.id === s.id) : s.src === 'new' ? fresh : null;
+  const activeV = versions.find((v) => v.active);
+  if (activeV) sel = { src: 'version', id: activeV.id }; // the plan the calendar was filled from, on any device
   if (!findPlan(sel)) sel = versions[0] ? { src: 'version', id: versions[0].id } : library[0] ? { src: 'library', id: library[0].id } : null;
   const plan = () => findPlan(sel);
   const studentPaces = (p) => p?.student?.t42 ? { 5: hms(p.student.t5), 10: hms(p.student.t10), 21: hms(p.student.t21), 42: hms(p.student.t42) } : null;
@@ -160,6 +167,13 @@
   let PACE = activePaces();
   let layout = store.get('layout', ['easy', 'easy', 'w1', 'rest', 'w2', 'easy', 'long']); // Mon..Sun
   let volume = null; // start volume, km per week; null = as in the plan
+  // a saved version carries the athlete's settings: first-week volume, which day holds which workout, paces
+  function applyVersion(v) {
+    const L = v?.student?.layout; if (Array.isArray(L) && L.length === 7) layout = L.slice();
+    const vol = +v?.student?.volume; volume = vol && vol !== +firstKmOf(v) ? vol : null;
+  }
+  const firstKmOf = (p) => p?.plan?.weeks?.slice().sort((a, b) => a.week - b.week)[0]?.km || 0;
+  if (sel?.src === 'version') applyVersion(findPlan(sel));
   let maxrecov = 20;
 
   /* ================= workout text ================= */
@@ -258,12 +272,19 @@
   function fillPreview() {
     const p = plan(); if (!p || !race) return null;
     const weeks = p.plan.weeks.slice().sort((a, b) => a.week - b.week).map((w) => layWeek(w, p));
-    const until = fillSpan === '2w' ? add(today, 14) : '9999-12-31';
-    const all = weeks.flatMap((w) => w.days).filter((t) => t.d > today && t.d <= until && t.d !== race.d); // the main race day stays as set on «Настройка плана»
+    const base = weeks.flatMap((w) => w.days).filter((t) => t.d > today && t.d !== race.d); // the main race day stays as set on «Настройка плана»
     const same = (t) => { const x = days.get(t.d); return x && +x.type === +t.typtrain && +x.target === +t.prekm && String(x.comment || '').trim() === String(t.task).trim(); };
-    const keep = keepExisting ? all.filter((t) => isRun(days.get(t.d))) : [];
-    const write = all.filter((t) => !keep.includes(t) && !same(t)); // a day that already says exactly this is not sent again
-    return { weeks, write, keep };
+    const pick = (from, until) => {
+      const all = base.filter((t) => t.d >= from && t.d <= until);
+      const keep = keepExisting ? all.filter((t) => isRun(days.get(t.d))) : [];
+      return { keep, write: all.filter((t) => !keep.includes(t) && !same(t)) }; // a day that already says exactly this is not sent again
+    };
+    if (fillSpan !== '2w') return { weeks, ...pick(add(today, 1), '9999-12-31'), span: null };
+    // two running weeks: the first pair from the next running week on that still has something to write,
+    // so after a fill the same button offers the next two weeks
+    const end = raceEnd || add(runStart, 13);
+    for (let st = runStart; st <= end; st = add(st, 7)) if (pick(st, add(st, 6)).write.length) return { weeks, ...pick(st, add(st, 13)), span: [st, add(st, 13)] };
+    return { weeks, ...pick(runStart, add(runStart, 13)), span: [runStart, add(runStart, 13)] };
   }
 
   /* ================= colours: 20 palettes from the taste-skill library ================= */
@@ -403,6 +424,7 @@
     fill.busy = true; fill.err = ''; fill.progress = 'Проверяю дневник…'; render();
     try { await loadRange(add(today, 1), raceEnd || add(today, 1)); } catch { /* the preview below still uses what is loaded */ }
     const f = fillPreview(); if (!f || !f.write.length) { fill = { confirm: false, busy: false, err: '', progress: '' }; return render(); }
+    fill.snap = f.write.slice();
     const weeks = []; for (const t of f.write) { const g = last(weeks); if (g && g.mon === monday(t.d)) g.list.push(t); else weeks.push({ mon: monday(t.d), list: [t] }); }
     let done = 0, upto = null, error = null;
     for (let i = 0; i < weeks.length; i++) {
@@ -412,27 +434,43 @@
     await loadRange(f.write[0].d, last(f.write).d, true).catch(() => {});
     const a = f.write[0].d, b = last(f.write).d, n = f.write.length;
     if (error) {
+      if (done) await storePlan({ filled: { from: a, to: upto } }).catch(() => {}); // what did get written is still linked to the plan
       fill = { confirm: false, busy: false, progress: '', err: done
         ? `Записано ${done} ${plural(done, 'день', 'дня', 'дней')} из ${n}, по ${dayLbl(upto)}. Дальше сервер не принял задачи (${error.message}). Нажмите «Заполнить календарь» ещё раз, чтобы дописать остальное.`
         : `Сервер не принял задачи (${error.message}). В дневнике ничего не изменилось.` };
       return render();
     }
+    fill.progress = 'Сохраняю план в профиль…'; render();
+    let saved = true; try { await storePlan({ filled: { from: a, to: b } }); } catch { saved = false; }
     fill = { confirm: false, busy: false, err: '', progress: '' };
-    flash = `${LIVE ? 'Календарь заполнен' : 'Демо: календарь заполнен только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(a, b)}.`;
+    flash = `${LIVE ? 'Календарь заполнен' : 'Демо: календарь заполнен только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(a, b)}.${saved ? ' План и настройки сохранены в профиле.' : ' План в профиль сохранить не удалось, задачи при этом записаны.'}`;
     wk = monday(a);
     render();
   }
-  async function saveVersion() {
-    const p = plan(); if (!p) return;
-    const weeksN = p.plan.weeks.length, first = p.plan.weeks.slice().sort((a, b) => a.week - b.week)[0];
+  // writes the chosen plan with the current settings to the profile and marks it active; re-reads the list first,
+  // so a version the coach saved meanwhile in calc5 is kept
+  async function storePlan({ asNew = false, filled = null } = {}) {
+    const p = plan(); if (!p) return null;
+    let list = versions;
+    try { const r = await get(`/apiweb/userparam.php?action=get&param[]=studentPlans${id}`); list = parseList(r.param?.[`studentPlans${id}`]); } catch { /* keep what we have */ }
+    const first = p.plan.weeks.slice().sort((a, b) => a.week - b.week)[0];
+    const keepId = !asNew && sel.src === 'version' ? p.id : null, old = keepId ? list.find((v) => v.id === keepId) : null;
+    const f0 = old?.filled, f = filled ? { at: new Date().toISOString(), from: f0?.from && f0.from < filled.from ? f0.from : filled.from, to: f0?.to && f0.to > filled.to ? f0.to : filled.to } : f0 || null;
     const v = {
-      id: Math.random().toString(36).slice(2, 16), name: `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${weeksN} нед.`, savedAt: new Date().toISOString(),
-      templateId: sel.src === 'library' ? p.id : p.templateId || null, distance: p.distance || null, plan: { weeks: p.plan.weeks },
-      student: { raceDate: race?.d || null, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], volume: String(volume || firstKm(p)) },
+      ...(old || {}), id: keepId || Math.random().toString(36).slice(2, 16),
+      name: old?.name || `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${p.plan.weeks.length} нед.`, savedAt: new Date().toISOString(),
+      templateId: old?.templateId || (sel.src === 'library' ? p.id : p.templateId || null), distance: p.distance || null, plan: { weeks: p.plan.weeks },
+      student: { ...(old?.student || {}), raceDate: race?.d || null, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], volume: String(volume || firstKm(p)), layout: layout.slice() },
+      active: true, filled: f,
     };
-    const list = [v, ...versions];
-    const fd = new FormData(); fd.append('action', 'set'); fd.append('id', id); fd.append(`param[studentPlans${id}]`, JSON.stringify(list));
-    try { await post('/apiweb/userparam.php', fd); versions = list; sel = { src: 'version', id: v.id }; persistSel(); flash = `Версия «${v.name}» сохранена. Её видно и на странице «План ученика».`; }
+    const next = [v, ...list.filter((x) => x.id !== v.id).map((x) => { const { active, ...rest } = x; return rest; })];
+    const fd = new FormData(); fd.append('action', 'set'); fd.append('id', id); fd.append(`param[studentPlans${id}]`, JSON.stringify(next));
+    await post('/apiweb/userparam.php', fd);
+    versions = next.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))); sel = { src: 'version', id: v.id }; persistSel(); fresh = null;
+    return v;
+  }
+  async function saveVersion() {
+    try { const v = await storePlan({ asNew: true }); if (v) flash = `Версия «${v.name}» сохранена в вашем профиле. Её видно и на странице «План ученика».`; }
     catch (e) { flash = `Версию не удалось сохранить (${e.message}).`; }
     render();
   }
@@ -458,7 +496,7 @@
   function chooserHTML() {
     const rows = (list, src) => list.length ? `<ul class="w-plans">${list.map((p) => {
       const on = sel && sel.src === src && sel.id === p.id, n = p.plan?.weeks?.length || 0, peak = Math.max(...(p.plan?.weeks || []).map((w) => +w.km || 0));
-      return `<li class="${on ? 'on' : ''}"><div class="w-pl"><b>${esc(p.name || 'Без названия')}</b><span class="w-muted num">${esc((p.distance || '').split(' · ')[0])}${p.distance ? ' · ' : ''}${n} ${plural(n, 'неделя', 'недели', 'недель')} · пик ${n1(peak)} км · ${p.savedAt ? `сохранён ${dayLbl(String(p.savedAt).slice(0, 10))}` : ''}${p.student?.t42 ? ` · свои темпа, T42 ${hms(p.student.t42)}` : ''}</span></div>${on ? '<span class="w-pill neutral">Выбран</span>' : `<button class="w-btn sm" data-act="psel" data-src="${src}" data-id="${esc(p.id)}">Выбрать</button>`}</li>`;
+      return `<li class="${on ? 'on' : ''}"><div class="w-pl"><b>${esc(p.name || 'Без названия')}</b><span class="w-muted num">${esc((p.distance || '').split(' · ')[0])}${p.distance ? ' · ' : ''}${n} ${plural(n, 'неделя', 'недели', 'недель')} · пик ${n1(peak)} км · ${p.savedAt ? `сохранён ${dayLbl(String(p.savedAt).slice(0, 10))}` : ''}${p.student?.t42 ? ` · свои темпа, T42 ${hms(p.student.t42)}` : ''}${p.filled?.to ? ` · в календаре по ${dayLbl(p.filled.to)}` : ''}</span></div>${on ? '<span class="w-pill neutral">Выбран</span>' : `<button class="w-btn sm" data-act="psel" data-src="${src}" data-id="${esc(p.id)}">Выбрать</button>`}</li>`;
     }).join('')}</ul>` : `<p class="w-note">${src === 'version' ? 'Сохранённых версий пока нет. Их сохраняет тренер на странице «План ученика» или вы сами кнопкой «Сохранить версию». Можно сделать новый план по описанию.' : 'В библиотеке пока пусто.'}</p>`;
     return `<div class="w-chooser">
       <div class="w-tabs" role="tablist" aria-label="Откуда взять план">
@@ -479,7 +517,7 @@
     const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
     if (!race) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. Выберите его на странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
     if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите версию, которую сохранил тренер, или сделайте новый по описанию: это займёт около минуты.</p>${chooserHTML()}</section>`;
-    const f = fillPreview(), src = sel.src === 'version' ? 'ваша версия' : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
+    const f = fillPreview(), src = sel.src === 'version' ? (p.active ? `в вашем профиле${p.filled?.to ? `, в календаре по ${dayLbl(p.filled.to)}` : ''}` : 'ваша версия') : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
     const ws = f.weeks, first = ws[0], lastW = last(ws);
     const curMon = monday(today);
     return `<section class="w-card" aria-labelledby="w-plan2-h">${head}
@@ -508,13 +546,13 @@
         </li>`;
       }).join('')}</ol>
       <div class="w-sum">
-        <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${[['2w', 'Ближайшие 2 недели'], ['race', 'До старта']].map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
-          <span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>${fillSpan === '2w' ? '<span class="w-muted">Поправьте задачи в календаре, а следующие недели допишите этой же кнопкой.</span>' : ''}
+        <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${[['2w', '2 беговые недели'], ['race', 'До старта']].map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
+          <span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>${fillSpan === '2w' && f.span ? `<span class="w-muted">Беговая неделя в S10 начинается ${DNIN[dow(f.span[0])]}. Поправьте задачи, а следующие две недели допишите этой же кнопкой.</span>` : ''}
           <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label></div>
         <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium ? '' : 'disabled'}>Заполнить календарь</button></div>
         ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи в календарь можно с премиум-подпиской S10, как на странице «Настройка плана».</p>'}
       </div>
-      ${fill.confirm ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')} в дневник?</b> ${range(f.write[0].d, last(f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'}</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}
+      ${fill.confirm && (fill.snap || f.write.length) ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${(fill.snap || f.write).length} ${plural((fill.snap || f.write).length, 'день', 'дня', 'дней')} в дневник?</b> ${range((fill.snap || f.write)[0].d, last(fill.snap || f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'} План и настройки сохранятся в вашем профиле.</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}
       ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}
     </section>`;
   }
@@ -719,7 +757,7 @@
     root.innerHTML = `
     ${LIVE ? '' : '<div class="w-demo" role="note">Демо на данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</div>'}
     <header class="w-top"><div class="w-topin">
-      <a class="w-wm" href="${LIVE ? '/' : 'https://s10.run/'}" aria-label="S10.run, главная" translate="no">S10<span>.run</span></a>
+      <a class="w-wm" href="${LIVE ? '/' : 'https://s10.run/'}" aria-label="S10.run, главная">${LOGO}</a>
       <span class="w-who">${esc(me.firstName)} ${esc(me.lastName)}</span>${SHOW_COLORS ? `<button class="w-btn sm" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}
     </div></header>
     <main class="w-main">
@@ -733,8 +771,7 @@
         <div class="w-stats">
           <div class="w-stat w-stat-wide"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span>
             ${W.plan ? `<div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${pct}%"></i></div><div class="w-track-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)} км</span></div>` : '<span class="s">на этой неделе ничего не запланировано</span>'}</div>
-          <div class="w-stat"><span class="w-lb">Длительная</span><span class="v num">${W.long ? `${n1(+W.long.x.target)}<small>км</small>` : '<span class="w-muted">—</span>'}</span><span class="s">${W.long ? `${DNF[W.long.i]}, ${dayLbl(W.long.d)}` : 'на этой неделе нет'}</span></div>
-          <div class="w-stat"><span class="w-lb">${race ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${race ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : 'не выбран'}</span></div>
+          <div class="w-stat w-stat-full"><span class="w-lb">${race ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${race ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : 'не выбран'}</span></div>
         </div>
       </section>
       ${calHTML()}
@@ -765,11 +802,11 @@
   .w-app :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .w-app a{color:var(--accent)}
   .w-demo{background:var(--accent-bg);color:var(--accent);font-size:13px;padding:8px max(24px,env(safe-area-inset-left));text-align:center}
-  .w-top{border-bottom:1px solid var(--border);background:var(--surface);padding:0 max(24px,env(safe-area-inset-right)) 0 max(24px,env(safe-area-inset-left))}
-  .w-topin{max-width:1112px;margin:0 auto;height:56px;display:flex;align-items:center;gap:20px}
-  .w-wm{font-weight:900;font-style:italic;font-size:22px;letter-spacing:-.02em;color:var(--accent)!important;text-decoration:none}
-  .w-wm span{font-weight:500}
-  .w-who{margin-left:auto;color:var(--muted);font-size:14px}
+  .w-top{background:#004aad;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
+  .w-topin{margin:0 auto;height:48px;display:flex;align-items:center;gap:20px;position:relative}
+  .w-wm{position:absolute;left:50%;top:8px;transform:translateX(-50%);display:block;height:32px;line-height:0}
+  .w-wm svg{height:32px;width:auto}
+  .w-who{margin-left:auto;color:#fff;font-size:14px;opacity:.92;max-width:calc(50% - 70px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .w-main{max-width:1160px;margin:0 auto;padding:28px max(24px,env(safe-area-inset-right)) 48px max(24px,env(safe-area-inset-left));display:grid;gap:24px}
   .w-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:12px 16px}
   .w-head h1{padding-top:3px}
@@ -821,7 +858,7 @@
   .w-today .w-tx{font-size:16px;max-width:56ch}
   .w-stats{display:grid;grid-template-columns:1fr 1fr;border-left:1px solid var(--rule)}
   .w-stat{padding:20px 24px;display:grid;gap:4px;align-content:start;border-top:1px solid var(--rule)}
-  .w-stat-wide{grid-column:1/-1;border-top:0}.w-stat:nth-child(3){border-left:1px solid var(--rule)}
+  .w-stat-wide{grid-column:1/-1;border-top:0}.w-stat-full{grid-column:1/-1}
   .w-stat .v{font-size:24px;line-height:1.2}
   .w-stat .v small{font-size:13px;color:var(--faint);margin-left:4px}
   .w-stat .s{color:var(--faint);font-size:13px}
@@ -934,13 +971,13 @@
   .w-f-wide{grid-column:1/-1}
   .w-gen .w-go{grid-column:1/-1}
   .w-pmeta{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-  .w-pset{display:grid;grid-template-columns:180px minmax(0,1fr);gap:16px;align-items:end}
+  .w-pset{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
   .w-pset input[data-p=volume]{width:80px;text-align:right}
   .w-pset .w-f-wide{grid-column:auto}
   .w-roles{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
   .w-role{display:grid;gap:4px}
   .w-role small{color:var(--faint);font-size:12px}
-  .w-app .w-role select{padding:0 22px 0 8px;font-size:13px;background-position:right 7px center}
+  .w-app .w-role select{width:100%;padding:0 20px 0 8px;font-size:13px;background-position:right 6px center;text-overflow:ellipsis}
   .w-wk{border-top:1px solid var(--rule)}
   .w-wk:first-child{border-top:0}
   .w-wkh{width:100%;display:grid;grid-template-columns:44px 120px 120px minmax(0,1fr) 72px 84px;gap:12px;align-items:center;padding:12px 20px;border:0;background:none;cursor:pointer;text-align:left}
@@ -982,7 +1019,7 @@
   .w-pal-prev em{position:absolute;right:36px;bottom:8px;width:22px;height:10px;border-radius:3px}.w-pal-prev em.k{right:8px}
   .w-pal-n{font-size:14px;font-weight:500}
   .w-pal small{color:var(--faint);font-size:12px}
-  @media (max-width:1000px){.w-duo{grid-template-columns:minmax(0,1fr)}.w-duo>.w-calc{order:-1}.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
+  @media (max-width:1000px){.w-duo{grid-template-columns:minmax(0,1fr)}.w-duo>.w-calc{order:-1}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
     .w-wkh{grid-template-columns:40px 110px minmax(0,1fr) 64px;grid-template-areas:"n d w k" "n p w s"}.w-wn{grid-area:n}.w-per{grid-area:p}.w-wworks{grid-area:w}.w-wkm{grid-area:k}.w-wkh>.w-pill,.w-wkh>.w-pill-sp{grid-area:s}
     .w-wdays{padding-left:20px}}
   @media (max-width:760px){.w-works{grid-template-columns:1fr}
@@ -992,7 +1029,7 @@
     .w-pset{grid-template-columns:1fr}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}
     .w-wkh{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w" "n p s"}.w-wkh>span:nth-child(2){grid-area:d}
     .w-gen{grid-template-columns:1fr}}
-  @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-top{padding:0 16px}.w-topin{gap:14px}.w-demo{padding:8px 16px}
+  @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-topin{gap:14px}.w-who{display:none}.w-demo{padding:8px 16px}
     .w-head h1{font-size:22px}.w-today{padding:20px}.w-stat{padding:16px}
     .w-cal{padding:0 6px}.w-cwh,.w-cw{grid-template-columns:26px repeat(7,minmax(0,1fr))}.w-cm{padding-left:4px}
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
@@ -1033,7 +1070,7 @@
       if (act === 'pal') { palId = a.dataset.id; store.set('palette', palId); applyPalette(); return render(); }
       if (act === 'pchoose') { chooser = !chooser; return render(); }
       if (act === 'ptab') { chooserTab = a.dataset.k; return render(); }
-      if (act === 'psel') { sel = { src: a.dataset.src, id: a.dataset.id }; persistSel(); chooser = false; volume = null; if (paceSrc === 'plan') paceSrc = null; reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } flash = `Выбран план «${plan().name}». Задания и темпа на странице пересчитаны.`; tab = 'plan'; return render(); }
+      if (act === 'psel') { sel = { src: a.dataset.src, id: a.dataset.id }; persistSel(); chooser = false; volume = null; if (sel.src === 'version') applyVersion(plan()); if (paceSrc === 'plan') paceSrc = null; reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } flash = `Выбран план «${plan().name}». Задания и темпа на странице пересчитаны.`; tab = 'plan'; return render(); }
       if (act === 'gen') return runGenerate();
       if (act === 'wopen') { const w = +a.dataset.w; openWeek = openWeek === w ? NaN : w; return render(); }
       if (act === 'fillask') { fill.confirm = true; fill.err = ''; return render(); }
