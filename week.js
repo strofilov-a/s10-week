@@ -1,0 +1,883 @@
+/* S10 «Моя неделя»: everything on one page.
+   Today and this week · the paces · the master plan (your saved versions, the library, or a new one from a prompt) laid
+   over the dates to the race · «Заполнить календарь» for the whole plan · «Запланировать неделю» for one week (calc3).
+   On s10.run it reads and writes the logged-in user's data through the site's own API.
+   Anywhere else (GitHub Pages, a local file) it runs as a demo on window.S10_FIXTURES and never sends anything. */
+(async () => {
+  /* ================= data source: live on s10.run, demo elsewhere ================= */
+  const LIVE = /(^|\.)s10\.run$/.test(location.hostname) && !window.S10_FORCE_DEMO;
+  const FX = window.S10_FIXTURES || null;
+  const ORIGIN = location.origin;
+  const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  async function get(u) {
+    if (LIVE) { const r = await fetch(ORIGIN + u, { credentials: 'include' }); if (!r.ok) throw new Error(r.status); return r.json(); }
+    if (!FX) throw new Error('нет демо-данных');
+    await wait(100);
+    if (u.includes('/student/self/info')) return FX.me;
+    if (u.includes('task.php?action=main')) return FX.main;
+    if (u.includes('studentMainStart')) return FX.startParam;
+    if (u.includes('planresults.php')) return FX.results;
+    if (u.startsWith('/student?')) return FX.diary;
+    if (u.includes('tasktemplates.php')) return FX.templates;
+    if (u.includes('param[]=studentPlans')) return { param: { [`studentPlans${FX.me.id}`]: JSON.stringify(FX.versions) } };
+    if (u.includes('param[]=planTemplates')) return { param: { planTemplates: JSON.stringify(FX.library) } };
+    if (u.includes('calc.php') && u.includes('step=2')) return demoSchedule(new URLSearchParams(u.split('?')[1]));
+    if (u.includes('calc.php')) return FX.base;
+    throw new Error('нет демо-данных для ' + u);
+  }
+  async function post(u, fd) {
+    if (LIVE) { const r = await fetch(ORIGIN + u, { method: 'POST', body: fd, credentials: 'include' }); const b = await r.json().catch(() => ({})); if (!r.ok || b.error) throw new Error(b.error || r.status); return b; }
+    await wait(250);
+    if (u.includes('task.php')) {
+      for (const t of JSON.parse(fd.get('tasks'))) {
+        const list = FX.diary.diaryTasksInfo, old = list.find((x) => x.date === t.d);
+        const row = { date: t.d, type: +t.typtrain, comment: t.task, target: +t.prekm, tracks: old?.tracks || [] };
+        if (old) Object.assign(old, row); else list.push(row);
+      }
+    }
+    if (u.includes('userparam.php')) { for (const [k, v] of fd.entries()) if (k.startsWith('param[studentPlans')) FX.versions = JSON.parse(v); }
+    return { ok: true };
+  }
+  async function generatePlanText(body, onProgress) {
+    if (!LIVE) { const txt = FX.generated; let out = ''; for (const line of txt.split('\n')) { out += line + '\n'; onProgress(out); await wait(60); } return out; }
+    const r = await fetch('https://s10.run/t7/plan-templates/public/api/generate.php', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error(b.error || `ошибка ${r.status}`); }
+    if (!r.body) { const t = await r.text(); onProgress(t); return t; }
+    const rd = r.body.getReader(), dec = new TextDecoder(); let out = '';
+    for (;;) { const { done, value } = await rd.read(); if (done) break; out += dec.decode(value, { stream: true }); onProgress(out); }
+    return out + dec.decode();
+  }
+  function demoSchedule(q) {
+    const start = FX.base.dselect[q.get('dselect')]?.date || FX.base.dselect[2].date;
+    const w = (n) => q.get('task' + n) ? [+q.get('typtrain' + n), q.get('task' + n), +q.get('prekm' + n)] : [1, '10 км (пульс до 140)', 10];
+    const plan = [w(1), [1, '8 км (пульс до 140)', 8], w(2), [1, 'Потрусите медленно в удовольствие без контроля расстояния и темпа', 0], [5, '10 км (пульс до 150)', 10], [0, 'отдых', 0], [1, '8 км (пульс до 140)', 8]];
+    const task = {};
+    plan.forEach(([t, txt, km], i) => { const d = add(start, i); task[d] = { d, typtrain: t, task: txt, prekm: km }; });
+    const prev = FX.diary.diaryTasksInfo.find((x) => x.date === add(start, -1));
+    return { task, pretask: prev && prev.date > today ? { [prev.date]: { d: prev.date, typtrain: prev.type, task: prev.comment, prekm: prev.target } } : {}, tasksummary: { 'за последние 7 дней': { km0: 20, km1: 48 } } };
+  }
+
+  /* ================= words and dates ================= */
+  const TYPES = { 0: 'Тренировка', 1: 'Восстановительная', 2: 'Развивающая', 3: 'Интервальная', 4: 'Повторная', 5: 'Длительная', 6: 'Соревнование' };
+  const SHORT = { 1: 'Восст.', 2: 'Разв.', 3: 'Интерв.', 4: 'Повт.', 5: 'Длит.', 6: 'Старт' };
+  const LEVEL = { 0: 1, 1: 1, 2: 2, 3: 3, 4: 3, 5: 2, 6: 3 };
+  const OTHER = { HIKING: 'Поход', CYCLING: 'Велосипед', WALKING: 'Ходьба', SWIMMING: 'Плавание', STRENGTH_TRAINING: 'Силовая' };
+  const TYPE_BY_NAME = { 'интервальная': 3, 'развивающая': 2, 'повторная': 4, 'длительная': 5, 'восстановительная': 1, 'соревнование': 6, 'силовая': 1 };
+  const DISTANCES = ['Марафон · 42.2 км', 'Полумарафон · 21.1 км', '10 км', '5 км', 'Паркран · 5 км'];
+  const DN = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const DNF = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье'];
+  const DNS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+  const MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  const MONS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const d8 = (s) => new Date(s + 'T12:00:00Z'), iso = (d) => d.toISOString().slice(0, 10);
+  const add = (s, n) => { const d = d8(s); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
+  const dow = (s) => (d8(s).getUTCDay() + 6) % 7;
+  const monday = (s) => add(s, -dow(s));
+  const n1 = (v) => (Math.round(v * 10) / 10).toLocaleString('ru-RU');
+  const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 12 || h > 14) ? b : c; };
+  const dayLbl = (s) => { const d = d8(s); return `${d.getUTCDate()} ${MONS[d.getUTCMonth()]}`; };
+  const range = (a, b) => d8(a).getUTCMonth() === d8(b).getUTCMonth() ? `${d8(a).getUTCDate()}–${d8(b).getUTCDate()} ${MONS[d8(b).getUTCMonth()]}` : `${dayLbl(a)} – ${dayLbl(b)}`;
+  const wLabel = (k) => { const a = d8(k), b = d8(add(k, 6)); return a.getUTCMonth() === b.getUTCMonth() ? `${a.getUTCDate()}–${b.getUTCDate()} ${MON[b.getUTCMonth()]}` : `${a.getUTCDate()} ${MONS[a.getUTCMonth()]} – ${b.getUTCDate()} ${MONS[b.getUTCMonth()]}`; };
+  const hms = (t) => String(t || '').replace(/^0(\d):/, '$1:');
+  const store = { get(k, d) { try { const v = localStorage.getItem('s10week.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('s10week.' + k, JSON.stringify(v)); } catch { /* storage blocked */ } } };
+
+  /* ================= load ================= */
+  const me = await get('/apiweb/student/self/info/');
+  const id = new URLSearchParams(location.search).get('id') || me.id;
+  const [main, startParam, results, spRes, libRes] = await Promise.all([
+    get(`/apiweb/task.php?action=main&id=${id}`).catch(() => ({})),
+    get(`/apiweb/userparam.php?action=get&id=${id}&param[]=studentMainStart`).catch(() => ({})),
+    get(`/apiweb/planresults.php?action=list&id=${id}&limit=31`).catch(() => []),
+    get(`/apiweb/userparam.php?action=get&param[]=studentPlans${id}`).catch(() => ({})),
+    get('/apiweb/userparam.php?action=get&param[]=planTemplates').catch(() => ({})),
+  ]);
+  const parseList = (v) => { try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
+  let versions = parseList(spRes.param?.[`studentPlans${id}`]).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+  const library = parseList(libRes.param?.planTemplates).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+  const race = main.main || null;
+  const raceMon = race ? monday(race.d) : null;
+  const startId = +(startParam.param?.studentMainStart || 0);
+  const paceRow = results.find((r) => r.i === startId) || results.find((r) => r.prehms) || results[0] || null;
+  const PACE_S10 = paceRow?.t ? Object.fromEntries(Object.entries(paceRow.t).map(([k, v]) => [k, hms(v)])) : null;
+  const today = iso(new Date(((me.nowmsk || Date.now() / 1000) + 3 * 3600) * 1000)); // the site counts days in Moscow time
+  const days = new Map();
+  async function loadUntil(lastDay) {
+    const ts = Math.floor(d8(add(lastDay, 1)).getTime() / 1000);
+    const res = await get(`/student?user_id=${id}&last_date=${ts}&limit=60`);
+    for (const x of res.diaryTasksInfo || []) days.set(x.date, x);
+  }
+  let wk = monday(today);
+  const horizon = () => { const a = add(wk, 13), b = raceMon ? add(raceMon, 6) : a; return a > b ? a : b; };
+  await loadUntil(horizon());
+
+  /* ================= the chosen plan and the paces ================= */
+  // sel: { src: 'version' | 'library' | 'new', id } ; the newly generated plan lives in memory until it is saved
+  let fresh = null;
+  let sel = store.get(`plan.${id}`, null);
+  const findPlan = (s) => !s ? null : s.src === 'version' ? versions.find((v) => v.id === s.id) : s.src === 'library' ? library.find((v) => v.id === s.id) : s.src === 'new' ? fresh : null;
+  if (!findPlan(sel)) sel = versions[0] ? { src: 'version', id: versions[0].id } : library[0] ? { src: 'library', id: library[0].id } : null;
+  const plan = () => findPlan(sel);
+  const studentPaces = (p) => p?.student?.t42 ? { 5: hms(p.student.t5), 10: hms(p.student.t10), 21: hms(p.student.t21), 42: hms(p.student.t42) } : null;
+  let paceSrc = store.get(`paceSrc.${id}`, null);
+  let PACE_OWN = store.get(`paceOwn.${id}`, null);
+  function activePaces() {
+    if (paceSrc === 'own' && PACE_OWN) return PACE_OWN;
+    if (paceSrc === 's10' && PACE_S10) return PACE_S10;
+    return studentPaces(plan()) || PACE_S10 || PACE_OWN;
+  }
+  const paceLabel = () => (paceSrc === 'own' && PACE_OWN) ? 'свои' : (paceSrc === 's10' && PACE_S10) ? `прогноз S10 на ${race?.location || 'старт'}` : studentPaces(plan()) ? `из плана «${plan().name}»` : PACE_S10 ? `прогноз S10 на ${race?.location || 'старт'}` : 'не заданы';
+  let PACE = activePaces();
+  let layout = store.get('layout', ['easy', 'easy', 'w1', 'rest', 'w2', 'easy', 'long']); // Mon..Sun
+  let volume = null; // start volume, km per week; null = as in the plan
+  let maxrecov = 20;
+
+  /* ================= workout text ================= */
+  const PRE = /[ТT]\s*(42|21|10|5)(?:\s*([+\-−])\s*(\d+))?/g;
+  const toSec = (s) => { const [m, x] = String(s).split(':').map(Number); return m * 60 + x; };
+  const fmtSec = (s) => Math.floor(s / 60) + ':' + String(Math.round(s) % 60).padStart(2, '0'); // taste-skill-ignore: a pace, not a counter
+  const plain = (t) => (PACE ? String(t).replace(PRE, (m, d, sg, n) => { let s = toSec(PACE[d]); if (sg) s += (sg === '+' ? 1 : -1) * +n; return fmtSec(s); }) : String(t))
+    .replace(/(\d)\s*[xх×]\s*(\d)/g, '$1×$2').replace(/(\d)(км|м)(?=[\s,;.]|$)/g, '$1 $2').replace(/\s{2,}/g, ' ').trim();
+  const isPaceOnly = (t) => /^\s*\d{1,2}:\d{2}(\s*[-–]\s*\d{1,2}:\d{2})?\s*$/.test(t || '');
+  function taskHTML(t) {
+    if (!String(t || '').trim()) return '';
+    if (isPaceOnly(t)) return `<p class="w-tx">Темп <b>${esc(t.trim().replace(/\s*-\s*/, '–'))}</b> мин/км</p>`;
+    const parts = plain(t).split(/;\s*|\s\+\s/).map((p) => p.trim()).filter(Boolean);
+    const line = (p) => esc(p.charAt(0).toUpperCase() + p.slice(1)).replace(/(\d{1,2}:\d{2}(?:\s*[-–]\s*\d{1,2}:\d{2})?)/g, '<b>$1</b>');
+    return parts.length > 1 ? `<ul class="w-tx">${parts.map((p) => `<li>${line(p)}</li>`).join('')}</ul>` : `<p class="w-tx">${line(parts[0])}</p>`;
+  }
+  const isRun = (x) => x && (+x.target > 0 || !!(x.comment || '').trim() && !/^отдых\.?$/i.test((x.comment || '').trim()));
+  const runKm = (x) => (x?.tracks || []).filter((t) => t.type === 'run').reduce((a, t) => a + (+t.km || 0), 0);
+  const others = (x) => (x?.tracks || []).filter((t) => t.type !== 'run').map((t) => `${OTHER[t.json?.subtype] || 'Активность'} ${n1(+t.km || 0)} км`);
+  const glyph = (l, isRace) => `<span class="w-ig" data-l="${l}" ${isRace ? 'data-race' : ''} aria-hidden="true"><i></i><i></i><i></i></span>`;
+  function week(k) {
+    const list = [...Array(7)].map((_, i) => { const d = add(k, i); return { d, i, x: days.get(d) || null }; });
+    return {
+      list,
+      plan: list.reduce((a, r) => a + (+r.x?.target || 0), 0),
+      done: list.reduce((a, r) => a + runKm(r.x), 0),
+      left: list.filter((r) => r.d >= today && isRun(r.x) && !(r.d === today && runKm(r.x) > 0)).length,
+      long: list.filter((r) => r.x?.type === 5).sort((a, b) => b.x.target - a.x.target)[0] || null,
+    };
+  }
+
+  /* ================= the plan laid over the dates ================= */
+  // week −1 is the race week; week −n starts n−1 weeks before it
+  const weekMon = (w) => add(raceMon, (w + 1) * 7);
+  const firstKm = (p) => p?.plan?.weeks?.slice().sort((a, b) => a.week - b.week)[0]?.km || 0;
+  const scaleK = (p) => { const f = firstKm(p); return volume && f ? volume / f : 1; };
+  const easyText = () => (PACE ? `${fmtSec(toSec(PACE[42]) + 55)}-${fmtSec(toSec(PACE[42]) + 75)}` : 'Лёгкий бег');
+  function layWeek(w, p) {
+    const mon = weekMon(w.week), k = scaleK(p);
+    const target = Math.round(w.km * k);
+    const slots = w.slots.map((s) => ({ t: TYPE_BY_NAME[s.type] || 0, desc: s.desc, km: +s.km }));
+    const raceSlot = slots.find((s) => s.t === 6);
+    const roles = layout.slice();
+    let raceDow = -1;
+    if (raceSlot && race && monday(race.d) === mon) {
+      // race week: nothing after the race, rest the day before, the two works on the earliest free days before that
+      raceDow = dow(race.d);
+      for (let i = 0; i < 7; i++) {
+        if (i > raceDow) roles[i] = 'rest';
+        else if (i === raceDow) roles[i] = 'race';
+        else if (i === raceDow - 1) roles[i] = 'rest';
+        else if (roles[i] === 'w1' || roles[i] === 'w2' || roles[i] === 'long') roles[i] = 'easy';
+      }
+      const free = [1, 2, 0, 3, 4].filter((i) => i < raceDow - 1);
+      if (free[0] != null && slots[0] && slots[0] !== raceSlot) roles[free[0]] = 'w1';
+      if (free[1] != null && slots[1] && slots[1] !== raceSlot) roles[free[1]] = 'w2';
+    }
+    const out = [];
+    const work = { w1: slots[0], w2: slots[1], long: slots.find((s) => s.t === 5) || slots[2], race: raceSlot };
+    const used = roles.map((r) => (work[r] ? work[r].km : 0)).reduce((a, b) => a + b, 0);
+    const easyDays = roles.filter((r) => r === 'easy').length;
+    const rest = Math.max(0, target - used);
+    const easyKm = easyDays ? Math.min(maxrecov, Math.max(rest ? 6 : 0, Math.round(rest / easyDays))) : 0;
+    roles.forEach((r, i) => {
+      const d = add(mon, i), s = work[r];
+      if (s) out.push({ d, typtrain: s.t, task: plain(s.desc), prekm: s.km, location: s.t === 6 ? (race?.location || '') : '', prediction: s.t === 6 ? hms(race?.prediction || '') : '' });
+      else if (r === 'easy' && easyKm) out.push({ d, typtrain: 1, task: easyText(), prekm: easyKm, location: '', prediction: '' });
+      else out.push({ d, typtrain: 0, task: 'отдых', prekm: 0, location: '', prediction: '' });
+    });
+    return { mon, target, total: out.reduce((a, t) => a + t.prekm, 0), days: out };
+  }
+  let keepExisting = true;
+  function fillPreview() {
+    const p = plan(); if (!p || !race) return null;
+    const weeks = p.plan.weeks.slice().sort((a, b) => a.week - b.week).map((w) => layWeek(w, p));
+    const all = weeks.flatMap((w) => w.days).filter((t) => t.d > today);
+    const keep = keepExisting ? all.filter((t) => isRun(days.get(t.d))) : [];
+    const write = all.filter((t) => !keep.includes(t));
+    return { weeks, write, keep };
+  }
+
+  /* ================= colours: 20 palettes from the taste-skill library ================= */
+  const PALETTES = [{"id": "s10", "name": "S10 как сейчас", "rec": false, "bg": "#f4f5f7", "surface": "#ffffff", "ink": "#14161a", "muted": "#565b66", "accent": "#2449c6", "accentInk": "#ffffff", "dark": false, "key": "#2f5d50", "keyInk": "#ffffff"}, {"id": "cool-white-slate", "name": "Иней и сланец", "rec": true, "bg": "#f7f9fa", "surface": "#ecf0f2", "ink": "#1f3038", "muted": "#5d6b72", "accent": "#0d7480", "accentInk": "#ffffff", "dark": false, "key": "#b84a32", "keyInk": "#ffffff"}, {"id": "white-link-blue", "name": "Лист, синяя и красная ручка", "rec": true, "bg": "#ffffff", "surface": "#f4f4f4", "ink": "#111111", "muted": "#6b6b6b", "accent": "#1a4be0", "accentInk": "#ffffff", "dark": false, "key": "#d62b1f", "keyInk": "#ffffff"}, {"id": "graphite-safety-orange", "name": "Графит, оранжевый, лёд", "rec": true, "bg": "#18191b", "surface": "#222427", "ink": "#eff0f1", "muted": "#9c9ea3", "accent": "#ff4a1f", "accentInk": "#18191b", "dark": true, "key": "#4cc3d9", "keyInk": "#111111"}, {"id": "cool-grey-cobalt", "name": "Серый, кобальт, киноварь", "rec": false, "bg": "#eef0f3", "surface": "#e2e5ea", "ink": "#0b0c0e", "muted": "#5d6470", "accent": "#1f2de6", "accentInk": "#ffffff", "dark": false, "key": "#c43a0a", "keyInk": "#ffffff"}, {"id": "blue-red-black", "name": "Белый, ультрасиний, жёлтый", "rec": false, "bg": "#ffffff", "surface": "#f3f3f3", "ink": "#0a0a0a", "muted": "#6b6b6b", "accent": "#2436ff", "accentInk": "#ffffff", "dark": false, "key": "#f2c200", "keyInk": "#111111", "keyData": "#2436ff"}, {"id": "stone-blueprint", "name": "Камень, чертёж, красный маркер", "rec": false, "bg": "#dfdedb", "surface": "#d3d2ce", "ink": "#26251e", "muted": "#5f5d55", "accent": "#2456d6", "accentInk": "#ffffff", "dark": false, "key": "#c8341f", "keyInk": "#ffffff"}, {"id": "mint-pink-accounts", "name": "Белый, бутылочный, розовый", "rec": false, "bg": "#f8f8f8", "surface": "#eeeeee", "ink": "#0a0a0a", "muted": "#6a6a6a", "accent": "#1f6b3a", "accentInk": "#ffffff", "dark": false, "key": "#d6336c", "keyInk": "#ffffff"}, {"id": "teal-on-paper", "name": "Бирюза и коралл на бумаге", "rec": false, "bg": "#f7f9f8", "surface": "#ebf0ee", "ink": "#06525c", "muted": "#2f737d", "accent": "#06525c", "accentInk": "#f7f9f8", "dark": false, "key": "#c2410c", "keyInk": "#ffffff"}, {"id": "three-stones", "name": "Три камня и глина", "rec": false, "bg": "#eeecea", "surface": "#e4e1dd", "ink": "#333231", "muted": "#6b6763", "accent": "#5c6b54", "accentInk": "#ffffff", "dark": false, "key": "#8a5a44", "keyInk": "#ffffff"}, {"id": "olive-on-bone", "name": "Олива и кирпич на кости", "rec": false, "bg": "#ecebe7", "surface": "#e1dfd9", "ink": "#38450f", "muted": "#5d683a", "accent": "#38450f", "accentInk": "#ecebe7", "dark": false, "key": "#b5452b", "keyInk": "#ffffff"}, {"id": "moss-sand", "name": "Песок, мох, сумерки", "rec": false, "bg": "#ddd6c6", "surface": "#d2cab8", "ink": "#2a2a26", "muted": "#59574e", "accent": "#4f6238", "accentInk": "#ffffff", "dark": false, "key": "#2f4a6d", "keyInk": "#ffffff"}, {"id": "green-mat-chocolate", "name": "Кость, зелень, шоколад", "rec": false, "bg": "#e5e1d8", "surface": "#dad5ca", "ink": "#2a1d17", "muted": "#6b5b51", "accent": "#456f3a", "accentInk": "#ffffff", "dark": false, "key": "#5a3a2a", "keyInk": "#ffffff"}, {"id": "card-pastels", "name": "Светлый, малиновый, бирюза", "rec": false, "bg": "#f7f7f5", "surface": "#ebebe8", "ink": "#000000", "muted": "#666662", "accent": "#d0106f", "accentInk": "#ffffff", "dark": false, "key": "#0f7b6c", "keyInk": "#ffffff"}, {"id": "cobalt-on-sand", "name": "Кобальт и терракота на песке", "rec": false, "bg": "#e6dbc7", "surface": "#ddd0b9", "ink": "#062b8a", "muted": "#3a5aa8", "accent": "#062b8a", "accentInk": "#e6dbc7", "dark": false, "key": "#a8321e", "keyInk": "#ffffff"}, {"id": "oxblood-grey", "name": "Бордо, серый, петроль", "rec": false, "bg": "#e2e2e2", "surface": "#d6d6d6", "ink": "#7d0c14", "muted": "#7a4a4e", "accent": "#7d0c14", "accentInk": "#e2e2e2", "dark": false, "key": "#2b4c5e", "keyInk": "#ffffff"}, {"id": "blue-black-cornflower", "name": "Ночь, васильковый, янтарь", "rec": false, "bg": "#0a0d14", "surface": "#131824", "ink": "#e9edf3", "muted": "#8891a1", "accent": "#5a9bfc", "accentInk": "#0a0d14", "dark": true, "key": "#f5b942", "keyInk": "#111111"}, {"id": "green-black-bone", "name": "Тёмно-зелёный, кость, персик", "rec": false, "bg": "#161c1a", "surface": "#1f2725", "ink": "#e3e2da", "muted": "#8e948d", "accent": "#9fc7b8", "accentInk": "#161c1a", "dark": true, "key": "#e8a87c", "keyInk": "#111111"}, {"id": "charcoal-room-sage", "name": "Уголь, шалфей, охра", "rec": false, "bg": "#1c1c1c", "surface": "#262626", "ink": "#f1f1ef", "muted": "#9a9b96", "accent": "#8fa68e", "accentInk": "#1c1c1c", "dark": true, "key": "#d9a96a", "keyInk": "#111111"}, {"id": "warm-black-gold", "name": "Чёрный, золото, терракота", "rec": false, "bg": "#0c0a08", "surface": "#181512", "ink": "#ffffff", "muted": "#8f8a84", "accent": "#c9a45a", "accentInk": "#0c0a08", "dark": true, "key": "#d9765f", "keyInk": "#111111"}];
+  // palette chosen 31.10.2026: №3 «Лист, синяя и красная ручка». ?colors brings the picker back.
+  const DEFAULT_PAL = 'white-link-blue';
+  const SHOW_COLORS = new URLSearchParams(location.search).has('colors');
+  let palId = SHOW_COLORS ? store.get('palette', DEFAULT_PAL) : DEFAULT_PAL, colorsOpen = false;
+  function applyPalette() {
+    const P = PALETTES.find((x) => x.id === palId) || PALETTES.find((x) => x.id === DEFAULT_PAL);
+    const mix = (a, pct, b) => `color-mix(in srgb, ${a} ${pct}%, ${b})`;
+    const card = P.id === 's10' ? '#ffffff' : P.dark ? P.surface : (P.bg.toLowerCase() === '#ffffff' ? '#ffffff' : mix(P.bg, 30, '#ffffff'));
+    const ground = P.id === 's10' ? P.bg : P.dark ? P.bg : (P.bg.toLowerCase() === '#ffffff' ? P.surface : P.bg);
+    const v = {
+      '--ground': ground, '--surface': card, '--field': P.dark ? mix(P.ink, 6, card) : '#ffffff', '--soft': mix(P.ink, 3, card),
+      '--border': mix(P.ink, 13, card), '--rule': mix(P.ink, 7, card), '--control': mix(P.ink, 24, card),
+      '--text': P.ink, '--muted': P.muted, '--faint': P.muted, '--accent': P.accent, '--accent-bg': mix(P.accent, P.dark ? 22 : 12, card), '--accent-soft': mix(P.accent, P.dark ? 10 : 5, card),
+      '--glyph-off': mix(P.ink, 16, card), '--primary': P.key, '--primary-ink': P.keyInk, '--primary-hover': mix(P.key, 86, P.dark ? '#ffffff' : '#000000'), '--key': P.keyData || P.key,
+      '--ok-bg': P.dark ? mix('#3fc07a', 20, card) : '#dcfae5', '--ok': P.dark ? '#86e3ae' : '#04250e',
+      '--bad-bg': P.dark ? mix('#e5566f', 22, card) : '#ffedea', '--bad': P.dark ? '#ff9aa9' : '#831c1e',
+      '--neutral-bg': mix(P.ink, 9, card), '--neutral': P.ink, '--warn-bg': P.dark ? mix('#d9a441', 16, card) : '#fffbeb',
+    };
+    for (const [k, val] of Object.entries(v)) root.style.setProperty(k, val);
+    root.style.colorScheme = P.dark ? 'dark' : 'light';
+    document.documentElement.style.background = ground;
+  }
+  function colorsPanel() {
+    const cur = PALETTES.find((x) => x.id === palId) || PALETTES[0];
+    return `<section class="w-card w-colors" aria-labelledby="w-col-h">
+      <div class="w-ch"><h2 id="w-col-h">Цвета страницы</h2><span class="w-muted">Сейчас: ${esc(cur.name)}. В каждой палитре три цвета: фон, акцент (вкладки, сегодня, ссылки) и третий цвет (главные кнопки и полоски нагрузки). «Совет» — мои фавориты.</span><button class="w-btn sm" data-act="colors">Готово</button></div>
+      <ul class="w-pals">${PALETTES.map((x, i) => `<li><button class="w-pal ${x.id === palId ? 'on' : ''}" data-act="pal" data-id="${x.id}" aria-pressed="${x.id === palId}">
+        <span class="w-pal-prev" style="background:${x.bg}" aria-hidden="true"><i style="background:${x.dark ? x.surface : '#ffffff'}"><b style="background:${x.ink}"></b><b style="background:${x.muted};width:60%"></b><em style="background:${x.accent}"></em><em class="k" style="background:${x.key}"></em></i></span>
+        <span class="w-pal-n"><span class="num">${i + 1}.</span> ${esc(x.name)}</span>${x.rec ? '<span class="w-pill now w-rec">совет</span>' : ''}<small>${x.dark ? 'тёмная' : 'светлая'}${x.id === 's10' ? ', фирменная' : ''}</small></button></li>`).join('')}</ul>
+    </section>`;
+  }
+
+  /* ================= state of the panels ================= */
+  let mode = 'view', PL = null, flash = '';
+  let tab = store.get('tab', 'week');
+  let chooser = !plan(), chooserTab = versions.length ? 'version' : library.length ? 'library' : 'new';
+  let gen = { distance: plan()?.distance || DISTANCES[0], weeks: raceMon ? Math.max(1, Math.round((d8(raceMon) - d8(monday(add(today, 1)))) / 6048e5) + 1) : 8, prompt: '', busy: false, lines: 0, err: '' };
+  let fill = { confirm: false, busy: false, err: '' };
+  let openWeek = null;
+  const persistSel = () => { store.set(`plan.${id}`, sel && sel.src !== 'new' ? sel : null); };
+  const reprice = () => { PACE = activePaces(); };
+
+  // plan text from the generator: "## -5 | ПАНО | 80" then "-5, интервальная, описание, 14 км" (calc4's format)
+  function parsePlanText(text) {
+    const weeks = [], errors = []; let cur = null;
+    text.split('\n').forEach((raw, n) => {
+      const s = raw.trim(); if (!s || /^ПРЕДУПРЕЖДЕНИЕ/i.test(s)) return;
+      if (s.startsWith('##')) { const u = s.slice(2).split('|').map((x) => x.trim()); const w = parseInt(u[0], 10), km = parseFloat((u[2] || '').replace(',', '.')); if (u.length < 3 || isNaN(w) || w >= 0 || isNaN(km)) { errors.push(n + 1); return; } cur = { week: w, period: u[1], km, slots: [] }; weeks.push(cur); return; }
+      const a = s.indexOf(','), b = s.indexOf(',', a + 1), c = s.lastIndexOf(',');
+      if (a < 0 || b < 0 || c <= b || !cur) { errors.push(n + 1); return; }
+      const type = s.slice(a + 1, b).trim().toLowerCase(), desc = s.slice(b + 1, c).trim(), km = parseFloat(s.slice(c + 1).replace(',', '.'));
+      if (!TYPE_BY_NAME[type] || isNaN(km) || cur.slots.length >= 3) { errors.push(n + 1); return; }
+      cur.slots.push({ type, desc, km });
+    });
+    return { weeks: weeks.sort((x, y) => x.week - y.week), errors };
+  }
+
+  /* ================= weekly planner (calc3) ================= */
+  const parseTpl = (s) => { const m = String(s).match(/^(.*?)\s*\[\s*(\d+)\s*,\s*(\d+)\s*,?\s*\]\s*(.*)$/); return m ? { txt: m[1].replace(/\s+,/g, ',').replace(/\s+\./g, '.').trim(), km: +m[2], t: +m[3], name: m[4] } : null; };
+  const weekNo = (start) => raceMon && start ? -(Math.round((d8(raceMon) - d8(monday(start))) / 6048e5) + 1) : null;
+  const windowStart = () => PL.dsels.find((x) => x.k === PL.dsel)?.date;
+  const planWeek = (n) => plan()?.plan?.weeks?.find((x) => x.week === n) || null;
+  function workOptions() {
+    const out = [], n = weekNo(windowStart()), pw = planWeek(n);
+    if (pw) pw.slots.forEach((sl) => { const t = TYPE_BY_NAME[sl.type]; if (t && ![1, 5, 6].includes(t)) out.push({ group: `План «${plan().name}», неделя ${n}`, name: `${TYPES[t]}, ${sl.km} км`, t, km: +sl.km, txt: plain(sl.desc) }); });
+    (PL.tt || []).forEach((g) => (g.items || []).forEach((it) => { const m = parseTpl(it); if (m && ![1, 5, 6].includes(m.t)) out.push({ group: `Шаблоны: ${g.name}`, name: `${m.name || plain(m.txt.split(/ через|,|\./)[0])}, ${m.km} км`, t: m.t, km: m.km, txt: plain(m.txt) }); }));
+    return out;
+  }
+  function pickWorks() {
+    PL.opts = workOptions();
+    PL.works = [0, 1].map((k) => (PL.opts[k] ? { ...PL.opts[k] } : { t: k ? 2 : 3, km: 0, txt: '' }));
+    PL.works.forEach((w) => { w.edit = false; });
+  }
+  async function openPlanner() {
+    mode = 'plan'; PL = { loading: true }; render(); root.querySelector('#w-plan-h')?.scrollIntoView({ block: 'start' });
+    try {
+      const [base, tt] = await Promise.all([get(`/apiweb/calc.php?id=${id}`), get('/apiweb/tasktemplates.php').catch(() => [])]);
+      const dsels = Object.entries(base.dselect || {}).map(([k, v]) => ({ k: String(k), date: v.date }));
+      PL = { base, tt, dsels, dsel: String(base.dselected || dsels.at(-1)?.k || 1), rows: null, pre: [], sum: null, busy: false, err: '' };
+      maxrecov = +base.param?.maxrecov?.v || maxrecov;
+      pickWorks();
+    } catch (e) { PL = { err: `Не удалось загрузить ограничения и шаблоны (${e.message}). Обновите страницу.` }; }
+    render();
+  }
+  async function generateWeek() {
+    PL.busy = true; PL.err = ''; render();
+    const b = PL.base, q = new URLSearchParams({ id, dselect: PL.dsel, step: 2 });
+    for (const [k, v] of Object.entries(b.param || {})) q.set(k, v.v);
+    if (b.phase) { q.set('phaset', b.phase.t); if (b.phase.d) { const d = d8(b.phase.d); q.set('phased', `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`); } }
+    PL.works.forEach((w, i) => { if (w.txt.trim()) { q.set('typtrain' + (i + 1), w.t); q.set('task' + (i + 1), w.txt.trim()); q.set('prekm' + (i + 1), w.km || 0); } });
+    try {
+      const c = await get('/apiweb/calc.php?' + q.toString());
+      const pw = planWeek(weekNo(windowStart()));
+      PL.pre = Object.values(c.pretask || {});
+      PL.rows = Object.values(c.task || {}).sort((a, z) => a.d.localeCompare(z.d)).map((x) => {
+        const r = { d: x.d, typtrain: +x.typtrain, task: x.task || '', prekm: +x.prekm || 0, location: x.location || '', prediction: x.prediction || '', src: 'gen', edit: false };
+        r.gen = { typtrain: r.typtrain, task: r.task, prekm: r.prekm };
+        const sl = r.typtrain === 5 && pw ? pw.slots.find((z) => TYPE_BY_NAME[z.type] === 5) : null;
+        if (sl) r.alt = { typtrain: 5, task: plain(sl.desc), prekm: +sl.km };
+        return r;
+      });
+      PL.sum = c.tasksummary || null; PL.stale = false;
+      if (!PL.rows.length) PL.err = 'Сервер не вернул ни одного дня. Попробуйте другой день начала.';
+    } catch (e) { PL.err = `Расписание не рассчиталось (${e.message}). Попробуйте ещё раз.`; }
+    PL.busy = false; render();
+  }
+  const planTotal = () => PL.rows.reduce((a, r) => a + (+r.prekm || 0) + (r.task.trim().startsWith('Потрусите медленно') && !+r.prekm ? 8 : 0), 0);
+  async function writeTasks(list) {
+    const fd = new FormData();
+    fd.append('tasks', JSON.stringify(list.map((r) => ({ d: r.d, task: r.task, prekm: String(r.prekm), typtrain: r.typtrain, main6: 0, location: r.location || null, prediction: r.prediction || null }))));
+    await post(`/apiweb/task.php?id=${id}&action=update`, fd);
+  }
+  async function saveWeek() {
+    const bad = PL.rows.filter((r) => r.typtrain === 6 && !(r.location.trim() && r.prediction.trim()));
+    if (bad.length) { PL.err = `Для соревнования укажите место и прогноз: ${bad.map((r) => dayLbl(r.d)).join(', ')}.`; bad.forEach((r) => { r.edit = true; }); return render(); }
+    if (!me.isPremium) { PL.err = 'Ставить задачи можно с премиум-подпиской S10.'; return render(); }
+    PL.busy = true; PL.err = ''; render();
+    try {
+      await writeTasks(PL.rows);
+      const first = PL.rows[0].d, last = PL.rows.at(-1).d, n = PL.rows.length;
+      await loadUntil(horizon());
+      mode = 'view'; wk = monday(first); PL = null;
+      flash = `${LIVE ? 'Задачи поставлены' : 'Демо: задачи поставлены только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${dayLbl(first)} – ${dayLbl(last)}.`;
+    } catch (e) { PL.busy = false; PL.err = `Сервер не принял задачи (${e.message}). В дневнике ничего не изменилось.`; }
+    render();
+  }
+
+  /* ================= whole plan: fill, save version, generate ================= */
+  async function fillCalendar() {
+    const f = fillPreview(); if (!f || !f.write.length) return;
+    if (!me.isPremium) { fill.err = 'Ставить задачи можно с премиум-подпиской S10.'; return render(); }
+    fill.busy = true; fill.err = ''; render();
+    try {
+      await writeTasks(f.write);
+      await loadUntil(horizon());
+      fill = { confirm: false, busy: false, err: '' };
+      const a = f.write[0].d, b = f.write.at(-1).d;
+      flash = `${LIVE ? 'Календарь заполнен' : 'Демо: календарь заполнен только на этой странице'}: ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}, ${dayLbl(a)} – ${dayLbl(b)}.`;
+      wk = monday(a);
+    } catch (e) { fill.busy = false; fill.err = `Сервер не принял задачи (${e.message}). В дневнике ничего не изменилось.`; }
+    render();
+  }
+  async function saveVersion() {
+    const p = plan(); if (!p) return;
+    const weeksN = p.plan.weeks.length, first = p.plan.weeks.slice().sort((a, b) => a.week - b.week)[0];
+    const v = {
+      id: Math.random().toString(36).slice(2, 16), name: `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${weeksN} нед.`, savedAt: new Date().toISOString(),
+      templateId: sel.src === 'library' ? p.id : p.templateId || null, distance: p.distance || null, plan: { weeks: p.plan.weeks },
+      student: { raceDate: race?.d || null, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], volume: String(volume || firstKm(p)) },
+    };
+    const list = [v, ...versions];
+    const fd = new FormData(); fd.append('action', 'set'); fd.append('id', id); fd.append(`param[studentPlans${id}]`, JSON.stringify(list));
+    try { await post('/apiweb/userparam.php', fd); versions = list; sel = { src: 'version', id: v.id }; persistSel(); flash = `Версия «${v.name}» сохранена. Её видно и на странице «План ученика».`; }
+    catch (e) { flash = `Версию не удалось сохранить (${e.message}).`; }
+    render();
+  }
+  async function runGenerate() {
+    if (!gen.prompt.trim()) { gen.err = 'Опишите бегуна и цель: результаты, объём, сколько тренировок в неделю, какие дни.'; return render(); }
+    gen.busy = true; gen.err = ''; gen.lines = 0; render();
+    try {
+      const text = await generatePlanText({ distance: gen.distance, weeks: gen.weeks, prompt: gen.prompt.trim() }, (t) => { const n = t.split('\n').length; if (n !== gen.lines) { gen.lines = n; const s = root.querySelector('#w-gen-status'); if (s) s.textContent = `Модель пишет план… ${n} строк`; } });
+      const parsed = parsePlanText(text);
+      if (!parsed.weeks.length) throw new Error('в ответе нет ни одной недели');
+      fresh = { id: 'new', name: `Новый план, ${gen.distance.split(' · ')[0].toLowerCase()}`, distance: gen.distance, savedAt: new Date().toISOString(), plan: { weeks: parsed.weeks } };
+      sel = { src: 'new', id: 'new' }; chooser = false; volume = null; reprice();
+      flash = `План готов: ${parsed.weeks.length} ${plural(parsed.weeks.length, 'неделя', 'недели', 'недель')}${parsed.errors.length ? `, строк с ошибками ${parsed.errors.length}` : ''}. Проверьте его ниже и сохраните версию, чтобы он остался.`;
+    } catch (e) { gen.err = `План не получился: ${e.message}.`; }
+    gen.busy = false; render();
+  }
+
+  /* ================= markup ================= */
+  const typeSelect = (v, attrs) => `<select ${attrs}>${[1, 2, 3, 4, 5, 6, 0].map((t) => `<option value="${t}" ${+v === t ? 'selected' : ''}>${t ? TYPES[t] : 'Отдых'}</option>`).join('')}</select>`;
+  const kmField = (v, attrs) => `<label class="w-kmf"><input ${attrs} class="num" inputmode="decimal" value="${v || 0}"> км</label>`;
+  const ROLE = { easy: 'Лёгкая', rest: 'Отдых', w1: 'Работа 1', w2: 'Работа 2', long: 'Длительная' };
+
+  function chooserHTML() {
+    const rows = (list, src) => list.length ? `<ul class="w-plans">${list.map((p) => {
+      const on = sel && sel.src === src && sel.id === p.id, n = p.plan?.weeks?.length || 0, peak = Math.max(...(p.plan?.weeks || []).map((w) => +w.km || 0));
+      return `<li class="${on ? 'on' : ''}"><div class="w-pl"><b>${esc(p.name || 'Без названия')}</b><span class="w-muted num">${esc((p.distance || '').split(' · ')[0])}${p.distance ? ' · ' : ''}${n} ${plural(n, 'неделя', 'недели', 'недель')} · пик ${n1(peak)} км · ${p.savedAt ? `сохранён ${dayLbl(String(p.savedAt).slice(0, 10))}` : ''}${p.student?.t42 ? ` · свои темпы, T42 ${hms(p.student.t42)}` : ''}</span></div>${on ? '<span class="w-pill neutral">Выбран</span>' : `<button class="w-btn sm" data-act="psel" data-src="${src}" data-id="${esc(p.id)}">Выбрать</button>`}</li>`;
+    }).join('')}</ul>` : `<p class="w-note">${src === 'version' ? 'Сохранённых версий пока нет. Выберите план из библиотеки или сделайте новый.' : 'В библиотеке пока пусто.'}</p>`;
+    return `<div class="w-chooser">
+      <div class="w-tabs" role="tablist" aria-label="Откуда взять план">
+        ${[['version', `Мои версии (${versions.length})`], ['library', `Библиотека (${library.length})`], ['new', 'Новый по промпту']].map(([k, l]) => `<button role="tab" aria-selected="${chooserTab === k}" data-act="ptab" data-k="${k}">${l}</button>`).join('')}
+      </div>
+      ${chooserTab === 'version' ? rows(versions, 'version') : chooserTab === 'library' ? rows(library, 'library') : `
+        <div class="w-gen">
+          <label class="w-f"><span>Дистанция</span><select data-g="distance">${DISTANCES.map((d) => `<option ${d === gen.distance ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
+          <label class="w-f w-f-s"><span>Недель</span><input data-g="weeks" class="num" inputmode="numeric" value="${gen.weeks}"></label>
+          <label class="w-f w-f-wide"><span>Бегун и цель</span><textarea data-g="prompt" rows="3" placeholder="Марафон 3 декабря на 3:20. 5 км 18:59, полумарафон 1:38. Сейчас ~40 км в неделю, 6 тренировок, четверг отдых, среда стадион, воскресенье длительная.">${esc(gen.prompt)}</textarea></label>
+          <div class="w-go"><button class="w-btn primary" data-act="gen" ${gen.busy ? 'disabled' : ''}>${gen.busy ? 'Генерирую…' : 'Сгенерировать план'}</button><span class="w-muted" id="w-gen-status">${gen.busy ? 'Модель думает…' : `${gen.weeks} ${plural(gen.weeks, 'неделя', 'недели', 'недель')} до ${race?.location || 'старта'}. Генерация занимает до минуты.`}</span></div>
+          ${gen.err ? `<p class="w-err" role="alert">${esc(gen.err)}</p>` : ''}
+        </div>`}
+    </div>`;
+  }
+  function planCard() {
+    const p = plan();
+    const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${race ? `<span class="w-muted num">до ${esc(race.location || 'старта')}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
+    if (!race) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. Выберите его на странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
+    if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите сохранённую версию, шаблон из библиотеки или сгенерируйте новый.</p>${chooserHTML()}</section>`;
+    const f = fillPreview(), src = sel.src === 'version' ? 'ваша версия' : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
+    const ws = f.weeks, first = ws[0], last = ws.at(-1);
+    const curMon = monday(today);
+    return `<section class="w-card" aria-labelledby="w-plan2-h">${head}
+      ${chooser ? chooserHTML() : ''}
+      <div class="w-step">
+        <div class="w-pmeta"><span class="w-muted num">${src} · ${ws.length} ${plural(ws.length, 'неделя', 'недели', 'недель')} · ${range(first.mon, add(last.mon, 6))} · темпы ${esc(paceLabel())}</span></div>
+        <div class="w-pset">
+          <label class="w-f w-f-s"><span>Объём первой недели</span><span class="w-inl"><input data-p="volume" class="num" inputmode="numeric" value="${volume || firstKm(p)}"> км</span></label>
+          <div class="w-f w-f-wide"><span>Дни недели</span><div class="w-roles">${layout.map((r, i) => `<label class="w-role"><small>${DN[i]}</small><select data-p="role" data-i="${i}" aria-label="${DNF[i]}">${Object.entries(ROLE).map(([k, l]) => `<option value="${k}" ${r === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div></div>
+        </div>
+      </div>
+      <ol class="w-weeks">${ws.map((w, n) => {
+        const src2 = p.plan.weeks.slice().sort((a, b) => a.week - b.week)[n];
+        const past = add(w.mon, 6) < today, now = w.mon === curMon, isOpen = openWeek === src2.week || (openWeek == null && now);
+        const works = w.days.filter((d) => d.typtrain >= 2);
+        return `<li class="w-wk ${past ? 'past' : ''} ${now ? 'now' : ''}">
+          <button class="w-wkh" data-act="wopen" data-w="${src2.week}" aria-expanded="${isOpen}">
+            <span class="num w-wn">${src2.week}</span><span class="num">${range(w.mon, add(w.mon, 6))}</span><span class="w-per">${esc(src2.period || '')}</span>
+            <span class="w-wworks">${works.map((d) => `<span>${glyph(LEVEL[d.typtrain], d.typtrain === 6)}${SHORT[d.typtrain]} ${n1(d.prekm)}</span>`).join('')}</span>
+            <span class="num w-wkm">${n1(w.total)} км</span>${past ? '<span class="w-pill neutral">Прошла</span>' : now ? '<span class="w-pill now">Сейчас</span>' : '<span class="w-pill-sp"></span>'}
+          </button>
+          ${isOpen ? `<ol class="w-wdays">${w.days.map((d) => { const ex = days.get(d.d); const keep = keepExisting && d.d > today && isRun(ex);
+            return `<li class="${d.d <= today ? 'gone' : ''}"><span class="w-wdd"><b>${DN[dow(d.d)]}</b><small class="num">${dayLbl(d.d)}</small></span>
+              <div class="w-wdb"><span class="w-name ${d.typtrain ? '' : 'w-muted'}">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}${keep ? `<span class="w-muted">В дневнике уже стоит: ${esc(TYPES[ex.type] || 'тренировка').toLowerCase()} ${n1(+ex.target || 0)} км, её не трогаем</span>` : ''}</div>
+              <span class="num w-wdk">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`; }).join('')}</ol>` : ''}
+        </li>`;
+      }).join('')}</ol>
+      <div class="w-sum">
+        <div><span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, f.write.at(-1).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>
+          <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label></div>
+        <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy ? '' : 'disabled'}>Заполнить календарь</button></div>
+      </div>
+      ${fill.confirm ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')} в дневник?</b> ${range(f.write[0].d, f.write.at(-1).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'}</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? 'Записываю…' : 'Записать'}</button></div></div>` : ''}
+      ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}
+    </section>`;
+  }
+  function pacesCard() {
+    const P = PACE;
+    const opts = [studentPaces(plan()) ? ['plan', `Из плана «${plan().name}»`] : null, PACE_S10 ? ['s10', `Прогноз S10${race?.prediction ? `, ${race.location} ${hms(race.prediction)}` : ''}`] : null, ['own', 'Свои']].filter(Boolean);
+    const cur = (paceSrc === 'own' && PACE_OWN) ? 'own' : (paceSrc === 's10' && PACE_S10) ? 's10' : studentPaces(plan()) ? 'plan' : PACE_S10 ? 's10' : 'own';
+    return `<section class="w-card" aria-labelledby="w-pace-h">
+      <div class="w-ch"><h2 id="w-pace-h">Темпы для заданий, мин/км</h2><label class="w-inl w-muted">Откуда <select data-p="pacesrc" aria-label="Откуда брать темпы">${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label></div>
+      <div class="w-paces num">${[['5', 'темп на 5 км'], ['10', 'темп на 10 км'], ['21', 'полумарафон'], ['42', 'марафон']].map(([k, l]) => `<label><span><b>T${k}</b><small>${l}</small></span><input data-p="pace" data-k="${k}" value="${P?.[k] || ''}" inputmode="numeric" aria-label="T${k}, мин/км" placeholder="4:30"></label>`).join('')}</div>
+      <p class="w-note">Все задания на странице считаются по этим темпам: «T21+8» — это ваш T21 плюс 8 секунд. Если поменять цифру, темпы станут «своими» и сохранятся на этом устройстве.</p>
+    </section>`;
+  }
+  function workCard(w, i) {
+    const groups = [...new Set(PL.opts.map((o) => o.group))];
+    const s = PL.opts.findIndex((o) => o.txt === w.txt && o.km === w.km);
+    return `<div class="w-work">
+      <div class="w-wh"><span class="w-name">${glyph(LEVEL[w.t] || 1)}Работа ${i + 1}: ${w.txt ? TYPES[w.t] : 'не выбрана'}</span>${w.txt ? `<span class="num">${n1(w.km)} км</span>` : ''}</div>
+      ${w.txt ? taskHTML(w.txt) : '<p class="w-tx w-muted">Выберите работу из плана или шаблонов.</p>'}
+      <div class="w-wa">
+        <select data-w="${i}" data-f="pick" aria-label="Работа ${i + 1}: выбрать другую"><option value="-1" selected>${w.txt ? 'Заменить на…' : 'Выбрать…'}</option>${groups.map((g) => `<optgroup label="${esc(g)}">${PL.opts.map((o, k) => (o.group === g && k !== s ? `<option value="${k}">${esc(o.name)}</option>` : '')).join('')}</optgroup>`).join('')}</select>
+        <button class="w-link" data-act="wedit" data-w="${i}" aria-expanded="${w.edit}">${w.edit ? 'Готово' : 'Изменить текст'}</button>
+      </div>
+      ${w.edit ? `<div class="w-edit">${typeSelect(w.t, `data-w="${i}" data-f="t" aria-label="Тип работы ${i + 1}"`)}${kmField(w.km, `data-w="${i}" data-f="km" aria-label="Километры работы ${i + 1}"`)}<textarea data-w="${i}" data-f="txt" rows="3" aria-label="Задание работы ${i + 1}">${esc(w.txt)}</textarea></div>` : ''}
+    </div>`;
+  }
+  function dayRow(r, i) {
+    const moveOpts = PL.rows.map((o, j) => (j === i ? '' : `<option value="${j}">на ${DNS[dow(o.d)]} ${dayLbl(o.d)}${o.typtrain && +o.prekm ? `, там ${TYPES[o.typtrain].toLowerCase()} ${n1(o.prekm)} км` : ', там отдых'}</option>`)).join('');
+    const rest = !r.typtrain && !+r.prekm;
+    return `<li class="w-pday ${rest ? 'rest' : ''}">
+      <div class="w-pd"><b>${DNF[dow(r.d)]}</b><small class="num">${dayLbl(r.d)}</small></div>
+      <div class="w-pbody">
+        <div class="w-ph"><span class="w-name">${rest ? 'Отдых' : glyph(LEVEL[r.typtrain] || 1, r.typtrain === 6) + TYPES[r.typtrain]}</span>${rest ? '' : `<span class="num w-pkm">${+r.prekm ? `${n1(r.prekm)} км` : 'без расстояния'}</span>`}</div>
+        ${rest ? '' : taskHTML(r.task)}
+        ${r.alt ? `<div class="w-alt" role="radiogroup" aria-label="Длительная: откуда взять"><label><input type="radio" name="alt${i}" data-r="${i}" data-alt="gen" ${r.src === 'gen' ? 'checked' : ''}>Из расчёта S10, ${n1(r.gen.prekm)} км</label><label><input type="radio" name="alt${i}" data-r="${i}" data-alt="alt" ${r.src === 'alt' ? 'checked' : ''}>Из плана, ${n1(r.alt.prekm)} км</label></div>` : ''}
+        ${r.edit ? `<div class="w-edit">${typeSelect(r.typtrain, `data-r="${i}" data-f="typtrain" aria-label="Тип, ${dayLbl(r.d)}"`)}${kmField(r.prekm, `data-r="${i}" data-f="prekm" aria-label="Километры, ${dayLbl(r.d)}"`)}<textarea data-r="${i}" data-f="task" rows="3" aria-label="Задание, ${dayLbl(r.d)}">${esc(r.task)}</textarea>
+          ${r.typtrain === 6 ? `<input data-r="${i}" data-f="location" placeholder="Место старта" value="${esc(r.location)}" aria-label="Место старта"><input data-r="${i}" data-f="prediction" placeholder="Прогноз, например 1:38:00" value="${esc(r.prediction)}" aria-label="Прогноз на старт">` : ''}</div>` : ''}
+      </div>
+      <div class="w-pa">
+        <select data-r="${i}" data-f="move" aria-label="Перенести тренировку ${DNF[dow(r.d)]} ${dayLbl(r.d)} на другой день"><option value="-1" selected>Перенести…</option>${moveOpts}</select>
+        <button class="w-link" data-act="redit" data-r="${i}" aria-expanded="${r.edit}">${r.edit ? 'Готово' : 'Изменить'}</button>
+      </div>
+    </li>`;
+  }
+  function plannerHTML() {
+    const head = () => `<div class="w-ch"><h2 id="w-plan-h">Неделя в деталях</h2><button class="w-btn sm" data-act="close">Закрыть</button></div>`;
+    if (!PL || PL.loading) return `<section class="w-card" aria-labelledby="w-plan-h">${head()}<p class="w-note">Загружаю ваши ограничения и шаблоны…</p></section>`;
+    if (!PL.base) return `<section class="w-card" aria-labelledby="w-plan-h">${head()}<p class="w-note w-err" role="alert">${esc(PL.err)}</p></section>`;
+    const p = PL.base.param || {}, n = weekNo(windowStart()), pw = planWeek(n);
+    return `<section class="w-card" aria-labelledby="w-plan-h">${head()}
+      <div class="w-step">
+        <div class="w-steph"><h3>Неделя с</h3><span class="num">Лимиты: объём до ${p.maxweek?.v ?? '—'} км, длительная до ${p.maxlong?.v ?? '—'} км</span></div>
+        <div class="w-seg" role="radiogroup" aria-label="Первый день недели">${PL.dsels.map((x) => `<button role="radio" aria-checked="${x.k === PL.dsel}" data-act="dsel" data-k="${x.k}">${DNF[dow(x.date)]}, ${dayLbl(x.date)}</button>`).join('')}</div>
+      </div>
+      <div class="w-step">
+        <div class="w-steph"><h3>Две ключевые работы</h3><span>${pw ? `Из выбранного плана «${esc(plan().name)}», неделя ${n}` : plan() ? `В плане «${esc(plan().name)}» нет недели ${n}, выберите из шаблонов` : 'Из шаблонов или своё'}</span></div>
+        <div class="w-works">${PL.works.map(workCard).join('')}</div>
+        <div class="w-go"><button class="w-btn ${PL.rows && !PL.stale ? '' : 'primary'}" data-act="wgen" ${PL.busy ? 'disabled' : ''}>${PL.busy && !PL.rows ? 'Считаю расписание…' : PL.rows ? 'Пересчитать расписание' : 'Рассчитать расписание'}</button><span class="w-muted">${PL.stale ? 'Работы изменились, пересчитайте расписание.' : 'Остальные дни подберёт S10 по вашим лимитам.'}</span></div>
+      </div>
+      ${PL.err ? `<p class="w-note w-err" role="alert">${esc(PL.err)}</p>` : ''}
+      ${PL.rows ? `<div class="w-step w-step-list"><div class="w-steph"><h3>Расписание</h3><span class="num">${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}, ${dayLbl(PL.rows[0].d)} – ${dayLbl(PL.rows.at(-1).d)}</span></div></div>
+        <ol class="w-plist">
+          ${PL.pre.map((x) => `<li class="w-pday locked"><div class="w-pd"><b>${DNF[dow(x.d)]}</b><small class="num">${dayLbl(x.d)}</small></div><div class="w-pbody"><div class="w-ph"><span class="w-name">${glyph(LEVEL[+x.typtrain] || 1)}${TYPES[+x.typtrain] || 'Тренировка'}</span><span class="num w-pkm">${n1(+x.prekm || 0)} км</span></div>${taskHTML(x.task)}</div><div class="w-pa"><span class="w-pill neutral">Уже в дневнике</span></div></li>`).join('')}
+          ${PL.rows.map(dayRow).join('')}
+        </ol>
+        <div class="w-sum">
+          <div><span class="w-lb">Итого за ${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}</span><b class="num" id="w-total">${n1(planTotal())} км</b>${PL.sum?.['за последние 7 дней'] ? `<span class="w-muted num">Последние 7 дней: пробежано ${PL.sum['за последние 7 дней'].km0} из ${PL.sum['за последние 7 дней'].km1} км</span>` : ''}</div>
+          <button class="w-btn primary" data-act="wsave" ${PL.busy || PL.stale ? 'disabled' : ''}>${PL.busy ? 'Ставлю задачи…' : 'Поставить задачи'}</button>
+        </div>` : ''}
+    </section>`;
+  }
+  function statusPill(r) {
+    const x = r.x, km = runKm(x);
+    if (!isRun(x)) return km ? `<span class="w-pill ok">${n1(km)} км</span>` : '';
+    if (r.d > today) return '';
+    if (km > 0) return `<span class="w-pill ok">Сделано ${n1(km)} км</span>`;
+    if (r.d === today) return '<span class="w-pill neutral">Сегодня</span>';
+    return '<span class="w-pill bad">Не выполнено</span>';
+  }
+  function todayCard(W) {
+    const r = W.list.find((q) => q.d === today);
+    if (!r) {
+      const next = [...days.values()].filter((x) => x.date >= today && isRun(x)).sort((a, b) => a.date.localeCompare(b.date))[0];
+      return `<div class="w-today"><span class="w-lb">Ближайшая тренировка</span>${next ? `<div class="w-type">${glyph(LEVEL[next.type] || 1, next.type === 6)}${TYPES[next.type] || 'Тренировка'}, ${DNF[dow(next.date)]} ${dayLbl(next.date)}</div><div class="w-big num">${n1(+next.target)}<small>км</small></div>${taskHTML(next.comment)}` : '<div class="w-type">Не запланирована</div>'}</div>`;
+    }
+    const x = r.x, d = d8(today), km = runKm(x);
+    const head = `<span class="w-lb">Сегодня, ${DNF[r.i]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}</span>`;
+    if (!isRun(x)) return `<div class="w-today">${head}<div class="w-big">Отдых</div><p class="w-tx">Тренировки сегодня нет.</p></div>`;
+    return `<div class="w-today">${head}<div class="w-type">${glyph(LEVEL[x.type] || 1, x.type === 6)}${TYPES[x.type] || 'Тренировка'}</div>
+      <div class="w-big num">${n1(+x.target)}<small>км</small></div>${taskHTML(x.comment)}${km ? `<div><span class="w-pill ok">Сделано ${n1(km)} км</span></div>` : ''}</div>`;
+  }
+  function weekSection(W) {
+    if (mode === 'plan') return plannerHTML();
+    return `<section class="w-card" aria-labelledby="w-days-h">
+        <div class="w-ch"><h2 id="w-days-h">По дням</h2><span class="w-muted num">План ${n1(W.plan)} км</span><button class="w-btn sm" data-act="plan">Неделя в деталях</button></div>
+        <ol class="w-days">${W.list.map((r) => {
+          const x = r.x, run = isRun(x), o = others(x);
+          return `<li class="w-day ${r.d === today ? 'today' : ''}">
+            <div class="w-dn"><b>${DN[r.i]}</b><small class="num">${dayLbl(r.d)}</small></div>
+            <div class="w-what ${run ? '' : 'rest'}">
+              <span class="w-name">${run ? glyph(LEVEL[x.type] || 1, x.type === 6) + (TYPES[x.type] || 'Тренировка') : 'Отдых'}</span>
+              ${run ? taskHTML(x.comment) : ''}
+              ${o.length ? `<span class="w-muted">${o.map(esc).join(' · ')}</span>` : ''}
+            </div>
+            <div class="w-km">${run ? `<span class="num">${n1(+x.target)} км</span>` : ''}${statusPill(r)}</div>
+          </li>`;
+        }).join('')}</ol>
+      </section>`;
+  }
+  function render() {
+    const W = week(wk), cur = wk === monday(today);
+    const daysToRace = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
+    const pct = W.plan ? Math.min(100, (W.done / W.plan) * 100) : 0;
+    root.innerHTML = `
+    ${LIVE ? '' : '<div class="w-demo" role="note">Демо на данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</div>'}
+    <header class="w-top"><div class="w-topin">
+      <a class="w-wm" href="${LIVE ? '/' : 'https://s10.run/'}" aria-label="S10.run, главная">S10<span>.run</span></a>
+      <span class="w-who">${esc(me.firstName)} ${esc(me.lastName)}</span>${SHOW_COLORS ? `<button class="w-btn sm" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}
+    </div></header>
+    <main class="w-main">
+      ${colorsOpen ? colorsPanel() : ''}
+      <div class="w-head">
+        <h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
+        <div class="w-nav" role="group" aria-label="Выбор недели">
+          <button data-w="-1" aria-label="Предыдущая неделя">‹</button><span>${cur ? 'Эта неделя' : wk < monday(today) ? 'Прошедшая' : 'Следующая'}</span><button data-w="1" aria-label="Следующая неделя">›</button>
+        </div>
+      </div>
+      <section class="w-card w-hero" aria-label="Сегодня и итоги недели">
+        ${todayCard(W)}
+        <div class="w-stats">
+          <div class="w-stat"><span class="w-lb">Пробежано</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span><div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} км"><i style="width:${pct}%"></i></div></div>
+          <div class="w-stat"><span class="w-lb">Осталось тренировок</span><span class="v num">${W.left}</span><span class="s">${W.left ? 'до воскресенья' : 'на этой неделе всё'}</span></div>
+          <div class="w-stat"><span class="w-lb">Длительная</span><span class="v num">${W.long ? `${n1(+W.long.x.target)}<small>км</small>` : '<span class="w-muted">—</span>'}</span><span class="s">${W.long ? `${DNF[W.long.i]}, ${dayLbl(W.long.d)}` : 'на этой неделе нет'}</span></div>
+          <div class="w-stat"><span class="w-lb">${race ? `До ${esc(race.location || 'старта')}` : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${race ? `${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : 'не выбран'}</span></div>
+        </div>
+      </section>
+      ${flash ? `<div class="w-flash" role="status"><span>${esc(flash)}</span><button data-act="flash" aria-label="Скрыть сообщение">×</button></div>` : ''}
+      <div class="w-tabbar" role="tablist" aria-label="Разделы">
+        ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпы']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
+      </div>
+      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? planCard() : pacesCard()}</div>
+      <p class="w-foot">${LIVE ? `Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.` : 'Демо-версия страницы «Моя неделя» для S10.run.'}</p>
+    </main>`;
+    root.querySelectorAll('textarea').forEach(fit);
+  }
+  function fit(t) { t.style.height = 'auto'; t.style.height = Math.max(64, t.scrollHeight + 2) + 'px'; }
+
+  /* ================= styles: light S10 brand on the taste-skill app-screen rules ================= */
+  const css = `
+  .w-app{--ground:#f4f4f4;--surface:#fff;--border:#e1e1e1;--rule:#eeeeee;--control:#c8c8c8;--text:#111111;--muted:#6b6b6b;--faint:#6b6b6b;--accent:#1a4be0;--accent-bg:#e4eafc;--glyph-off:#d6d6d6;--primary:#d62b1f;--primary-hover:#b8251b;--primary-ink:#fff;--key:#d62b1f;--field:#fff;--soft:#f9f9f9;--accent-soft:#f4f6fe;--warn-bg:#fffbeb;
+    --ok-bg:#dcfae5;--ok:#04250e;--bad-bg:#ffedea;--bad:#831c1e;--neutral-bg:#eceef2;--neutral:#3d424b;
+    min-height:100vh;background:var(--ground);color:var(--text);font:15px/1.5 Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;text-align:left}
+  .w-app.w-over{position:fixed;inset:0;overflow:auto;z-index:2147483000}
+  .w-app *{box-sizing:border-box;margin:0;padding:0}
+  .w-app .num{font-variant-numeric:tabular-nums}
+  .w-app button,.w-app select,.w-app input,.w-app textarea{font:inherit;color:inherit}
+  .w-app :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .w-app a{color:var(--accent)}
+  .w-demo{background:var(--accent-bg);color:var(--accent);font-size:13px;padding:8px max(24px,env(safe-area-inset-left));text-align:center}
+  .w-top{border-bottom:1px solid var(--border);background:var(--surface);padding:0 max(24px,env(safe-area-inset-right)) 0 max(24px,env(safe-area-inset-left))}
+  .w-topin{max-width:1112px;margin:0 auto;height:56px;display:flex;align-items:center;gap:20px}
+  .w-wm{font-weight:900;font-style:italic;font-size:22px;letter-spacing:-.02em;color:var(--accent)!important;text-decoration:none}
+  .w-wm span{font-weight:500}
+  .w-who{margin-left:auto;color:var(--muted);font-size:14px}
+  .w-main{max-width:1160px;margin:0 auto;padding:28px max(24px,env(safe-area-inset-right)) 48px max(24px,env(safe-area-inset-left));display:grid;gap:24px}
+  .w-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .w-head h1{font-size:26px;line-height:1.2;font-weight:500;letter-spacing:-.01em}
+  .w-nav{display:flex;align-items:center;height:38px;border:1px solid var(--control);border-radius:6px;background:var(--surface)}
+  .w-nav button{width:40px;height:36px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;border-radius:6px}
+  .w-nav button:hover{color:var(--text);background:var(--rule)}
+  .w-nav span{width:120px;text-align:center;font-weight:500;font-size:14px}
+  .w-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:0}
+  .w-lb{color:var(--muted);font-size:13px}
+  .w-muted{color:var(--faint);font-size:13px}
+  .w-name{display:inline-flex;align-items:center;gap:8px;font-weight:500}
+  .w-tx{color:var(--muted);line-height:1.5}
+  .w-tx b{color:var(--text);font-weight:500;white-space:nowrap}
+  ul.w-tx{list-style:none;display:grid;gap:2px}
+  ul.w-tx li{position:relative;padding-left:14px}
+  ul.w-tx li::before{content:"";position:absolute;left:2px;top:.68em;width:5px;height:5px;border-radius:50%;background:var(--glyph-off)}
+  .w-hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+  .w-today{padding:24px;display:grid;gap:10px;align-content:start}
+  .w-today .w-type{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:500}
+  .w-big{font-size:32px;line-height:1.1;font-weight:500;letter-spacing:-.01em}
+  .w-big small{font-size:15px;color:var(--faint);font-weight:400;margin-left:6px;letter-spacing:0}
+  .w-today .w-tx{font-size:16px;max-width:56ch}
+  .w-stats{display:grid;grid-template-columns:1fr 1fr;border-left:1px solid var(--rule)}
+  .w-stat{padding:20px 24px;display:grid;gap:4px;align-content:start;border-top:1px solid var(--rule)}
+  .w-stat:nth-child(-n+2){border-top:0}.w-stat:nth-child(even){border-left:1px solid var(--rule)}
+  .w-stat .v{font-size:24px;line-height:1.2}
+  .w-stat .v small{font-size:13px;color:var(--faint);margin-left:4px}
+  .w-stat .s{color:var(--faint);font-size:13px}
+  .w-track{height:6px;border-radius:999px;background:var(--rule);margin-top:6px;overflow:hidden}
+  .w-track i{display:block;height:100%;background:var(--accent);border-radius:999px}
+  .w-ch{display:flex;align-items:center;gap:12px;padding:16px 20px;flex-wrap:wrap}
+  .w-ch h2{font-size:17px;font-weight:500;margin-right:auto}
+  .w-days,.w-plist,.w-weeks,.w-wdays,.w-plans{list-style:none}
+  .w-days,.w-plist,.w-weeks{border-top:1px solid var(--rule)}
+  .w-day{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:16px;padding:16px 20px;border-top:1px solid var(--rule);align-items:start}
+  .w-day:first-child{border-top:0}
+  .w-day.today{background:var(--accent-soft)}
+  .w-dn b,.w-pd b,.w-wdd b{display:block;font-weight:500}
+  .w-dn small,.w-pd small,.w-wdd small{color:var(--faint);font-size:13px}
+  .w-day.today .w-dn b{color:var(--accent)}
+  .w-what{display:grid;gap:4px;min-width:0}
+  .w-what.rest .w-name{color:var(--faint);font-weight:400}
+  .w-km{display:grid;gap:6px;justify-items:end;white-space:nowrap}
+  .w-km .num{font-size:16px}
+  .w-pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:12px;font-weight:500;white-space:nowrap;flex:none}
+  .w-pill.ok{background:var(--ok-bg);color:var(--ok)}.w-pill.bad{background:var(--bad-bg);color:var(--bad)}.w-pill.neutral{background:var(--neutral-bg);color:var(--neutral)}.w-pill.now{background:var(--accent-bg);color:var(--accent)}
+  .w-ig{display:inline-flex;align-items:flex-end;gap:2px;height:16px;flex:none}
+  .w-ig i{width:4px;border-radius:1px;background:var(--glyph-off)}
+  .w-ig i:nth-child(1){height:7px}.w-ig i:nth-child(2){height:11px}.w-ig i:nth-child(3){height:16px}
+  .w-ig[data-l="1"] i:nth-child(-n+1),.w-ig[data-l="2"] i:nth-child(-n+2),.w-ig[data-l="3"] i:nth-child(-n+3){background:var(--key,var(--accent))}
+  .w-ig[data-race] i{background:var(--text)!important}
+  .w-note{padding:8px 20px 18px;color:var(--faint);font-size:13px;line-height:1.45}
+  .w-err{color:var(--bad)!important;font-size:14px}
+  .w-foot{color:var(--faint);font-size:12px}
+  .w-btn{height:38px;padding:0 16px;border-radius:6px;border:1px solid var(--control);background:var(--surface);font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,transform .12s}
+  .w-btn:hover:not(:disabled){background:var(--rule)}
+  .w-btn:active:not(:disabled){transform:translateY(1px)}
+  .w-btn.primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink,#fff)}
+  .w-btn.primary:hover:not(:disabled){background:var(--primary-hover)}
+  .w-btn:disabled{opacity:.55;cursor:default}
+  .w-btn.sm{height:34px;padding:0 12px;font-size:14px}
+  .w-link{border:0;background:none;color:var(--accent);cursor:pointer;font-size:14px;font-weight:500;padding:6px 2px;white-space:nowrap}
+  .w-link:hover{text-decoration:underline}
+  .w-app select,.w-app input,.w-app textarea{border:1px solid var(--control);border-radius:6px;background:var(--field);min-width:0;max-width:100%}
+  .w-app select{height:36px;padding:0 30px 0 10px;font-size:14px;appearance:none;cursor:pointer;
+    background:var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b707a' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 11px center}
+  .w-app input{height:36px;padding:0 10px}
+  .w-app input[type=checkbox],.w-app input[type=radio]{height:16px;width:16px;accent-color:var(--accent)}
+  .w-app textarea{width:100%;padding:8px 10px;line-height:1.5;resize:vertical}
+  .w-inl{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+  .w-step{padding:18px 20px;border-top:1px solid var(--rule);display:grid;gap:14px}
+  .w-step-list{padding-bottom:12px}
+  .w-steph{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .w-steph h3{font-size:16px;font-weight:500}.w-steph span{color:var(--faint);font-size:13px}
+  .w-seg,.w-tabs{display:inline-flex;flex-wrap:wrap;border:1px solid var(--control);border-radius:6px;overflow:hidden;justify-self:start}
+  .w-seg button,.w-tabs button{height:36px;padding:0 16px;border:0;background:var(--field);cursor:pointer;color:var(--muted);font-size:14px}
+  .w-seg button+button,.w-tabs button+button{border-left:1px solid var(--control)}
+  .w-seg button[aria-checked="true"],.w-tabs button[aria-selected="true"]{background:var(--accent-bg);color:var(--accent);font-weight:500}
+  .w-works{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .w-work{display:grid;gap:10px;align-content:start;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--soft);min-width:0}
+  .w-wh,.w-ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .w-wh .num,.w-pkm{font-size:16px;white-space:nowrap}
+  .w-wa{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .w-wa select{flex:1 1 180px}
+  .w-edit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+  .w-edit textarea,.w-edit input:not([data-f=prekm]):not([data-f=km]){grid-column:1/-1}
+  .w-kmf{display:inline-flex;align-items:center;gap:6px;color:var(--faint);font-size:14px;white-space:nowrap}
+  .w-kmf input{width:72px;text-align:right}
+  .w-go{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .w-pday{display:grid;grid-template-columns:110px minmax(0,1fr) 180px;gap:16px;padding:16px 20px;border-top:1px solid var(--rule);align-items:start}
+  .w-pday:first-child{border-top:0}
+  .w-pday.locked{background:var(--soft)}
+  .w-pday.rest .w-name{color:var(--faint);font-weight:400}
+  .w-pd b{text-transform:capitalize}
+  .w-pbody{display:grid;gap:6px;min-width:0}
+  .w-pa{display:grid;gap:4px;justify-items:stretch}
+  .w-pa .w-link,.w-pa .w-pill{justify-self:start}
+  .w-app .w-pa select{border-color:transparent;background-color:transparent;color:var(--accent);font-weight:500;padding-left:2px;background-position:right 8px center}
+  .w-app .w-pa select:hover{border-color:var(--control);background-color:var(--field)}
+  .w-alt{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--muted);padding-top:2px}
+  .w-alt label{display:inline-flex;gap:8px;align-items:center;cursor:pointer}
+  .w-sum{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 20px;border-top:1px solid var(--rule);background:var(--soft)}
+  .w-card>.w-sum:last-child{border-radius:0 0 8px 8px}
+  .w-sum>div{display:grid;gap:2px}
+  .w-sum b{font-size:24px;font-weight:500;line-height:1.2}
+  .w-acts{display:flex;gap:10px;flex-wrap:wrap}
+  .w-chk{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-top:6px;cursor:pointer}
+  .w-flash{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--ok-bg);color:var(--ok);border-radius:8px;padding:12px 16px}
+  .w-flash button{border:0;background:none;color:inherit;cursor:pointer;font-size:18px;width:32px;height:32px}
+  .w-chooser{padding:4px 20px 18px;display:grid;gap:12px}
+  .w-plans{border:1px solid var(--border);border-radius:8px}
+  .w-plans li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-top:1px solid var(--rule)}
+  .w-plans li:first-child{border-top:0}
+  .w-plans li.on{background:var(--accent-soft)}
+  .w-pl{display:grid;gap:2px;min-width:0}
+  .w-gen{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:12px}
+  .w-f{display:grid;gap:6px;min-width:0}
+  .w-f>span{color:var(--muted);font-size:13px}
+  .w-f-wide{grid-column:1/-1}
+  .w-gen .w-go{grid-column:1/-1}
+  .w-pmeta{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .w-pset{display:grid;grid-template-columns:180px minmax(0,1fr);gap:16px;align-items:end}
+  .w-pset input[data-p=volume]{width:80px;text-align:right}
+  .w-pset .w-f-wide{grid-column:auto}
+  .w-roles{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+  .w-role{display:grid;gap:4px}
+  .w-role small{color:var(--faint);font-size:12px}
+  .w-app .w-role select{padding:0 22px 0 8px;font-size:13px;background-position:right 7px center}
+  .w-wk{border-top:1px solid var(--rule)}
+  .w-wk:first-child{border-top:0}
+  .w-wkh{width:100%;display:grid;grid-template-columns:44px 120px 120px minmax(0,1fr) 72px 84px;gap:12px;align-items:center;padding:12px 20px;border:0;background:none;cursor:pointer;text-align:left}
+  .w-wkh:hover{background:var(--soft)}
+  .w-wk.past .w-wkh{color:var(--faint)}
+  .w-wk.now .w-wkh{background:var(--accent-soft)}
+  .w-wn{font-weight:500}
+  .w-per{color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .w-wworks{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+  .w-wworks span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .w-wkm{text-align:right;font-size:15px}
+  .w-wkh .w-pill,.w-pill-sp{justify-self:end}
+  .w-wdays{padding:0 20px 12px 76px}
+  .w-wdays>li{display:grid;grid-template-columns:70px minmax(0,1fr) 64px;gap:12px;padding:10px 0;border-top:1px solid var(--rule)}
+  .w-wdays>li.gone{opacity:.55}
+  .w-wdb{display:grid;gap:2px;min-width:0}
+  .w-wdk{text-align:right;white-space:nowrap}
+  .w-confirm{margin:0 20px 18px;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--warn-bg);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .w-confirm p{max-width:62ch;color:var(--text)}
+  .w-paces{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--rule)}
+  .w-paces label{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px;border-left:1px solid var(--rule)}
+  .w-paces label:first-child{border-left:0}
+  .w-paces label>span{display:grid}
+  .w-paces small{color:var(--faint);font-size:13px}
+  .w-paces input{width:76px;text-align:right;font-size:20px;height:40px}
+  .w-tabbar{display:flex;gap:4px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+  .w-tabbar button{border:0;background:none;padding:10px 4px;margin-right:20px;font-size:16px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .w-tabbar button:hover{color:var(--text)}
+  .w-tabbar button[aria-selected="true"]{color:var(--text);font-weight:500;border-bottom-color:var(--accent)}
+  .w-panel{display:grid;gap:24px}
+  .w-pals{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;padding:0 20px 20px}
+  .w-pal{width:100%;display:grid;gap:6px;text-align:left;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:8px 8px 10px;cursor:pointer}
+  .w-pal:hover{border-color:var(--control)}
+  .w-pal.on{border-color:var(--accent);outline:1px solid var(--accent)}
+  .w-rec{justify-self:start;height:20px}
+  .w-pal-prev{display:block;height:64px;border-radius:5px;padding:10px;position:relative}
+  .w-pal-prev i{display:grid;gap:5px;height:100%;border-radius:4px;padding:8px;align-content:start;position:relative}
+  .w-pal-prev b{display:block;height:5px;border-radius:2px;width:80%}
+  .w-pal-prev em{position:absolute;right:36px;bottom:8px;width:22px;height:10px;border-radius:3px}.w-pal-prev em.k{right:8px}
+  .w-pal-n{font-size:14px;font-weight:500}
+  .w-pal small{color:var(--faint);font-size:12px}
+  @media (max-width:1000px){.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
+    .w-wkh{grid-template-columns:40px 110px minmax(0,1fr) 64px;grid-template-areas:"n d w k" "n p w s"}.w-wn{grid-area:n}.w-per{grid-area:p}.w-wworks{grid-area:w}.w-wkm{grid-area:k}.w-wkh>.w-pill,.w-wkh>.w-pill-sp{grid-area:s}
+    .w-wdays{padding-left:20px}}
+  @media (max-width:760px){.w-works{grid-template-columns:1fr}
+    .w-pday{grid-template-columns:minmax(0,1fr);gap:8px}.w-pd{display:flex;gap:8px;align-items:baseline}.w-pa{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+    .w-paces{grid-template-columns:1fr 1fr}.w-paces label:nth-child(3){border-left:0}.w-paces label:nth-child(n+3){border-top:1px solid var(--rule)}
+    .w-pset{grid-template-columns:1fr}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .w-wkh{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w" "n p s"}.w-wkh>span:nth-child(2){grid-area:d}
+    .w-gen{grid-template-columns:1fr}}
+  @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-top{padding:0 16px}.w-topin{gap:14px}.w-demo{padding:8px 16px}
+    .w-head h1{font-size:22px}.w-today{padding:20px}.w-stat{padding:16px}
+    .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
+    .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
+    .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
+    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
+    .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}}
+  @media (prefers-reduced-motion:reduce){.w-app *{transition:none!important}}
+  `;
+
+  /* ================= mount and events ================= */
+  document.getElementById('s10-week')?.remove();
+  document.getElementById('s10-week-css')?.remove();
+  const style = document.createElement('style'); style.id = 's10-week-css'; style.textContent = css; document.head.appendChild(style);
+  const root = document.createElement('div'); root.id = 's10-week'; root.className = document.getElementById('root') ? 'w-app w-over' : 'w-app'; document.body.appendChild(root);
+  document.title = 'Моя неделя · S10.run';
+  root.addEventListener('click', async (e) => {
+    const a = e.target.closest('[data-act]');
+    if (a) {
+      const act = a.dataset.act;
+      if (act === 'plan') { tab = 'week'; return openPlanner(); }
+      if (act === 'close') { mode = 'view'; PL = null; return render(); }
+      if (act === 'flash') { flash = ''; return render(); }
+      if (act === 'wgen') return generateWeek();
+      if (act === 'wsave') return saveWeek();
+      if (act === 'dsel') { PL.dsel = a.dataset.k; PL.rows = null; pickWorks(); return render(); }
+      if (act === 'wedit') { const w = PL.works[+a.dataset.w]; w.edit = !w.edit; return render(); }
+      if (act === 'redit') { const r = PL.rows[+a.dataset.r]; r.edit = !r.edit; return render(); }
+      if (act === 'tab') { tab = a.dataset.k; store.set('tab', tab); return render(); }
+      if (act === 'colors') { colorsOpen = !colorsOpen; return render(); }
+      if (act === 'pal') { palId = a.dataset.id; store.set('palette', palId); applyPalette(); return render(); }
+      if (act === 'pchoose') { chooser = !chooser; return render(); }
+      if (act === 'ptab') { chooserTab = a.dataset.k; return render(); }
+      if (act === 'psel') { sel = { src: a.dataset.src, id: a.dataset.id }; persistSel(); chooser = false; volume = null; if (paceSrc === 'plan') paceSrc = null; reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } flash = `Выбран план «${plan().name}». Задания и темпы на странице пересчитаны.`; tab = 'plan'; return render(); }
+      if (act === 'gen') return runGenerate();
+      if (act === 'wopen') { const w = +a.dataset.w; openWeek = openWeek === w ? NaN : w; return render(); }
+      if (act === 'fillask') { fill.confirm = true; fill.err = ''; return render(); }
+      if (act === 'fillno') { fill.confirm = false; return render(); }
+      if (act === 'fillyes') return fillCalendar();
+      if (act === 'pversion') return saveVersion();
+      return;
+    }
+    const b = e.target.closest('button[data-w]'); if (!b) return;
+    wk = add(wk, 7 * +b.dataset.w);
+    if (![...Array(7)].some((_, i) => days.has(add(wk, i)))) await loadUntil(add(wk, 6)).catch(() => {});
+    render();
+  });
+  root.addEventListener('change', (e) => {
+    const t = e.target, f = t.dataset.f, pk = t.dataset.p;
+    if (pk === 'role') { layout[+t.dataset.i] = t.value; store.set('layout', layout); return render(); }
+    if (pk === 'keep') { keepExisting = t.checked; fill.confirm = false; return render(); }
+    if (pk === 'pacesrc') { paceSrc = t.value; if (paceSrc === 'own' && !PACE_OWN) PACE_OWN = { ...PACE }; store.set(`paceSrc.${id}`, paceSrc); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render(); }
+    if (pk === 'pace') {
+      const v = t.value.trim().replace(/[.,]/g, ':'), m = v.match(/^(\d{1,2}):?(\d{2})$/);
+      if (!m) { t.setCustomValidity('Например 4:30'); t.reportValidity(); return; }
+      t.setCustomValidity('');
+      PACE_OWN = { ...PACE, [t.dataset.k]: `${+m[1]}:${m[2]}` }; paceSrc = 'own'; store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render();
+    }
+    if (pk === 'volume') { const v = +t.value.replace(',', '.'); volume = v > 0 ? v : null; return render(); }
+    if (t.dataset.g) { const k = t.dataset.g; gen[k] = k === 'weeks' ? Math.max(1, Math.min(30, +t.value || gen.weeks)) : t.value; if (k !== 'prompt') render(); return; }
+    if (t.dataset.alt != null) { const r = PL.rows[+t.dataset.r]; r.src = t.dataset.alt; Object.assign(r, t.dataset.alt === 'alt' ? r.alt : r.gen); return render(); }
+    if (f === 'pick') { const o = PL.opts[+t.value]; if (o) Object.assign(PL.works[+t.dataset.w], { t: o.t, km: o.km, txt: o.txt }); if (PL.rows) PL.stale = true; return render(); }
+    if (f === 'move') {
+      const i = +t.dataset.r, j = +t.value; if (j < 0) return;
+      const A = PL.rows[i], B = PL.rows[j];
+      for (const k of ['typtrain', 'task', 'prekm', 'location', 'prediction', 'src', 'gen', 'alt', 'edit']) [A[k], B[k]] = [B[k], A[k]];
+      return render();
+    }
+    if (f === 'typtrain') { PL.rows[+t.dataset.r].typtrain = +t.value; return render(); }
+    if (f === 't') { PL.works[+t.dataset.w].t = +t.value; if (PL.rows) PL.stale = true; return render(); }
+  });
+  root.addEventListener('input', (e) => {
+    const t = e.target, f = t.dataset.f;
+    if (t.tagName === 'TEXTAREA') fit(t);
+    if (t.dataset.g === 'prompt') { gen.prompt = t.value; return; }
+    if (!f || f === 'pick' || f === 'move' || f === 'typtrain' || f === 't') return;
+    if (t.dataset.w != null) { const w = PL.works[+t.dataset.w]; if (f === 'km') w.km = +t.value.replace(',', '.') || 0; else w.txt = t.value; if (PL.rows && !PL.stale) { PL.stale = true; const s = root.querySelector('[data-act=wsave]'); if (s) s.disabled = true; } return; }
+    if (t.dataset.r != null) {
+      const r = PL.rows[+t.dataset.r];
+      if (f === 'prekm') r.prekm = +t.value.replace(',', '.') || 0; else r[f] = t.value;
+      const tot = root.querySelector('#w-total'); if (tot) tot.textContent = `${n1(planTotal())} км`;
+    }
+  });
+  applyPalette();
+  render();
+  const q = new URLSearchParams(location.search).get('open');
+  if (!LIVE && q === 'plan') { tab = 'week'; await openPlanner(); await generateWeek(); }
+  if (!LIVE && q === 'choose') { tab = 'plan'; chooser = true; render(); }
+  if (!LIVE && q === 'colors') { colorsOpen = true; render(); }
+  if (!LIVE && q === 'tab-plan') { tab = 'plan'; render(); }
+  if (!LIVE && q === 'tab-paces') { tab = 'paces'; render(); }
+  return `S10 «Моя неделя» (${LIVE ? 'live' : 'demo'}) для ${me.firstName} ${me.lastName}`;
+})();
