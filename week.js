@@ -76,7 +76,7 @@
   const monday = (s) => add(s, -dow(s));
   const n1 = (v) => (Math.round(v * 10) / 10).toLocaleString('ru-RU');
   const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 12 || h > 14) ? b : c; };
-  const dayLbl = (s) => { const d = d8(s); return `${d.getUTCDate()} ${MONS[d.getUTCMonth()]}`; };
+  const dayLbl = (s) => { const d = d8(s); return `${d.getUTCDate()} ${MONS[d.getUTCMonth()]}`; };
   const range = (a, b) => d8(a).getUTCMonth() === d8(b).getUTCMonth() ? `${d8(a).getUTCDate()}–${d8(b).getUTCDate()} ${MONS[d8(b).getUTCMonth()]}` : `${dayLbl(a)} – ${dayLbl(b)}`;
   const wLabel = (k) => { const a = d8(k), b = d8(add(k, 6)); return a.getUTCMonth() === b.getUTCMonth() ? `${a.getUTCDate()}–${b.getUTCDate()} ${MON[b.getUTCMonth()]}` : `${a.getUTCDate()} ${MONS[a.getUTCMonth()]} – ${b.getUTCDate()} ${MONS[b.getUTCMonth()]}`; };
   const hms = (t) => String(t || '').replace(/^0(\d):/, '$1:');
@@ -96,6 +96,7 @@
   let versions = parseList(spRes.param?.[`studentPlans${id}`]).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
   const library = parseList(libRes.param?.planTemplates).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
   const race = main.main || null;
+  const raceName = (() => { const l = race?.location || ''; return l && l === l.toUpperCase() ? l.charAt(0) + l.slice(1).toLowerCase() : l; })(); // VALENCIA → Valencia, for display only
   const raceMon = race ? monday(race.d) : null;
   const startId = +(startParam.param?.studentMainStart || 0);
   const paceRow = results.find((r) => r.i === startId) || results.find((r) => r.prehms) || results[0] || null;
@@ -126,7 +127,7 @@
     if (paceSrc === 's10' && PACE_S10) return PACE_S10;
     return studentPaces(plan()) || PACE_S10 || PACE_OWN;
   }
-  const paceLabel = () => (paceSrc === 'own' && PACE_OWN) ? 'свои' : (paceSrc === 's10' && PACE_S10) ? `прогноз S10 на ${race?.location || 'старт'}` : studentPaces(plan()) ? `из плана «${plan().name}»` : PACE_S10 ? `прогноз S10 на ${race?.location || 'старт'}` : 'не заданы';
+  const paceLabel = () => (paceSrc === 'own' && PACE_OWN) ? 'свои' : (paceSrc === 's10' && PACE_S10) ? `прогноз S10${raceName ? ` (${raceName})` : ''}` : studentPaces(plan()) ? `из плана «${plan().name}»` : PACE_S10 ? `прогноз S10${raceName ? ` (${raceName})` : ''}` : 'не заданы';
   let PACE = activePaces();
   let layout = store.get('layout', ['easy', 'easy', 'w1', 'rest', 'w2', 'easy', 'long']); // Mon..Sun
   let volume = null; // start volume, km per week; null = as in the plan
@@ -139,16 +140,38 @@
   const plain = (t) => (PACE ? String(t).replace(PRE, (m, d, sg, n) => { let s = toSec(PACE[d]); if (sg) s += (sg === '+' ? 1 : -1) * +n; return fmtSec(s); }) : String(t))
     .replace(/(\d)\s*[xх×]\s*(\d)/g, '$1×$2').replace(/(\d)(км|м)(?=[\s,;.]|$)/g, '$1 $2').replace(/\s{2,}/g, ' ').trim();
   const isPaceOnly = (t) => /^\s*\d{1,2}:\d{2}(\s*[-–]\s*\d{1,2}:\d{2})?\s*$/.test(t || '');
+  // display only: diary texts like "4 км разминка 3×2000 м 4:00-4:05 отдых 400 м 2200 м заминка" become
+  // Разминка / работа / Заминка lines; the text written to the diary is never changed here
+  const DIST = String.raw`\d+(?:[.,]\d+)?\s*(?:км|м)`;
+  const PACE_RX = String.raw`\d{1,2}:\d{2}(?:\s*[-–]\s*\d{1,2}:\d{2})?`;
+  function structure(text) {
+    const out = [];
+    for (let p of text.split(/;\s*|\s\+\s/).map((x) => x.trim()).filter(Boolean)) {
+      let tail = '';
+      const w = p.match(new RegExp(`^(${DIST})\\s+разминк\\S*\\s*`, 'i'));
+      if (w) { out.push(`Разминка ${w[1]}`); p = p.slice(w[0].length).trim(); }
+      const c = p.match(new RegExp(`\\s*(${DIST})\\s+заминк\\S*\\s*$`, 'i'));
+      if (c && c.index > 0) { tail = `Заминка ${c[1]}`; p = p.slice(0, c.index).trim(); }
+      else if (c && c.index === 0) { out.push(`Заминка ${c[1]}`); p = ''; }
+      p = p.replace(new RegExp(`(${DIST})\\s+отдых`, 'gi'), 'отдых $1')
+        .replace(new RegExp(`(${DIST})\\s+(${PACE_RX})`, 'g'), '$1 по $2').replace(/\s+,/g, ',')
+        .replace(/([^,\s])\s+отдых/g, '$1, отдых').trim();
+      if (p) out.push(p);
+      if (tail) out.push(tail);
+    }
+    return out;
+  }
+  const nb = (h) => h.replace(/(\d) (км|м|мин|с|сек)(?=[\s,;.)]|$)/g, '$1\u00a0$2');
   function taskHTML(t) {
     if (!String(t || '').trim()) return '';
-    if (isPaceOnly(t)) return `<p class="w-tx">Темп <b>${esc(t.trim().replace(/\s*-\s*/, '–'))}</b> мин/км</p>`;
-    const parts = plain(t).split(/;\s*|\s\+\s/).map((p) => p.trim()).filter(Boolean);
-    const line = (p) => esc(p.charAt(0).toUpperCase() + p.slice(1)).replace(/(\d{1,2}:\d{2}(?:\s*[-–]\s*\d{1,2}:\d{2})?)/g, '<b>$1</b>');
+    if (isPaceOnly(t)) return `<p class="w-tx">Темп <span class="w-nw"><b>${esc(t.trim().replace(/\s*-\s*/, '–'))}</b>\u00a0мин/км</span></p>`;
+    const parts = structure(plain(t));
+    const line = (p) => nb(esc(p.charAt(0).toUpperCase() + p.slice(1))).replace(new RegExp(`(${PACE_RX})`, 'g'), (m) => `<b>${m.replace(/\s*-\s*/, '–')}</b>`);
     return parts.length > 1 ? `<ul class="w-tx">${parts.map((p) => `<li>${line(p)}</li>`).join('')}</ul>` : `<p class="w-tx">${line(parts[0])}</p>`;
   }
   const isRun = (x) => x && (+x.target > 0 || !!(x.comment || '').trim() && !/^отдых\.?$/i.test((x.comment || '').trim()));
   const runKm = (x) => (x?.tracks || []).filter((t) => t.type === 'run').reduce((a, t) => a + (+t.km || 0), 0);
-  const others = (x) => (x?.tracks || []).filter((t) => t.type !== 'run').map((t) => `${OTHER[t.json?.subtype] || 'Активность'} ${n1(+t.km || 0)} км`);
+  const others = (x) => (x?.tracks || []).filter((t) => t.type !== 'run').map((t) => `${OTHER[t.json?.subtype] || 'Активность'} ${n1(+t.km || 0)} км`);
   const glyph = (l, isRace) => `<span class="w-ig" data-l="${l}" ${isRace ? 'data-race' : ''} aria-hidden="true"><i></i><i></i><i></i></span>`;
   function week(k) {
     const list = [...Array(7)].map((_, i) => { const d = add(k, i); return { d, i, x: days.get(d) || null }; });
@@ -246,7 +269,7 @@
   }
 
   /* ================= state of the panels ================= */
-  let mode = 'view', PL = null, flash = '';
+  let mode = 'view', PL = null, flash = '', shownFlash = '';
   let tab = store.get('tab', 'week');
   let chooser = !plan(), chooserTab = versions.length ? 'version' : library.length ? 'library' : 'new';
   let gen = { distance: plan()?.distance || DISTANCES[0], weeks: raceMon ? Math.max(1, Math.round((d8(raceMon) - d8(monday(add(today, 1)))) / 6048e5) + 1) : 8, prompt: '', busy: false, lines: 0, err: '' };
@@ -277,8 +300,8 @@
   const planWeek = (n) => plan()?.plan?.weeks?.find((x) => x.week === n) || null;
   function workOptions() {
     const out = [], n = weekNo(windowStart()), pw = planWeek(n);
-    if (pw) pw.slots.forEach((sl) => { const t = TYPE_BY_NAME[sl.type]; if (t && ![1, 5, 6].includes(t)) out.push({ group: `План «${plan().name}», неделя ${n}`, name: `${TYPES[t]}, ${sl.km} км`, t, km: +sl.km, txt: plain(sl.desc) }); });
-    (PL.tt || []).forEach((g) => (g.items || []).forEach((it) => { const m = parseTpl(it); if (m && ![1, 5, 6].includes(m.t)) out.push({ group: `Шаблоны: ${g.name}`, name: `${m.name || plain(m.txt.split(/ через|,|\./)[0])}, ${m.km} км`, t: m.t, km: m.km, txt: plain(m.txt) }); }));
+    if (pw) pw.slots.forEach((sl) => { const t = TYPE_BY_NAME[sl.type]; if (t && ![1, 5, 6].includes(t)) out.push({ group: `План «${plan().name}», неделя ${n}`, name: `${TYPES[t]}, ${sl.km} км`, t, km: +sl.km, txt: plain(sl.desc) }); });
+    (PL.tt || []).forEach((g) => (g.items || []).forEach((it) => { const m = parseTpl(it); if (m && ![1, 5, 6].includes(m.t)) out.push({ group: `Шаблоны: ${g.name}`, name: `${m.name || plain(m.txt.split(/ через|,|\./)[0])}, ${m.km} км`, t: m.t, km: m.km, txt: plain(m.txt) }); }));
     return out;
   }
   function pickWorks() {
@@ -335,7 +358,7 @@
       const first = PL.rows[0].d, last = PL.rows.at(-1).d, n = PL.rows.length;
       await loadUntil(horizon());
       mode = 'view'; wk = monday(first); PL = null;
-      flash = `${LIVE ? 'Задачи поставлены' : 'Демо: задачи поставлены только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${dayLbl(first)} – ${dayLbl(last)}.`;
+      flash = `${LIVE ? 'Задачи поставлены' : 'Демо: задачи поставлены только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(first, last)}.`;
     } catch (e) { PL.busy = false; PL.err = `Сервер не принял задачи (${e.message}). В дневнике ничего не изменилось.`; }
     render();
   }
@@ -350,7 +373,7 @@
       await loadUntil(horizon());
       fill = { confirm: false, busy: false, err: '' };
       const a = f.write[0].d, b = f.write.at(-1).d;
-      flash = `${LIVE ? 'Календарь заполнен' : 'Демо: календарь заполнен только на этой странице'}: ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}, ${dayLbl(a)} – ${dayLbl(b)}.`;
+      flash = `${LIVE ? 'Календарь заполнен' : 'Демо: календарь заполнен только на этой странице'}: ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}, ${range(a, b)}.`;
       wk = monday(a);
     } catch (e) { fill.busy = false; fill.err = `Сервер не принял задачи (${e.message}). В дневнике ничего не изменилось.`; }
     render();
@@ -373,12 +396,12 @@
     if (!gen.prompt.trim()) { gen.err = 'Опишите бегуна и цель: результаты, объём, сколько тренировок в неделю, какие дни.'; return render(); }
     gen.busy = true; gen.err = ''; gen.lines = 0; render();
     try {
-      const text = await generatePlanText({ distance: gen.distance, weeks: gen.weeks, prompt: gen.prompt.trim() }, (t) => { const n = t.split('\n').length; if (n !== gen.lines) { gen.lines = n; const s = root.querySelector('#w-gen-status'); if (s) s.textContent = `Модель пишет план… ${n} строк`; } });
+      const text = await generatePlanText({ distance: gen.distance, weeks: gen.weeks, prompt: gen.prompt.trim() }, (t) => { const n = t.split('\n').length; if (n !== gen.lines) { gen.lines = n; const s = root.querySelector('#w-gen-status'); if (s) s.textContent = `Модель пишет план… ${n} ${plural(n, 'строка', 'строки', 'строк')}`; } });
       const parsed = parsePlanText(text);
       if (!parsed.weeks.length) throw new Error('в ответе нет ни одной недели');
       fresh = { id: 'new', name: `Новый план, ${gen.distance.split(' · ')[0].toLowerCase()}`, distance: gen.distance, savedAt: new Date().toISOString(), plan: { weeks: parsed.weeks } };
       sel = { src: 'new', id: 'new' }; chooser = false; volume = null; reprice();
-      flash = `План готов: ${parsed.weeks.length} ${plural(parsed.weeks.length, 'неделя', 'недели', 'недель')}${parsed.errors.length ? `, строк с ошибками ${parsed.errors.length}` : ''}. Проверьте его ниже и сохраните версию, чтобы он остался.`;
+      flash = `План готов: ${parsed.weeks.length} ${plural(parsed.weeks.length, 'неделя', 'недели', 'недель')}${parsed.errors.length ? `, строк с ошибками: ${parsed.errors.length}` : ''}. Проверьте его ниже и сохраните версию, чтобы он остался.`;
     } catch (e) { gen.err = `План не получился: ${e.message}.`; }
     gen.busy = false; render();
   }
@@ -391,25 +414,25 @@
   function chooserHTML() {
     const rows = (list, src) => list.length ? `<ul class="w-plans">${list.map((p) => {
       const on = sel && sel.src === src && sel.id === p.id, n = p.plan?.weeks?.length || 0, peak = Math.max(...(p.plan?.weeks || []).map((w) => +w.km || 0));
-      return `<li class="${on ? 'on' : ''}"><div class="w-pl"><b>${esc(p.name || 'Без названия')}</b><span class="w-muted num">${esc((p.distance || '').split(' · ')[0])}${p.distance ? ' · ' : ''}${n} ${plural(n, 'неделя', 'недели', 'недель')} · пик ${n1(peak)} км · ${p.savedAt ? `сохранён ${dayLbl(String(p.savedAt).slice(0, 10))}` : ''}${p.student?.t42 ? ` · свои темпы, T42 ${hms(p.student.t42)}` : ''}</span></div>${on ? '<span class="w-pill neutral">Выбран</span>' : `<button class="w-btn sm" data-act="psel" data-src="${src}" data-id="${esc(p.id)}">Выбрать</button>`}</li>`;
+      return `<li class="${on ? 'on' : ''}"><div class="w-pl"><b>${esc(p.name || 'Без названия')}</b><span class="w-muted num">${esc((p.distance || '').split(' · ')[0])}${p.distance ? ' · ' : ''}${n} ${plural(n, 'неделя', 'недели', 'недель')} · пик ${n1(peak)} км · ${p.savedAt ? `сохранён ${dayLbl(String(p.savedAt).slice(0, 10))}` : ''}${p.student?.t42 ? ` · свои темпа, T42 ${hms(p.student.t42)}` : ''}</span></div>${on ? '<span class="w-pill neutral">Выбран</span>' : `<button class="w-btn sm" data-act="psel" data-src="${src}" data-id="${esc(p.id)}">Выбрать</button>`}</li>`;
     }).join('')}</ul>` : `<p class="w-note">${src === 'version' ? 'Сохранённых версий пока нет. Выберите план из библиотеки или сделайте новый.' : 'В библиотеке пока пусто.'}</p>`;
     return `<div class="w-chooser">
       <div class="w-tabs" role="tablist" aria-label="Откуда взять план">
-        ${[['version', `Мои версии (${versions.length})`], ['library', `Библиотека (${library.length})`], ['new', 'Новый по промпту']].map(([k, l]) => `<button role="tab" aria-selected="${chooserTab === k}" data-act="ptab" data-k="${k}">${l}</button>`).join('')}
+        ${[['version', `Мои версии (${versions.length})`], ['library', `Библиотека (${library.length})`], ['new', 'Новый по описанию']].map(([k, l]) => `<button role="tab" aria-selected="${chooserTab === k}" tabindex="${chooserTab === k ? 0 : -1}" data-act="ptab" data-k="${k}">${l}</button>`).join('')}
       </div>
       ${chooserTab === 'version' ? rows(versions, 'version') : chooserTab === 'library' ? rows(library, 'library') : `
         <div class="w-gen">
           <label class="w-f"><span>Дистанция</span><select data-g="distance">${DISTANCES.map((d) => `<option ${d === gen.distance ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
           <label class="w-f w-f-s"><span>Недель</span><input data-g="weeks" class="num" inputmode="numeric" value="${gen.weeks}"></label>
           <label class="w-f w-f-wide"><span>Бегун и цель</span><textarea data-g="prompt" rows="3" placeholder="Марафон 3 декабря на 3:20. 5 км 18:59, полумарафон 1:38. Сейчас ~40 км в неделю, 6 тренировок, четверг отдых, среда стадион, воскресенье длительная.">${esc(gen.prompt)}</textarea></label>
-          <div class="w-go"><button class="w-btn primary" data-act="gen" ${gen.busy ? 'disabled' : ''}>${gen.busy ? 'Генерирую…' : 'Сгенерировать план'}</button><span class="w-muted" id="w-gen-status">${gen.busy ? 'Модель думает…' : `${gen.weeks} ${plural(gen.weeks, 'неделя', 'недели', 'недель')} до ${race?.location || 'старта'}. Генерация занимает до минуты.`}</span></div>
+          <div class="w-go"><button class="w-btn primary" data-act="gen" ${gen.busy ? 'disabled' : ''}>${gen.busy ? 'Генерирую…' : 'Сгенерировать план'}</button><span class="w-muted" id="w-gen-status">${gen.busy ? 'Модель думает…' : `${gen.weeks} ${plural(gen.weeks, 'неделя', 'недели', 'недель')} до старта. Генерация занимает до минуты.`}</span></div>
           ${gen.err ? `<p class="w-err" role="alert">${esc(gen.err)}</p>` : ''}
         </div>`}
     </div>`;
   }
   function planCard() {
     const p = plan();
-    const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${race ? `<span class="w-muted num">до ${esc(race.location || 'старта')}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
+    const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
     if (!race) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. Выберите его на странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
     if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите сохранённую версию, шаблон из библиотеки или сгенерируйте новый.</p>${chooserHTML()}</section>`;
     const f = fillPreview(), src = sel.src === 'version' ? 'ваша версия' : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
@@ -418,7 +441,7 @@
     return `<section class="w-card" aria-labelledby="w-plan2-h">${head}
       ${chooser ? chooserHTML() : ''}
       <div class="w-step">
-        <div class="w-pmeta"><span class="w-muted num">${src} · ${ws.length} ${plural(ws.length, 'неделя', 'недели', 'недель')} · ${range(first.mon, add(last.mon, 6))} · темпы ${esc(paceLabel())}</span></div>
+        <div class="w-pmeta"><span class="w-muted num">${src} · ${ws.length} ${plural(ws.length, 'неделя', 'недели', 'недель')} · ${range(first.mon, add(last.mon, 6))} · темпа ${esc(paceLabel())}</span></div>
         <div class="w-pset">
           <label class="w-f w-f-s"><span>Объём первой недели</span><span class="w-inl"><input data-p="volume" class="num" inputmode="numeric" value="${volume || firstKm(p)}"> км</span></label>
           <div class="w-f w-f-wide"><span>Дни недели</span><div class="w-roles">${layout.map((r, i) => `<label class="w-role"><small>${DN[i]}</small><select data-p="role" data-i="${i}" aria-label="${DNF[i]}">${Object.entries(ROLE).map(([k, l]) => `<option value="${k}" ${r === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div></div>
@@ -432,16 +455,16 @@
           <button class="w-wkh" data-act="wopen" data-w="${src2.week}" aria-expanded="${isOpen}">
             <span class="num w-wn">${src2.week}</span><span class="num">${range(w.mon, add(w.mon, 6))}</span><span class="w-per">${esc(src2.period || '')}</span>
             <span class="w-wworks">${works.map((d) => `<span>${glyph(LEVEL[d.typtrain], d.typtrain === 6)}${SHORT[d.typtrain]} ${n1(d.prekm)}</span>`).join('')}</span>
-            <span class="num w-wkm">${n1(w.total)} км</span>${past ? '<span class="w-pill neutral">Прошла</span>' : now ? '<span class="w-pill now">Сейчас</span>' : '<span class="w-pill-sp"></span>'}
+            <span class="num w-wkm">${n1(w.total)} км</span>${past ? '<span class="w-pill neutral">Прошла</span>' : now ? '<span class="w-pill now">Сейчас</span>' : '<span class="w-pill-sp"></span>'}
           </button>
           ${isOpen ? `<ol class="w-wdays">${w.days.map((d) => { const ex = days.get(d.d); const keep = keepExisting && d.d > today && isRun(ex);
             return `<li class="${d.d <= today ? 'gone' : ''}"><span class="w-wdd"><b>${DN[dow(d.d)]}</b><small class="num">${dayLbl(d.d)}</small></span>
-              <div class="w-wdb"><span class="w-name ${d.typtrain ? '' : 'w-muted'}">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}${keep ? `<span class="w-muted">В дневнике уже стоит: ${esc(TYPES[ex.type] || 'тренировка').toLowerCase()} ${n1(+ex.target || 0)} км, её не трогаем</span>` : ''}</div>
-              <span class="num w-wdk">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`; }).join('')}</ol>` : ''}
+              <div class="w-wdb"><span class="w-name ${d.typtrain ? '' : 'w-muted'}">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}${keep ? `<span class="w-muted">В дневнике уже стоит: ${esc(TYPES[ex.type] || 'тренировка').toLowerCase()} ${n1(+ex.target || 0)} км, её не трогаем</span>` : ''}</div>
+              <span class="num w-wdk">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`; }).join('')}</ol>` : ''}
         </li>`;
       }).join('')}</ol>
       <div class="w-sum">
-        <div><span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, f.write.at(-1).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>
+        <div><span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, f.write.at(-1).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>
           <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label></div>
         <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy ? '' : 'disabled'}>Заполнить календарь</button></div>
       </div>
@@ -451,19 +474,30 @@
   }
   function pacesCard() {
     const P = PACE;
-    const opts = [studentPaces(plan()) ? ['plan', `Из плана «${plan().name}»`] : null, PACE_S10 ? ['s10', `Прогноз S10${race?.prediction ? `, ${race.location} ${hms(race.prediction)}` : ''}`] : null, ['own', 'Свои']].filter(Boolean);
+    const opts = [studentPaces(plan()) ? ['plan', `Из плана «${plan().name}»`] : null, PACE_S10 ? ['s10', `Прогноз S10${race?.prediction ? `, ${raceName} ${hms(race.prediction)}` : ''}`] : null, ['own', 'Свои']].filter(Boolean);
     const cur = (paceSrc === 'own' && PACE_OWN) ? 'own' : (paceSrc === 's10' && PACE_S10) ? 's10' : studentPaces(plan()) ? 'plan' : PACE_S10 ? 's10' : 'own';
     return `<section class="w-card" aria-labelledby="w-pace-h">
-      <div class="w-ch"><h2 id="w-pace-h">Темпы для заданий, мин/км</h2><label class="w-inl w-muted">Откуда <select data-p="pacesrc" aria-label="Откуда брать темпы">${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label></div>
+      <div class="w-ch"><h2 id="w-pace-h">Темпа для заданий, мин/км</h2><label class="w-inl w-muted">Откуда <select data-p="pacesrc" aria-label="Откуда брать темпа">${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label></div>
       <div class="w-paces num">${[['5', 'темп на 5 км'], ['10', 'темп на 10 км'], ['21', 'полумарафон'], ['42', 'марафон']].map(([k, l]) => `<label><span><b>T${k}</b><small>${l}</small></span><input data-p="pace" data-k="${k}" value="${P?.[k] || ''}" inputmode="numeric" aria-label="T${k}, мин/км" placeholder="4:30"></label>`).join('')}</div>
-      <p class="w-note">Все задания на странице считаются по этим темпам: «T21+8» — это ваш T21 плюс 8 секунд. Если поменять цифру, темпы станут «своими» и сохранятся на этом устройстве.</p>
+      ${paceTable(P)}
+      <p class="w-note">Все задания на странице считаются по этим темпам: «T21+8» — это ваш T21 плюс 8 секунд. Если поменять цифру, темпа станут «своими» и сохранятся на этом устройстве.</p>
     </section>`;
+  }
+  function paceTable(P) {
+    if (!P?.[42]) return '';
+    const easy = [toSec(P[42]) + 55, toSec(P[42]) + 75];
+    const rows = [['Лёгкий бег', easy], ['T42', [toSec(P[42])], 'марафон'], ['T21', [toSec(P[21])], 'полумарафон'], ['T10', [toSec(P[10])], '10 км'], ['T5', [toSec(P[5])], '5 км']];
+    const cell = (r, m) => (r.length > 1 && m < 1000 ? '<span class="w-muted">—</span>' : r.map((v) => fmtSec(v * m / 1000)).join('–')); // easy runs are not timed on the track
+    return `<div class="w-ptab-wrap"><table class="w-ptab num"><caption>Время на отрезок</caption>
+      <thead><tr><th scope="col">Зона</th><th scope="col">1 км</th><th scope="col">800 м</th><th scope="col">400 м</th><th scope="col">200 м</th></tr></thead>
+      <tbody>${rows.map(([n, r, sub]) => `<tr><th scope="row"><b>${n}</b>${sub ? `<small>${sub}</small>` : ''}</th><td>${cell(r, 1000)}</td><td>${cell(r, 800)}</td><td>${cell(r, 400)}</td><td>${cell(r, 200)}</td></tr>`).join('')}</tbody>
+    </table></div>`;
   }
   function workCard(w, i) {
     const groups = [...new Set(PL.opts.map((o) => o.group))];
     const s = PL.opts.findIndex((o) => o.txt === w.txt && o.km === w.km);
     return `<div class="w-work">
-      <div class="w-wh"><span class="w-name">${glyph(LEVEL[w.t] || 1)}Работа ${i + 1}: ${w.txt ? TYPES[w.t] : 'не выбрана'}</span>${w.txt ? `<span class="num">${n1(w.km)} км</span>` : ''}</div>
+      <div class="w-wh"><span class="w-name">${glyph(LEVEL[w.t] || 1)}Работа ${i + 1}: ${w.txt ? TYPES[w.t] : 'не выбрана'}</span>${w.txt ? `<span class="num">${n1(w.km)} км</span>` : ''}</div>
       ${w.txt ? taskHTML(w.txt) : '<p class="w-tx w-muted">Выберите работу из плана или шаблонов.</p>'}
       <div class="w-wa">
         <select data-w="${i}" data-f="pick" aria-label="Работа ${i + 1}: выбрать другую"><option value="-1" selected>${w.txt ? 'Заменить на…' : 'Выбрать…'}</option>${groups.map((g) => `<optgroup label="${esc(g)}">${PL.opts.map((o, k) => (o.group === g && k !== s ? `<option value="${k}">${esc(o.name)}</option>` : '')).join('')}</optgroup>`).join('')}</select>
@@ -473,31 +507,31 @@
     </div>`;
   }
   function dayRow(r, i) {
-    const moveOpts = PL.rows.map((o, j) => (j === i ? '' : `<option value="${j}">на ${DNS[dow(o.d)]} ${dayLbl(o.d)}${o.typtrain && +o.prekm ? `, там ${TYPES[o.typtrain].toLowerCase()} ${n1(o.prekm)} км` : ', там отдых'}</option>`)).join('');
+    const moveOpts = PL.rows.map((o, j) => (j === i ? '' : `<option value="${j}">на ${DNS[dow(o.d)]} ${dayLbl(o.d)}${o.typtrain && +o.prekm ? `, там ${TYPES[o.typtrain].toLowerCase()} ${n1(o.prekm)} км` : ', там отдых'}</option>`)).join('');
     const rest = !r.typtrain && !+r.prekm;
     return `<li class="w-pday ${rest ? 'rest' : ''}">
       <div class="w-pd"><b>${DNF[dow(r.d)]}</b><small class="num">${dayLbl(r.d)}</small></div>
       <div class="w-pbody">
-        <div class="w-ph"><span class="w-name">${rest ? 'Отдых' : glyph(LEVEL[r.typtrain] || 1, r.typtrain === 6) + TYPES[r.typtrain]}</span>${rest ? '' : `<span class="num w-pkm">${+r.prekm ? `${n1(r.prekm)} км` : 'без расстояния'}</span>`}</div>
+        <div class="w-ph"><span class="w-name">${rest ? 'Отдых' : glyph(LEVEL[r.typtrain] || 1, r.typtrain === 6) + TYPES[r.typtrain]}</span>${rest ? '' : `<span class="num w-pkm">${+r.prekm ? `${n1(r.prekm)} км` : 'без расстояния'}</span>`}</div>
         ${rest ? '' : taskHTML(r.task)}
-        ${r.alt ? `<div class="w-alt" role="radiogroup" aria-label="Длительная: откуда взять"><label><input type="radio" name="alt${i}" data-r="${i}" data-alt="gen" ${r.src === 'gen' ? 'checked' : ''}>Из расчёта S10, ${n1(r.gen.prekm)} км</label><label><input type="radio" name="alt${i}" data-r="${i}" data-alt="alt" ${r.src === 'alt' ? 'checked' : ''}>Из плана, ${n1(r.alt.prekm)} км</label></div>` : ''}
+        ${r.alt ? `<div class="w-alt" role="radiogroup" aria-label="Длительная: откуда взять"><label><input type="radio" name="alt${i}" data-r="${i}" data-alt="gen" ${r.src === 'gen' ? 'checked' : ''}>Из расчёта S10, ${n1(r.gen.prekm)} км</label><label><input type="radio" name="alt${i}" data-r="${i}" data-alt="alt" ${r.src === 'alt' ? 'checked' : ''}>Из плана, ${n1(r.alt.prekm)} км</label></div>` : ''}
         ${r.edit ? `<div class="w-edit">${typeSelect(r.typtrain, `data-r="${i}" data-f="typtrain" aria-label="Тип, ${dayLbl(r.d)}"`)}${kmField(r.prekm, `data-r="${i}" data-f="prekm" aria-label="Километры, ${dayLbl(r.d)}"`)}<textarea data-r="${i}" data-f="task" rows="3" aria-label="Задание, ${dayLbl(r.d)}">${esc(r.task)}</textarea>
           ${r.typtrain === 6 ? `<input data-r="${i}" data-f="location" placeholder="Место старта" value="${esc(r.location)}" aria-label="Место старта"><input data-r="${i}" data-f="prediction" placeholder="Прогноз, например 1:38:00" value="${esc(r.prediction)}" aria-label="Прогноз на старт">` : ''}</div>` : ''}
       </div>
       <div class="w-pa">
-        <select data-r="${i}" data-f="move" aria-label="Перенести тренировку ${DNF[dow(r.d)]} ${dayLbl(r.d)} на другой день"><option value="-1" selected>Перенести…</option>${moveOpts}</select>
+        <select data-r="${i}" data-f="move" aria-label="Перенести тренировку с ${dayLbl(r.d)} на другой день"><option value="-1" selected>Перенести…</option>${moveOpts}</select>
         <button class="w-link" data-act="redit" data-r="${i}" aria-expanded="${r.edit}">${r.edit ? 'Готово' : 'Изменить'}</button>
       </div>
     </li>`;
   }
   function plannerHTML() {
-    const head = () => `<div class="w-ch"><h2 id="w-plan-h">Неделя в деталях</h2><button class="w-btn sm" data-act="close">Закрыть</button></div>`;
+    const head = () => `<div class="w-ch"><h2 id="w-plan-h">Запланировать неделю</h2><button class="w-btn sm" data-act="close">Закрыть</button></div>`;
     if (!PL || PL.loading) return `<section class="w-card" aria-labelledby="w-plan-h">${head()}<p class="w-note">Загружаю ваши ограничения и шаблоны…</p></section>`;
     if (!PL.base) return `<section class="w-card" aria-labelledby="w-plan-h">${head()}<p class="w-note w-err" role="alert">${esc(PL.err)}</p></section>`;
     const p = PL.base.param || {}, n = weekNo(windowStart()), pw = planWeek(n);
     return `<section class="w-card" aria-labelledby="w-plan-h">${head()}
       <div class="w-step">
-        <div class="w-steph"><h3>Неделя с</h3><span class="num">Лимиты: объём до ${p.maxweek?.v ?? '—'} км, длительная до ${p.maxlong?.v ?? '—'} км</span></div>
+        <div class="w-steph"><h3>Начало недели</h3><span class="num">Лимиты: объём до ${p.maxweek?.v ?? '—'} км, длительная до ${p.maxlong?.v ?? '—'} км</span></div>
         <div class="w-seg" role="radiogroup" aria-label="Первый день недели">${PL.dsels.map((x) => `<button role="radio" aria-checked="${x.k === PL.dsel}" data-act="dsel" data-k="${x.k}">${DNF[dow(x.date)]}, ${dayLbl(x.date)}</button>`).join('')}</div>
       </div>
       <div class="w-step">
@@ -508,20 +542,41 @@
       ${PL.err ? `<p class="w-note w-err" role="alert">${esc(PL.err)}</p>` : ''}
       ${PL.rows ? `<div class="w-step w-step-list"><div class="w-steph"><h3>Расписание</h3><span class="num">${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}, ${dayLbl(PL.rows[0].d)} – ${dayLbl(PL.rows.at(-1).d)}</span></div></div>
         <ol class="w-plist">
-          ${PL.pre.map((x) => `<li class="w-pday locked"><div class="w-pd"><b>${DNF[dow(x.d)]}</b><small class="num">${dayLbl(x.d)}</small></div><div class="w-pbody"><div class="w-ph"><span class="w-name">${glyph(LEVEL[+x.typtrain] || 1)}${TYPES[+x.typtrain] || 'Тренировка'}</span><span class="num w-pkm">${n1(+x.prekm || 0)} км</span></div>${taskHTML(x.task)}</div><div class="w-pa"><span class="w-pill neutral">Уже в дневнике</span></div></li>`).join('')}
+          ${PL.pre.map((x) => `<li class="w-pday locked"><div class="w-pd"><b>${DNF[dow(x.d)]}</b><small class="num">${dayLbl(x.d)}</small></div><div class="w-pbody"><div class="w-ph"><span class="w-name">${glyph(LEVEL[+x.typtrain] || 1)}${TYPES[+x.typtrain] || 'Тренировка'}</span><span class="num w-pkm">${n1(+x.prekm || 0)} км</span></div>${taskHTML(x.task)}</div><div class="w-pa"><span class="w-pill neutral">Уже в дневнике</span></div></li>`).join('')}
           ${PL.rows.map(dayRow).join('')}
         </ol>
         <div class="w-sum">
-          <div><span class="w-lb">Итого за ${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}</span><b class="num" id="w-total">${n1(planTotal())} км</b>${PL.sum?.['за последние 7 дней'] ? `<span class="w-muted num">Последние 7 дней: пробежано ${PL.sum['за последние 7 дней'].km0} из ${PL.sum['за последние 7 дней'].km1} км</span>` : ''}</div>
+          <div><span class="w-lb">Итого за ${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}</span><b class="num" id="w-total">${n1(planTotal())} км</b>${PL.sum?.['за последние 7 дней'] ? `<span class="w-muted num">Последние 7 дней: пробежано ${PL.sum['за последние 7 дней'].km0} из ${PL.sum['за последние 7 дней'].km1} км</span>` : ''}</div>
           <button class="w-btn primary" data-act="wsave" ${PL.busy || PL.stale ? 'disabled' : ''}>${PL.busy ? 'Ставлю задачи…' : 'Поставить задачи'}</button>
         </div>` : ''}
     </section>`;
   }
+  // what was actually run: km and average pace from the diary tracks, compared with a pace-only task
+  const tSec = (t) => String(t || '').split(':').reduce((a, v) => a * 60 + (+v || 0), 0);
+  function runFact(x) {
+    const tr = (x?.tracks || []).filter((t) => t.type === 'run' && +t.km > 0);
+    // the track's own pace (moving pace, as S10 shows it), averaged by distance; elapsed time only as a fallback
+    const km = tr.reduce((a, t) => a + +t.km, 0);
+    const sec = tr.reduce((a, t) => a + (t.pace ? tSec(t.pace) * +t.km : tSec(t.time)), 0);
+    return km ? { km, pace: sec ? sec / km : null } : null;
+  }
+  function paceVerdict(task, pace) {
+    if (!pace || !isPaceOnly(task)) return '';
+    const [lo, hi = lo] = task.trim().split(/\s*[-–]\s*/).map(toSec);
+    if (pace < lo - 5) return '<span class="w-pill neutral">быстрее задания</span>';
+    if (pace > hi + 5) return '<span class="w-pill neutral">медленнее задания</span>';
+    return '<span class="w-pill ok">в задании</span>';
+  }
+  function factHTML(x, planned) {
+    const f = runFact(x); if (!f) return '';
+    const what = planned ? 'Факт' : 'Пробежка вне плана';
+    return `<p class="w-fact"><span>${what}:</span><span class="w-nw"><b class="num">${n1(f.km)} км</b>${f.pace ? ` · <b class="num">${fmtSec(f.pace)}</b> мин/км` : ''}</span>${planned ? paceVerdict(x.comment, f.pace) : ''}</p>`;
+  }
   function statusPill(r) {
     const x = r.x, km = runKm(x);
-    if (!isRun(x)) return km ? `<span class="w-pill ok">${n1(km)} км</span>` : '';
+    if (!isRun(x)) return '';
     if (r.d > today) return '';
-    if (km > 0) return `<span class="w-pill ok">Сделано ${n1(km)} км</span>`;
+    if (km > 0) return '<span class="w-pill ok">Сделано</span>';
     if (r.d === today) return '<span class="w-pill neutral">Сегодня</span>';
     return '<span class="w-pill bad">Не выполнено</span>';
   }
@@ -535,12 +590,12 @@
     const head = `<span class="w-lb">Сегодня, ${DNF[r.i]} ${d.getUTCDate()} ${MON[d.getUTCMonth()]}</span>`;
     if (!isRun(x)) return `<div class="w-today">${head}<div class="w-big">Отдых</div><p class="w-tx">Тренировки сегодня нет.</p></div>`;
     return `<div class="w-today">${head}<div class="w-type">${glyph(LEVEL[x.type] || 1, x.type === 6)}${TYPES[x.type] || 'Тренировка'}</div>
-      <div class="w-big num">${n1(+x.target)}<small>км</small></div>${taskHTML(x.comment)}${km ? `<div><span class="w-pill ok">Сделано ${n1(km)} км</span></div>` : ''}</div>`;
+      <div class="w-big num">${n1(+x.target)}<small>км</small></div>${taskHTML(x.comment)}${factHTML(x, true)}</div>`;
   }
   function weekSection(W) {
     if (mode === 'plan') return plannerHTML();
     return `<section class="w-card" aria-labelledby="w-days-h">
-        <div class="w-ch"><h2 id="w-days-h">По дням</h2><span class="w-muted num">План ${n1(W.plan)} км</span><button class="w-btn sm" data-act="plan">Неделя в деталях</button></div>
+        <div class="w-ch"><h2 id="w-days-h">По дням</h2><span class="w-muted num">План ${n1(W.plan)} км</span><button class="w-btn sm" data-act="plan">Запланировать неделю</button></div>
         <ol class="w-days">${W.list.map((r) => {
           const x = r.x, run = isRun(x), o = others(x);
           return `<li class="w-day ${r.d === today ? 'today' : ''}">
@@ -548,12 +603,35 @@
             <div class="w-what ${run ? '' : 'rest'}">
               <span class="w-name">${run ? glyph(LEVEL[x.type] || 1, x.type === 6) + (TYPES[x.type] || 'Тренировка') : 'Отдых'}</span>
               ${run ? taskHTML(x.comment) : ''}
+              ${factHTML(x, run)}
               ${o.length ? `<span class="w-muted">${o.map(esc).join(' · ')}</span>` : ''}
             </div>
-            <div class="w-km">${run ? `<span class="num">${n1(+x.target)} км</span>` : ''}${statusPill(r)}</div>
+            <div class="w-km">${run ? `<span class="num">${n1(+x.target)} км</span>` : ''}${statusPill(r)}</div>
           </li>`;
         }).join('')}</ol>
       </section>`;
+  }
+  function weekRel() {
+    const n = Math.round((d8(wk) - d8(monday(today))) / 6048e5);
+    if (!n) return 'Эта неделя';
+    if (n === -1) return 'Прошлая неделя';
+    if (n === 1) return 'Следующая неделя';
+    const k = Math.abs(n), w = `${k} ${plural(k, 'неделя', 'недели', 'недель')}`;
+    return n < 0 ? `${w} назад` : `Через ${w}`;
+  }
+  // tab and week live in the address, so a link opens the same view and «назад» works
+  function syncURL(push) {
+    const u = new URL(location.href);
+    if (tab === 'week') u.searchParams.delete('tab'); else u.searchParams.set('tab', tab);
+    if (wk === monday(today)) u.searchParams.delete('week'); else u.searchParams.set('week', wk);
+    u.searchParams.delete('open');
+    if (u.href !== location.href) history[push ? 'pushState' : 'replaceState'](null, '', u);
+  }
+  async function readURL(first) {
+    const q = new URLSearchParams(location.search);
+    const t = q.get('tab'); tab = ['plan', 'paces'].includes(t) ? t : (first && !t && !q.has('week') ? tab : 'week');
+    const w = q.get('week'); wk = /^\d{4}-\d{2}-\d{2}$/.test(w || '') ? monday(w) : monday(today);
+    if (![...Array(7)].some((_, i) => days.has(add(wk, i)))) await loadUntil(add(wk, 6)).catch(() => {});
   }
   function render() {
     const W = week(wk), cur = wk === monday(today);
@@ -562,34 +640,36 @@
     root.innerHTML = `
     ${LIVE ? '' : '<div class="w-demo" role="note">Демо на данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</div>'}
     <header class="w-top"><div class="w-topin">
-      <a class="w-wm" href="${LIVE ? '/' : 'https://s10.run/'}" aria-label="S10.run, главная">S10<span>.run</span></a>
+      <a class="w-wm" href="${LIVE ? '/' : 'https://s10.run/'}" aria-label="S10.run, главная" translate="no">S10<span>.run</span></a>
       <span class="w-who">${esc(me.firstName)} ${esc(me.lastName)}</span>${SHOW_COLORS ? `<button class="w-btn sm" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}
     </div></header>
     <main class="w-main">
       ${colorsOpen ? colorsPanel() : ''}
       <div class="w-head">
         <h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
-        <div class="w-nav" role="group" aria-label="Выбор недели">
-          <button data-w="-1" aria-label="Предыдущая неделя">‹</button><span>${cur ? 'Эта неделя' : wk < monday(today) ? 'Прошедшая' : 'Следующая'}</span><button data-w="1" aria-label="Следующая неделя">›</button>
-        </div>
+        <div class="w-navs"><div class="w-nav" role="group" aria-label="Выбор недели">
+          <button data-w="-1" aria-label="Предыдущая неделя">‹</button><span>${weekRel()}</span><button data-w="1" aria-label="Следующая неделя">›</button>
+        </div>${cur ? '' : '<button class="w-btn sm" data-act="today">К этой неделе</button>'}</div>
       </div>
       <section class="w-card w-hero" aria-label="Сегодня и итоги недели">
         ${todayCard(W)}
         <div class="w-stats">
-          <div class="w-stat"><span class="w-lb">Пробежано</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span><div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} км"><i style="width:${pct}%"></i></div></div>
+          <div class="w-stat"><span class="w-lb">Пробежано</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span><div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} км"><i style="width:${pct}%"></i></div></div>
           <div class="w-stat"><span class="w-lb">Осталось тренировок</span><span class="v num">${W.left}</span><span class="s">${W.left ? 'до воскресенья' : 'на этой неделе всё'}</span></div>
           <div class="w-stat"><span class="w-lb">Длительная</span><span class="v num">${W.long ? `${n1(+W.long.x.target)}<small>км</small>` : '<span class="w-muted">—</span>'}</span><span class="s">${W.long ? `${DNF[W.long.i]}, ${dayLbl(W.long.d)}` : 'на этой неделе нет'}</span></div>
-          <div class="w-stat"><span class="w-lb">${race ? `До ${esc(race.location || 'старта')}` : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${race ? `${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : 'не выбран'}</span></div>
+          <div class="w-stat"><span class="w-lb">${race ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${race ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : 'не выбран'}</span></div>
         </div>
       </section>
-      ${flash ? `<div class="w-flash" role="status"><span>${esc(flash)}</span><button data-act="flash" aria-label="Скрыть сообщение">×</button></div>` : ''}
+      ${flash ? `<div class="w-flash" role="status" tabindex="-1"><span>${esc(flash)}</span><button data-act="flash" aria-label="Скрыть сообщение">×</button></div>` : ''}
       <div class="w-tabbar" role="tablist" aria-label="Разделы">
-        ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпы']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
+        ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпа']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
       </div>
       <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? planCard() : pacesCard()}</div>
       <p class="w-foot">${LIVE ? `Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.` : 'Демо-версия страницы «Моя неделя» для S10.run.'}</p>
     </main>`;
     root.querySelectorAll('textarea').forEach(fit);
+    syncURL(false);
+    if (flash && flash !== shownFlash) { shownFlash = flash; root.querySelector('.w-flash')?.focus({ preventScroll: false }); }
   }
   function fit(t) { t.style.height = 'auto'; t.style.height = Math.max(64, t.scrollHeight + 2) + 'px'; }
 
@@ -616,7 +696,7 @@
   .w-nav{display:flex;align-items:center;height:38px;border:1px solid var(--control);border-radius:6px;background:var(--surface)}
   .w-nav button{width:40px;height:36px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;border-radius:6px}
   .w-nav button:hover{color:var(--text);background:var(--rule)}
-  .w-nav span{width:120px;text-align:center;font-weight:500;font-size:14px}
+  .w-nav span{width:144px;text-align:center;font-weight:500;font-size:14px}
   .w-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;min-width:0}
   .w-lb{color:var(--muted);font-size:13px}
   .w-muted{color:var(--faint);font-size:13px}
@@ -718,6 +798,19 @@
   .w-acts{display:flex;gap:10px;flex-wrap:wrap}
   .w-chk{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-top:6px;cursor:pointer}
   .w-flash{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--ok-bg);color:var(--ok);border-radius:8px;padding:12px 16px}
+  .w-nw{white-space:nowrap}
+  .w-fact{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+  .w-fact b{color:var(--text);font-weight:500}
+  .w-flash:focus{outline:none}.w-flash:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .w-navs{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .w-ptab-wrap{padding:0 20px 4px;overflow-x:auto}
+  .w-ptab{width:100%;border-collapse:collapse;font-size:15px}
+  .w-ptab caption{text-align:left;color:var(--muted);font-size:13px;padding:14px 0 8px}
+  .w-ptab th,.w-ptab td{padding:10px 12px;border-top:1px solid var(--rule);text-align:right;white-space:nowrap}
+  .w-ptab thead th{border-top:0;color:var(--muted);font-weight:400;font-size:13px}
+  .w-ptab th[scope=row],.w-ptab thead th:first-child{text-align:left;padding-left:0}
+  .w-ptab th[scope=row] b{font-weight:500;margin-right:8px}
+  .w-ptab th[scope=row] small{color:var(--faint);font-size:13px;font-weight:400}
   .w-flash button{border:0;background:none;color:inherit;cursor:pointer;font-size:18px;width:32px;height:32px}
   .w-chooser{padding:4px 20px 18px;display:grid;gap:12px}
   .w-plans{border:1px solid var(--border);border-radius:8px}
@@ -794,7 +887,9 @@
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
     .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
-    .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}}
+    .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
+    .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
+    .w-paces label{flex-direction:column;align-items:flex-start;gap:8px}.w-paces input{width:100%}.w-ptab th[scope=row] small{display:block}}
   @media (prefers-reduced-motion:reduce){.w-app *{transition:none!important}}
   `;
 
@@ -816,12 +911,13 @@
       if (act === 'dsel') { PL.dsel = a.dataset.k; PL.rows = null; pickWorks(); return render(); }
       if (act === 'wedit') { const w = PL.works[+a.dataset.w]; w.edit = !w.edit; return render(); }
       if (act === 'redit') { const r = PL.rows[+a.dataset.r]; r.edit = !r.edit; return render(); }
-      if (act === 'tab') { tab = a.dataset.k; store.set('tab', tab); return render(); }
+      if (act === 'tab') { tab = a.dataset.k; store.set('tab', tab); syncURL(true); return render(); }
+      if (act === 'today') { wk = monday(today); syncURL(true); return render(); }
       if (act === 'colors') { colorsOpen = !colorsOpen; return render(); }
       if (act === 'pal') { palId = a.dataset.id; store.set('palette', palId); applyPalette(); return render(); }
       if (act === 'pchoose') { chooser = !chooser; return render(); }
       if (act === 'ptab') { chooserTab = a.dataset.k; return render(); }
-      if (act === 'psel') { sel = { src: a.dataset.src, id: a.dataset.id }; persistSel(); chooser = false; volume = null; if (paceSrc === 'plan') paceSrc = null; reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } flash = `Выбран план «${plan().name}». Задания и темпы на странице пересчитаны.`; tab = 'plan'; return render(); }
+      if (act === 'psel') { sel = { src: a.dataset.src, id: a.dataset.id }; persistSel(); chooser = false; volume = null; if (paceSrc === 'plan') paceSrc = null; reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } flash = `Выбран план «${plan().name}». Задания и темпа на странице пересчитаны.`; tab = 'plan'; return render(); }
       if (act === 'gen') return runGenerate();
       if (act === 'wopen') { const w = +a.dataset.w; openWeek = openWeek === w ? NaN : w; return render(); }
       if (act === 'fillask') { fill.confirm = true; fill.err = ''; return render(); }
@@ -833,7 +929,15 @@
     const b = e.target.closest('button[data-w]'); if (!b) return;
     wk = add(wk, 7 * +b.dataset.w);
     if (![...Array(7)].some((_, i) => days.has(add(wk, i)))) await loadUntil(add(wk, 6)).catch(() => {});
-    render();
+    syncURL(true); render();
+  });
+  root.addEventListener('keydown', (e) => {
+    const t = e.target.closest('[role=tab]'); if (!t || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    const list = [...t.parentElement.querySelectorAll('[role=tab]')], label = t.parentElement.getAttribute('aria-label');
+    let i = list.indexOf(t);
+    i = e.key === 'Home' ? 0 : e.key === 'End' ? list.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + list.length) % list.length;
+    e.preventDefault(); list[i].click();
+    requestAnimationFrame(() => root.querySelector(`[aria-label="${label}"] [role=tab][aria-selected=true]`)?.focus());
   });
   root.addEventListener('change', (e) => {
     const t = e.target, f = t.dataset.f, pk = t.dataset.p;
@@ -868,12 +972,14 @@
     if (t.dataset.r != null) {
       const r = PL.rows[+t.dataset.r];
       if (f === 'prekm') r.prekm = +t.value.replace(',', '.') || 0; else r[f] = t.value;
-      const tot = root.querySelector('#w-total'); if (tot) tot.textContent = `${n1(planTotal())} км`;
+      const tot = root.querySelector('#w-total'); if (tot) tot.textContent = `${n1(planTotal())} км`;
     }
   });
+  const q = new URLSearchParams(location.search).get('open');
+  await readURL(true);
   applyPalette();
   render();
-  const q = new URLSearchParams(location.search).get('open');
+  window.addEventListener('popstate', async () => { await readURL(); mode = 'view'; PL = null; render(); });
   if (!LIVE && q === 'plan') { tab = 'week'; await openPlanner(); await generateWeek(); }
   if (!LIVE && q === 'choose') { tab = 'plan'; chooser = true; render(); }
   if (!LIVE && q === 'colors') { colorsOpen = true; render(); }
