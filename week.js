@@ -547,7 +547,7 @@
       }).join('')}</ol>
       <div class="w-sum">
         <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${[['2w', '2 беговые недели'], ['race', 'До старта']].map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
-          <span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>${fillSpan === '2w' && f.span ? `<span class="w-muted">Беговая неделя в S10 начинается ${DNIN[dow(f.span[0])]}. Поправьте задачи, а следующие две недели допишите этой же кнопкой.</span>` : ''}
+          <span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span><span class="w-muted w-hint">${fillSpan === '2w' ? `<span>Беговая неделя в S10 начинается ${DNIN[dow(f.span ? f.span[0] : runStart)]}.</span><span>Поправьте задачи, а следующие две недели допишите этой же кнопкой.</span>` : '<span>Все оставшиеся недели плана сразу, до старта.</span><span>Поправить отдельные задачи можно потом в календаре S10.</span>'}</span>
           <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label></div>
         <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium ? '' : 'disabled'}>Заполнить календарь</button></div>
         ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи в календарь можно с премиум-подпиской S10, как на странице «Настройка плана».</p>'}
@@ -812,7 +812,7 @@
   .w-head h1{padding-top:3px}
   .w-head h1{font-size:26px;line-height:1.2;font-weight:500;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* the calendar: a small card beside the week's summary; dots for workouts, a red disc for a race */
-  .w-duo{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:16px;align-items:start}
+  .w-duo{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:16px;align-items:stretch}
   .w-calc .w-ch{padding:14px 16px 6px}.w-calc .w-ch h2{font-size:15px}
   .w-calc .w-link{font-size:13px;padding:2px 0}
   .w-cal{display:grid;gap:2px;padding:0 10px}
@@ -856,7 +856,7 @@
   .w-big{font-size:32px;line-height:1.1;font-weight:500;letter-spacing:-.01em}
   .w-big small{font-size:15px;color:var(--faint);font-weight:400;margin-left:6px;letter-spacing:0}
   .w-today .w-tx{font-size:16px;max-width:56ch}
-  .w-stats{display:grid;grid-template-columns:1fr 1fr;border-left:1px solid var(--rule)}
+  .w-stats{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;border-left:1px solid var(--rule)}
   .w-stat{padding:20px 24px;display:grid;gap:4px;align-content:start;border-top:1px solid var(--rule)}
   .w-stat-wide{grid-column:1/-1;border-top:0}.w-stat-full{grid-column:1/-1}
   .w-stat .v{font-size:24px;line-height:1.2}
@@ -937,9 +937,11 @@
   .w-app .w-pa select:hover{border-color:var(--control);background-color:var(--field)}
   .w-alt{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--muted);padding-top:2px}
   .w-alt label{display:inline-flex;gap:8px;align-items:center;cursor:pointer}
-  .w-sum{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 20px;border-top:1px solid var(--rule);background:var(--soft)}
+  .w-sum{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;padding:18px 20px;border-top:1px solid var(--rule);background:var(--soft)}
   .w-card>.w-sum:last-child{border-radius:0 0 8px 8px}
-  .w-sum>div{display:grid;gap:2px}
+  .w-sum>div{display:grid;gap:2px;flex:1 1 360px;min-width:0}.w-sum>.w-acts{flex:none}
+  .w-span button{font-weight:500}
+  .w-hint{display:grid;margin-top:4px}.w-hint>span{display:block}
   .w-sum b{font-size:24px;font-weight:500;line-height:1.2}
   .w-acts{display:flex;gap:10px;flex-wrap:wrap}
   .w-chk{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-top:6px;cursor:pointer}
@@ -1035,7 +1037,7 @@
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
-    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
+    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-hint{min-height:calc(4 * 1.45em)}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
     .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
     .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
     .w-paces label{flex-direction:column;align-items:flex-start;gap:8px}.w-paces input{width:100%}.w-ptab th[scope=row] small{display:block}}
