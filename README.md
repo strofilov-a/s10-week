@@ -1,6 +1,7 @@
 # S10 «Моя неделя»
 
-Everything on one page, in three tabs under "today + the week in four numbers":
+Everything on one page, in three views switched from the header (Неделя / План до старта / Мои темпа). On «Неделя» a pinned
+left column holds today's workout, the week's volume against the plan, the long run and the days to the race:
 - **Неделя**: each day with plan and fact; «Запланировать неделю» runs calc3's flow (two key workouts from the chosen plan →
   schedule computed by the S10 server → edit or move any day → «Поставить задачи»).
 - **План до старта**: choose the master plan (your saved versions from calc5, the calc4 library, or a new one generated
@@ -8,13 +9,13 @@ Everything on one page, in three tabs under "today + the week in four numbers":
   volume and which day holds which workout, then «Заполнить календарь» writes the whole plan into the diary (optionally
   leaving days that already have a task). «Сохранить версию» saves it where calc5 sees it.
 - **Мои темпа**: T5/T10/T21/T42 from the chosen plan, the S10 forecast, or your own; every workout on the page uses them.
-  Below them a split table (1 км / 800 м / 400 м / 200 м) for each zone and the easy-run range.
+  One table per zone with the pace per km (editable) and the 400 m lap time, plus the easy-run range.
 - Each day shows the fact next to the plan: distance and average pace from the diary tracks, and for pace-only tasks
   whether the run was faster, slower or within the task. Diary texts are shown as Разминка / работа / Заминка lines
   (display only; nothing written to the diary changes).
 - The tab and the week are in the address (`?tab=plan`, `?week=2026-10-19`), so links open the same view and «назад» works.
 
-Colours: palette №3 «Лист, синяя и красная ручка» is the fixed default — white/grey ground, blue accent #1a4be0 (tabs, today, links, progress), red #d62b1f (main buttons, workout-load bars). Add `?colors` to the URL to bring back the picker with all 20 three-colour schemes.
+Colours: palette №3 «Лист, синяя и красная ручка» is the fixed default. The chrome is ink on white/grey; blue #1a4be0 marks the wordmark, today and the volume scale; red #d62b1f is the main button and the load bars of hard sessions (intervals, repeats, race). Add `?colors` to the URL to bring back the picker with all 20 three-colour schemes.
 
 ## Files
 | File | What it is |
