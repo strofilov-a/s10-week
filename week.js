@@ -252,7 +252,7 @@
       '--glyph-off': mix(P.ink, 16, card), '--primary': P.key, '--primary-ink': P.keyInk, '--primary-hover': mix(P.key, 86, P.dark ? '#ffffff' : '#000000'), '--key': P.keyData || P.key,
       '--ok-bg': P.dark ? mix('#3fc07a', 20, card) : '#dcfae5', '--ok': P.dark ? '#86e3ae' : '#04250e',
       '--bad-bg': P.dark ? mix('#e5566f', 22, card) : '#ffedea', '--bad': P.dark ? '#ff9aa9' : '#831c1e',
-      '--neutral-bg': mix(P.ink, 9, card), '--neutral': P.ink, '--warn-bg': P.dark ? mix('#d9a441', 16, card) : '#fffbeb',
+      '--neutral-bg': mix(P.ink, 9, card), '--neutral': P.ink, '--warn-bg': P.dark ? mix('#d9a441', 16, card) : '#fffbeb', '--warn-line': P.dark ? mix('#d9a441', 40, card) : '#fde68a', '--warn-ink': P.dark ? '#f0c36a' : '#92400e',
     };
     for (const [k, val] of Object.entries(v)) root.style.setProperty(k, val);
     root.style.colorScheme = P.dark ? 'dark' : 'light';
@@ -261,7 +261,7 @@
   function colorsPanel() {
     const cur = PALETTES.find((x) => x.id === palId) || PALETTES[0];
     return `<section class="w-card w-colors" aria-labelledby="w-col-h">
-      <div class="w-ch"><h2 id="w-col-h">Цвета страницы</h2><span class="w-muted">Сейчас: ${esc(cur.name)}. В каждой палитре три цвета: фон, акцент (вкладки, сегодня, ссылки) и третий цвет (главные кнопки и полоски нагрузки). «Совет» — мои фавориты.</span><button class="w-btn sm" data-act="colors">Готово</button></div>
+      <div class="w-ch"><h2 id="w-col-h">Цвета страницы</h2><span class="w-muted">Сейчас: ${esc(cur.name)}. В каждой палитре три цвета: фон, акцент (вкладки, сегодня, ссылки) и третий цвет (главные кнопки и полоски нагрузки). «Совет» отмечает мои фавориты.</span><button class="w-btn sm" data-act="colors">Готово</button></div>
       <ul class="w-pals">${PALETTES.map((x, i) => `<li><button class="w-pal ${x.id === palId ? 'on' : ''}" data-act="pal" data-id="${x.id}" aria-pressed="${x.id === palId}">
         <span class="w-pal-prev" style="background:${x.bg}" aria-hidden="true"><i style="background:${x.dark ? x.surface : '#ffffff'}"><b style="background:${x.ink}"></b><b style="background:${x.muted};width:60%"></b><em style="background:${x.accent}"></em><em class="k" style="background:${x.key}"></em></i></span>
         <span class="w-pal-n"><span class="num">${i + 1}.</span> ${esc(x.name)}</span>${x.rec ? '<span class="w-pill now w-rec">совет</span>' : ''}<small>${x.dark ? 'тёмная' : 'светлая'}${x.id === 's10' ? ', фирменная' : ''}</small></button></li>`).join('')}</ul>
@@ -432,7 +432,7 @@
   }
   function planCard() {
     const p = plan();
-    const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
+    const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
     if (!race) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. Выберите его на странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
     if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите сохранённую версию, шаблон из библиотеки или сгенерируйте новый.</p>${chooserHTML()}</section>`;
     const f = fillPreview(), src = sel.src === 'version' ? 'ваша версия' : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
@@ -476,22 +476,24 @@
     const P = PACE;
     const opts = [studentPaces(plan()) ? ['plan', `Из плана «${plan().name}»`] : null, PACE_S10 ? ['s10', `Прогноз S10${race?.prediction ? `, ${raceName} ${hms(race.prediction)}` : ''}`] : null, ['own', 'Свои']].filter(Boolean);
     const cur = (paceSrc === 'own' && PACE_OWN) ? 'own' : (paceSrc === 's10' && PACE_S10) ? 's10' : studentPaces(plan()) ? 'plan' : PACE_S10 ? 's10' : 'own';
-    return `<section class="w-card" aria-labelledby="w-pace-h">
-      <div class="w-ch"><h2 id="w-pace-h">Темпа для заданий, мин/км</h2><label class="w-inl w-muted">Откуда <select data-p="pacesrc" aria-label="Откуда брать темпа">${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label></div>
-      <div class="w-paces num">${[['5', 'темп на 5 км'], ['10', 'темп на 10 км'], ['21', 'полумарафон'], ['42', 'марафон']].map(([k, l]) => `<label><span><b>T${k}</b><small>${l}</small></span><input data-p="pace" data-k="${k}" value="${P?.[k] || ''}" inputmode="numeric" aria-label="T${k}, мин/км" placeholder="4:30"></label>`).join('')}</div>
-      ${paceTable(P)}
-      <p class="w-note">Все задания на странице считаются по этим темпам: «T21+8» — это ваш T21 плюс 8 секунд. Если поменять цифру, темпа станут «своими» и сохранятся на этом устройстве.</p>
+    const zones = [['5', 'T5', 'темп на 5 км'], ['10', 'T10', 'темп на 10 км'], ['21', 'T21', 'полумарафон'], ['42', 'T42', 'марафон']];
+    const lap = (sec) => fmtSec(sec * 0.4); // 400 m, one stadium lap
+    const easy = P?.[42] ? [toSec(P[42]) + 55, toSec(P[42]) + 75] : null;
+    const dash = '<span class="w-dash" aria-label="нет">—</span>';
+    return `<section class="w-set" aria-labelledby="w-pace-h">
+      <div class="w-set-l">
+        <h2 id="w-pace-h">Темпа по зонам</h2>
+        <p>«T21+8» в задании означает ваш T21 плюс 8 секунд. Если поменять цифру в таблице, темпа станут «своими» и сохранятся на этом устройстве.</p>
+        <label class="w-f"><span>Откуда брать</span><select data-p="pacesrc">${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+      </div>
+      <div class="w-card w-set-r">
+        <table class="w-ptab num">
+          <thead><tr><th scope="col">Зона</th><th scope="col">1 км</th><th scope="col">400 м</th></tr></thead>
+          <tbody>${zones.map(([k, n, sub]) => `<tr><th scope="row"><b>${n}</b><small>${sub}</small></th><td><input data-p="pace" data-k="${k}" value="${P?.[k] || ''}" inputmode="numeric" autocomplete="off" aria-label="${n}, минут на километр" placeholder="4:30"></td><td>${P?.[k] ? lap(toSec(P[k])) : dash}</td></tr>`).join('')}
+            ${easy ? `<tr><th scope="row"><b>Лёгкий бег</b><small>T42 + 55–75 с</small></th><td><span class="w-pv">${fmtSec(easy[0])}–${fmtSec(easy[1])}</span></td><td>${dash}</td></tr>` : ''}</tbody>
+        </table>
+      </div>
     </section>`;
-  }
-  function paceTable(P) {
-    if (!P?.[42]) return '';
-    const easy = [toSec(P[42]) + 55, toSec(P[42]) + 75];
-    const rows = [['Лёгкий бег', easy], ['T42', [toSec(P[42])], 'марафон'], ['T21', [toSec(P[21])], 'полумарафон'], ['T10', [toSec(P[10])], '10 км'], ['T5', [toSec(P[5])], '5 км']];
-    const cell = (r, m) => (r.length > 1 && m < 1000 ? '<span class="w-muted">—</span>' : r.map((v) => fmtSec(v * m / 1000)).join('–')); // easy runs are not timed on the track
-    return `<div class="w-ptab-wrap"><table class="w-ptab num"><caption>Время на отрезок</caption>
-      <thead><tr><th scope="col">Зона</th><th scope="col">1 км</th><th scope="col">800 м</th><th scope="col">400 м</th><th scope="col">200 м</th></tr></thead>
-      <tbody>${rows.map(([n, r, sub]) => `<tr><th scope="row"><b>${n}</b>${sub ? `<small>${sub}</small>` : ''}</th><td>${cell(r, 1000)}</td><td>${cell(r, 800)}</td><td>${cell(r, 400)}</td><td>${cell(r, 200)}</td></tr>`).join('')}</tbody>
-    </table></div>`;
   }
   function workCard(w, i) {
     const groups = [...new Set(PL.opts.map((o) => o.group))];
@@ -577,8 +579,8 @@
     if (!isRun(x)) return '';
     if (r.d > today) return '';
     if (km > 0) return '<span class="w-pill ok">Сделано</span>';
-    if (r.d === today) return '<span class="w-pill neutral">Сегодня</span>';
-    return '<span class="w-pill bad">Не выполнено</span>';
+    if (r.d === today) return '';
+    return '<span class="w-pill neutral">Не выполнено</span>';
   }
   function todayCard(W) {
     const r = W.list.find((q) => q.d === today);
@@ -633,38 +635,57 @@
     const w = q.get('week'); wk = /^\d{4}-\d{2}-\d{2}$/.test(w || '') ? monday(w) : monday(today);
     if (![...Array(7)].some((_, i) => days.has(add(wk, i)))) await loadUntil(add(wk, 6)).catch(() => {});
   }
+  function viewHead() {
+    if (tab === 'plan') {
+      const n = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
+      return `<div class="w-head"><div><h1>План до старта</h1><p class="w-sub">${race ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)} · через ${n}\u00a0${plural(n, 'день', 'дня', 'дней')}` : 'Главный старт не выбран'}</p></div></div>`;
+    }
+    if (tab === 'paces') return '<div class="w-head"><div><h1>Мои темпа</h1><p class="w-sub">По ним считаются все задания на странице.</p></div></div>';
+    const cur = wk === monday(today);
+    return `<div class="w-head"><h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
+      <div class="w-navs"><div class="w-nav" role="group" aria-label="Выбор недели">
+        <button data-w="-1" aria-label="Предыдущая неделя">‹</button><span>${weekRel()}</span><button data-w="1" aria-label="Следующая неделя">›</button>
+      </div>${cur ? '' : '<button class="w-btn sm" data-act="today">К этой неделе</button>'}</div></div>`;
+  }
+  // the week's volume as one long scale: the fill is the true ratio of what was run to the plan, both ends labelled
+  function weekScale(W) {
+    if (!W.plan) return '<p class="w-scale w-muted">На этой неделе ничего не запланировано.</p>';
+    const f = Math.min(100, (W.done / W.plan) * 100);
+    return `<div class="w-scale"><div class="w-scale-t" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><b style="width:${f}%"></b></div>
+      <div class="w-scale-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)}\u00a0км</span></div></div>`;
+  }
+  function heroHTML(W) {
+    const n = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
+    return `<section class="w-card w-hero" aria-label="Сегодня и итоги недели">
+      ${todayCard(W)}
+      <div class="w-hr">
+        <div class="w-vol"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)}\u00a0км</small></span></div>
+        ${weekScale(W)}
+        <dl class="w-stats2">
+          <div><dt>Длительная</dt><dd class="num">${W.long ? `${n1(+W.long.x.target)}<small>км, ${DNS[W.long.i]}</small>` : '<span class="w-dash">—</span>'}</dd></div>
+          <div><dt>До старта</dt><dd class="num">${n != null ? `${n}<small>${plural(n, 'день', 'дня', 'дней')}</small>` : '<span class="w-dash">—</span>'}</dd></div>
+        </dl>
+      </div>
+    </section>`;
+  }
   function render() {
-    const W = week(wk), cur = wk === monday(today);
-    const daysToRace = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
-    const pct = W.plan ? Math.min(100, (W.done / W.plan) * 100) : 0;
+    const W = week(wk);
     root.innerHTML = `
-    ${LIVE ? '' : '<div class="w-demo" role="note">Демо на данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</div>'}
     <header class="w-top"><div class="w-topin">
       <a class="w-wm" href="${LIVE ? '/' : 'https://s10.run/'}" aria-label="S10.run, главная" translate="no">S10<span>.run</span></a>
-      <span class="w-who">${esc(me.firstName)} ${esc(me.lastName)}</span>${SHOW_COLORS ? `<button class="w-btn sm" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}
-    </div></header>
-    <main class="w-main">
-      ${colorsOpen ? colorsPanel() : ''}
-      <div class="w-head">
-        <h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
-        <div class="w-navs"><div class="w-nav" role="group" aria-label="Выбор недели">
-          <button data-w="-1" aria-label="Предыдущая неделя">‹</button><span>${weekRel()}</span><button data-w="1" aria-label="Следующая неделя">›</button>
-        </div>${cur ? '' : '<button class="w-btn sm" data-act="today">К этой неделе</button>'}</div>
-      </div>
-      <section class="w-card w-hero" aria-label="Сегодня и итоги недели">
-        ${todayCard(W)}
-        <div class="w-stats">
-          <div class="w-stat"><span class="w-lb">Пробежано</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span><div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} км"><i style="width:${pct}%"></i></div></div>
-          <div class="w-stat"><span class="w-lb">Осталось тренировок</span><span class="v num">${W.left}</span><span class="s">${W.left ? 'до воскресенья' : 'на этой неделе всё'}</span></div>
-          <div class="w-stat"><span class="w-lb">Длительная</span><span class="v num">${W.long ? `${n1(+W.long.x.target)}<small>км</small>` : '<span class="w-muted">—</span>'}</span><span class="s">${W.long ? `${DNF[W.long.i]}, ${dayLbl(W.long.d)}` : 'на этой неделе нет'}</span></div>
-          <div class="w-stat"><span class="w-lb">${race ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${race ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : 'не выбран'}</span></div>
-        </div>
-      </section>
-      ${flash ? `<div class="w-flash" role="status" tabindex="-1"><span>${esc(flash)}</span><button data-act="flash" aria-label="Скрыть сообщение">×</button></div>` : ''}
       <div class="w-tabbar" role="tablist" aria-label="Разделы">
         ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпа']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
       </div>
-      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? planCard() : pacesCard()}</div>
+      <span class="w-who">${esc(me.firstName)} ${esc(me.lastName)}</span>${SHOW_COLORS ? `<button class="w-btn sm w-colbtn" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}
+    </div></header>
+    <main class="w-main">
+      ${LIVE ? '' : '<p class="w-notice" role="note">Демо на снимке данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</p>'}
+      ${colorsOpen ? colorsPanel() : ''}
+      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">
+        ${viewHead()}
+        ${flash ? `<div class="w-flash" role="status" tabindex="-1"><span>${esc(flash)}</span><button data-act="flash" aria-label="Скрыть сообщение">×</button></div>` : ''}
+        ${tab === 'week' ? `<div class="w-weekgrid"><aside class="w-rail">${heroHTML(W)}</aside><div class="w-col">${weekSection(W)}</div></div>` : tab === 'plan' ? planCard() : pacesCard()}
+      </div>
       <p class="w-foot">${LIVE ? `Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.` : 'Демо-версия страницы «Моя неделя» для S10.run.'}</p>
     </main>`;
     root.querySelectorAll('textarea').forEach(fit);
@@ -684,15 +705,17 @@
   .w-app button,.w-app select,.w-app input,.w-app textarea{font:inherit;color:inherit}
   .w-app :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .w-app a{color:var(--accent)}
-  .w-demo{background:var(--accent-bg);color:var(--accent);font-size:13px;padding:8px max(24px,env(safe-area-inset-left));text-align:center}
+  .w-notice{background:var(--warn-bg);border:1px solid var(--warn-line,#fde68a);color:var(--warn-ink,#92400e);font-size:13px;border-radius:6px;padding:8px 12px}
   .w-top{border-bottom:1px solid var(--border);background:var(--surface);padding:0 max(24px,env(safe-area-inset-right)) 0 max(24px,env(safe-area-inset-left))}
-  .w-topin{max-width:1112px;margin:0 auto;height:56px;display:flex;align-items:center;gap:20px}
-  .w-wm{font-weight:900;font-style:italic;font-size:22px;letter-spacing:-.02em;color:var(--accent)!important;text-decoration:none}
+  .w-topin{max-width:1112px;margin:0 auto;height:56px;display:flex;align-items:stretch;gap:40px}
+  .w-wm{align-self:center;font-weight:900;font-style:italic;font-size:22px;letter-spacing:-.02em;color:var(--accent)!important;text-decoration:none}
   .w-wm span{font-weight:500}
-  .w-who{margin-left:auto;color:var(--muted);font-size:14px}
+  .w-who{margin-left:auto;align-self:center;color:var(--muted);font-size:14px}
+  .w-colbtn{align-self:center}
   .w-main{max-width:1160px;margin:0 auto;padding:28px max(24px,env(safe-area-inset-right)) 48px max(24px,env(safe-area-inset-left));display:grid;gap:24px}
   .w-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-  .w-head h1{font-size:26px;line-height:1.2;font-weight:500;letter-spacing:-.01em}
+  .w-sub{color:var(--muted);font-size:14px;margin-top:4px}
+  .w-head h1{font-size:24px;line-height:1.2;font-weight:500;letter-spacing:-.01em}
   .w-nav{display:flex;align-items:center;height:38px;border:1px solid var(--control);border-radius:6px;background:var(--surface)}
   .w-nav button{width:40px;height:36px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;border-radius:6px}
   .w-nav button:hover{color:var(--text);background:var(--rule)}
@@ -706,27 +729,36 @@
   ul.w-tx{list-style:none;display:grid;gap:2px}
   ul.w-tx li{position:relative;padding-left:14px}
   ul.w-tx li::before{content:"";position:absolute;left:2px;top:.68em;width:5px;height:5px;border-radius:50%;background:var(--glyph-off)}
-  .w-hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+  .w-weekgrid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:24px;align-items:start}
+  .w-rail{position:sticky;top:16px}
+  .w-col{display:grid;gap:24px;min-width:0}
+  .w-hero{display:grid;grid-template-columns:minmax(0,1fr)}
   .w-today{padding:24px;display:grid;gap:10px;align-content:start}
-  .w-today .w-type{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:500}
+  .w-today .w-type{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:500}
   .w-big{font-size:32px;line-height:1.1;font-weight:500;letter-spacing:-.01em}
   .w-big small{font-size:15px;color:var(--faint);font-weight:400;margin-left:6px;letter-spacing:0}
   .w-today .w-tx{font-size:16px;max-width:56ch}
-  .w-stats{display:grid;grid-template-columns:1fr 1fr;border-left:1px solid var(--rule)}
-  .w-stat{padding:20px 24px;display:grid;gap:4px;align-content:start;border-top:1px solid var(--rule)}
-  .w-stat:nth-child(-n+2){border-top:0}.w-stat:nth-child(even){border-left:1px solid var(--rule)}
-  .w-stat .v{font-size:24px;line-height:1.2}
-  .w-stat .v small{font-size:13px;color:var(--faint);margin-left:4px}
-  .w-stat .s{color:var(--faint);font-size:13px}
-  .w-track{height:6px;border-radius:999px;background:var(--rule);margin-top:6px;overflow:hidden}
-  .w-track i{display:block;height:100%;background:var(--accent);border-radius:999px}
+  .w-hr{border-top:1px solid var(--rule);display:grid;grid-template-rows:auto auto 1fr;align-content:start}
+  .w-vol{display:grid;gap:4px;padding:24px 24px 14px}
+  .w-vol .v{font-size:24px;line-height:1.2}
+  .w-vol .v small,.w-stats2 dd small{font-size:13px;color:var(--faint);margin-left:4px}
+  .w-scale{padding:0 24px 22px}
+  .w-scale-t{position:relative;height:10px;border-radius:999px;background:var(--rule);overflow:hidden}
+  .w-scale-t b{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:999px}
+  .w-scale-l{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--faint)}
+  .w-stats2{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--rule);align-self:end;margin:0}
+  .w-stats2>div{padding:16px 24px;display:grid;gap:2px}
+  .w-stats2>div+div{border-left:1px solid var(--rule)}
+  .w-stats2 dt{color:var(--muted);font-size:13px}
+  .w-stats2 dd{font-size:24px;line-height:1.2;margin:0}
+  .w-dash{color:var(--faint)}
   .w-ch{display:flex;align-items:center;gap:12px;padding:16px 20px;flex-wrap:wrap}
-  .w-ch h2{font-size:17px;font-weight:500;margin-right:auto}
+  .w-ch h2{font-size:16px;font-weight:500;margin-right:auto}
   .w-days,.w-plist,.w-weeks,.w-wdays,.w-plans{list-style:none}
   .w-days,.w-plist,.w-weeks{border-top:1px solid var(--rule)}
   .w-day{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:16px;padding:16px 20px;border-top:1px solid var(--rule);align-items:start}
   .w-day:first-child{border-top:0}
-  .w-day.today{background:var(--accent-soft)}
+  .w-day.today{background:var(--soft)}
   .w-dn b,.w-pd b,.w-wdd b{display:block;font-weight:500}
   .w-dn small,.w-pd small,.w-wdd small{color:var(--faint);font-size:13px}
   .w-day.today .w-dn b{color:var(--accent)}
@@ -735,12 +767,12 @@
   .w-km{display:grid;gap:6px;justify-items:end;white-space:nowrap}
   .w-km .num{font-size:16px}
   .w-pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:12px;font-weight:500;white-space:nowrap;flex:none}
-  .w-pill.ok{background:var(--ok-bg);color:var(--ok)}.w-pill.bad{background:var(--bad-bg);color:var(--bad)}.w-pill.neutral{background:var(--neutral-bg);color:var(--neutral)}.w-pill.now{background:var(--accent-bg);color:var(--accent)}
+  .w-pill.ok{background:var(--ok-bg);color:var(--ok)}.w-pill.bad{background:var(--bad-bg);color:var(--bad)}.w-pill.neutral{background:var(--neutral-bg);color:var(--neutral)}.w-pill.now{background:none;border:1px solid var(--text);color:var(--text)}
   .w-ig{display:inline-flex;align-items:flex-end;gap:2px;height:16px;flex:none}
   .w-ig i{width:4px;border-radius:1px;background:var(--glyph-off)}
   .w-ig i:nth-child(1){height:7px}.w-ig i:nth-child(2){height:11px}.w-ig i:nth-child(3){height:16px}
-  .w-ig[data-l="1"] i:nth-child(-n+1),.w-ig[data-l="2"] i:nth-child(-n+2),.w-ig[data-l="3"] i:nth-child(-n+3){background:var(--key,var(--accent))}
-  .w-ig[data-race] i{background:var(--text)!important}
+  .w-ig[data-l="1"] i:nth-child(-n+1),.w-ig[data-l="2"] i:nth-child(-n+2),.w-ig[data-l="3"] i:nth-child(-n+3){background:var(--text)}
+  .w-ig[data-l="3"] i{background:var(--key,var(--text))!important}
   .w-note{padding:8px 20px 18px;color:var(--faint);font-size:13px;line-height:1.45}
   .w-err{color:var(--bad)!important;font-size:14px}
   .w-foot{color:var(--faint);font-size:12px}
@@ -751,8 +783,8 @@
   .w-btn.primary:hover:not(:disabled){background:var(--primary-hover)}
   .w-btn:disabled{opacity:.55;cursor:default}
   .w-btn.sm{height:34px;padding:0 12px;font-size:14px}
-  .w-link{border:0;background:none;color:var(--accent);cursor:pointer;font-size:14px;font-weight:500;padding:6px 2px;white-space:nowrap}
-  .w-link:hover{text-decoration:underline}
+  .w-link{border:0;background:none;color:var(--text);cursor:pointer;font-size:14px;font-weight:500;padding:6px 2px;white-space:nowrap;text-decoration:underline;text-decoration-color:var(--control);text-underline-offset:3px}
+  .w-link:hover{text-decoration-color:var(--text)}
   .w-app select,.w-app input,.w-app textarea{border:1px solid var(--control);border-radius:6px;background:var(--field);min-width:0;max-width:100%}
   .w-app select{height:36px;padding:0 30px 0 10px;font-size:14px;appearance:none;cursor:pointer;
     background:var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b707a' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 11px center}
@@ -767,7 +799,7 @@
   .w-seg,.w-tabs{display:inline-flex;flex-wrap:wrap;border:1px solid var(--control);border-radius:6px;overflow:hidden;justify-self:start}
   .w-seg button,.w-tabs button{height:36px;padding:0 16px;border:0;background:var(--field);cursor:pointer;color:var(--muted);font-size:14px}
   .w-seg button+button,.w-tabs button+button{border-left:1px solid var(--control)}
-  .w-seg button[aria-checked="true"],.w-tabs button[aria-selected="true"]{background:var(--accent-bg);color:var(--accent);font-weight:500}
+  .w-seg button[aria-checked="true"],.w-tabs button[aria-selected="true"]{background:var(--neutral-bg);color:var(--text);font-weight:500}
   .w-works{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .w-work{display:grid;gap:10px;align-content:start;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--soft);min-width:0}
   .w-wh,.w-ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
@@ -787,7 +819,7 @@
   .w-pbody{display:grid;gap:6px;min-width:0}
   .w-pa{display:grid;gap:4px;justify-items:stretch}
   .w-pa .w-link,.w-pa .w-pill{justify-self:start}
-  .w-app .w-pa select{border-color:transparent;background-color:transparent;color:var(--accent);font-weight:500;padding-left:2px;background-position:right 8px center}
+  .w-app .w-pa select{border-color:transparent;background-color:transparent;color:var(--text);font-weight:500;padding-left:2px;background-position:right 8px center}
   .w-app .w-pa select:hover{border-color:var(--control);background-color:var(--field)}
   .w-alt{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--muted);padding-top:2px}
   .w-alt label{display:inline-flex;gap:8px;align-items:center;cursor:pointer}
@@ -803,20 +835,12 @@
   .w-fact b{color:var(--text);font-weight:500}
   .w-flash:focus{outline:none}.w-flash:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .w-navs{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .w-ptab-wrap{padding:0 20px 4px;overflow-x:auto}
-  .w-ptab{width:100%;border-collapse:collapse;font-size:15px}
-  .w-ptab caption{text-align:left;color:var(--muted);font-size:13px;padding:14px 0 8px}
-  .w-ptab th,.w-ptab td{padding:10px 12px;border-top:1px solid var(--rule);text-align:right;white-space:nowrap}
-  .w-ptab thead th{border-top:0;color:var(--muted);font-weight:400;font-size:13px}
-  .w-ptab th[scope=row],.w-ptab thead th:first-child{text-align:left;padding-left:0}
-  .w-ptab th[scope=row] b{font-weight:500;margin-right:8px}
-  .w-ptab th[scope=row] small{color:var(--faint);font-size:13px;font-weight:400}
   .w-flash button{border:0;background:none;color:inherit;cursor:pointer;font-size:18px;width:32px;height:32px}
   .w-chooser{padding:4px 20px 18px;display:grid;gap:12px}
   .w-plans{border:1px solid var(--border);border-radius:8px}
   .w-plans li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-top:1px solid var(--rule)}
   .w-plans li:first-child{border-top:0}
-  .w-plans li.on{background:var(--accent-soft)}
+  .w-plans li.on{background:var(--soft)}
   .w-pl{display:grid;gap:2px;min-width:0}
   .w-gen{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:12px}
   .w-f{display:grid;gap:6px;min-width:0}
@@ -836,7 +860,7 @@
   .w-wkh{width:100%;display:grid;grid-template-columns:44px 120px 120px minmax(0,1fr) 72px 84px;gap:12px;align-items:center;padding:12px 20px;border:0;background:none;cursor:pointer;text-align:left}
   .w-wkh:hover{background:var(--soft)}
   .w-wk.past .w-wkh{color:var(--faint)}
-  .w-wk.now .w-wkh{background:var(--accent-soft)}
+  .w-wk.now .w-wkh{background:var(--soft)}
   .w-wn{font-weight:500}
   .w-per{color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .w-wworks{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
@@ -850,17 +874,25 @@
   .w-wdk{text-align:right;white-space:nowrap}
   .w-confirm{margin:0 20px 18px;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--warn-bg);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
   .w-confirm p{max-width:62ch;color:var(--text)}
-  .w-paces{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--rule)}
-  .w-paces label{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px;border-left:1px solid var(--rule)}
-  .w-paces label:first-child{border-left:0}
-  .w-paces label>span{display:grid}
-  .w-paces small{color:var(--faint);font-size:13px}
-  .w-paces input{width:76px;text-align:right;font-size:20px;height:40px}
-  .w-tabbar{display:flex;gap:4px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
-  .w-tabbar button{border:0;background:none;padding:10px 4px;margin-right:20px;font-size:16px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .w-tabbar{display:flex;gap:28px;overflow-x:auto;scrollbar-width:none}
+  .w-tabbar button{border:0;background:none;padding:0 2px;font-size:15px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
   .w-tabbar button:hover{color:var(--text)}
-  .w-tabbar button[aria-selected="true"]{color:var(--text);font-weight:500;border-bottom-color:var(--accent)}
+  .w-tabbar button[aria-selected="true"]{color:var(--text);font-weight:500;border-bottom-color:var(--text)}
   .w-panel{display:grid;gap:24px}
+  .w-set{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:24px 48px;align-items:start}
+  .w-set-l{display:grid;gap:12px;padding-top:6px}
+  .w-set-l h2{font-size:16px;font-weight:500}
+  .w-set-l p{color:var(--muted);font-size:14px;line-height:1.5}
+  .w-set-l .w-f{margin-top:8px}
+  .w-ptab{width:100%;border-collapse:collapse}
+  .w-ptab th,.w-ptab td{padding:12px 24px;border-top:1px solid var(--rule);text-align:right;white-space:nowrap;vertical-align:middle;font-size:16px}
+  .w-ptab thead th{color:var(--muted);font-weight:400;font-size:13px;padding-top:14px;padding-bottom:10px;border-top:0}
+  .w-ptab th[scope=row],.w-ptab thead th:first-child{text-align:left;width:100%}
+  .w-ptab th[scope=row] b{font-weight:500;margin-right:10px}
+  .w-ptab th[scope=row] small{color:var(--faint);font-size:13px;font-weight:400}
+  .w-ptab td input{width:84px;text-align:right;font-size:16px}
+  .w-ptab td:last-child{min-width:96px}
+  .w-pv{display:inline-block;padding-right:11px}
   .w-pals{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;padding:0 20px 20px}
   .w-pal{width:100%;display:grid;gap:6px;text-align:left;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:8px 8px 10px;cursor:pointer}
   .w-pal:hover{border-color:var(--control)}
@@ -872,24 +904,25 @@
   .w-pal-prev em{position:absolute;right:36px;bottom:8px;width:22px;height:10px;border-radius:3px}.w-pal-prev em.k{right:8px}
   .w-pal-n{font-size:14px;font-weight:500}
   .w-pal small{color:var(--faint);font-size:12px}
-  @media (max-width:1000px){.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
+  @media (max-width:1000px){.w-set{grid-template-columns:1fr;gap:16px}
+    .w-weekgrid{grid-template-columns:1fr}.w-rail{position:static}.w-hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.w-hr{border-top:0;border-left:1px solid var(--rule)}
     .w-wkh{grid-template-columns:40px 110px minmax(0,1fr) 64px;grid-template-areas:"n d w k" "n p w s"}.w-wn{grid-area:n}.w-per{grid-area:p}.w-wworks{grid-area:w}.w-wkm{grid-area:k}.w-wkh>.w-pill,.w-wkh>.w-pill-sp{grid-area:s}
     .w-wdays{padding-left:20px}}
   @media (max-width:760px){.w-works{grid-template-columns:1fr}
     .w-pday{grid-template-columns:minmax(0,1fr);gap:8px}.w-pd{display:flex;gap:8px;align-items:baseline}.w-pa{grid-template-columns:minmax(0,1fr) auto;align-items:center}
-    .w-paces{grid-template-columns:1fr 1fr}.w-paces label:nth-child(3){border-left:0}.w-paces label:nth-child(n+3){border-top:1px solid var(--rule)}
+    .w-hero{grid-template-columns:1fr}.w-hr{border-left:0;border-top:1px solid var(--rule)}
     .w-pset{grid-template-columns:1fr}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}
     .w-wkh{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w" "n p s"}.w-wkh>span:nth-child(2){grid-area:d}
     .w-gen{grid-template-columns:1fr}}
-  @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-top{padding:0 16px}.w-topin{gap:14px}.w-demo{padding:8px 16px}
-    .w-head h1{font-size:22px}.w-today{padding:20px}.w-stat{padding:16px}
+  @media (max-width:560px){.w-main{padding:16px 16px 40px;gap:16px}.w-top{padding:0 16px}.w-topin{height:auto;flex-wrap:wrap;gap:0 14px}.w-wm{height:52px;display:flex;align-items:center}
+    .w-tabbar{order:3;flex-basis:100%;height:44px;gap:24px}
+    .w-head h1{font-size:22px}.w-today{padding:20px}.w-vol{padding:20px 20px 12px}.w-scale{padding:0 20px 18px}.w-stats2>div{padding:14px 20px}
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
     .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
-    .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
-    .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
-    .w-paces label{flex-direction:column;align-items:flex-start;gap:8px}.w-paces input{width:100%}.w-ptab th[scope=row] small{display:block}}
+    .w-plans li{flex-wrap:wrap}
+    .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab th,.w-ptab td{padding:12px 16px}.w-ptab th[scope=row] small{display:block}}
   @media (prefers-reduced-motion:reduce){.w-app *{transition:none!important}}
   `;
 
