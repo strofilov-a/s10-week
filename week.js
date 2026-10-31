@@ -83,7 +83,14 @@
   const store = { get(k, d) { try { const v = localStorage.getItem('s10week.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('s10week.' + k, JSON.stringify(v)); } catch { /* storage blocked */ } } };
 
   /* ================= load ================= */
-  const me = await get('/apiweb/student/self/info/');
+  const me = await get('/apiweb/student/self/info/').catch(() => null);
+  if (!me?.id) { // not logged in: the API answers null
+    const box = document.createElement('main');
+    box.style.cssText = 'font:16px/1.5 Roboto,system-ui,sans-serif;max-width:560px;margin:0 auto;padding:48px 24px;color:#111';
+    box.innerHTML = '<h1 style="font-size:24px;font-weight:500;margin:0 0 8px">Моя неделя</h1><p style="margin:0">Чтобы увидеть свою неделю и план до старта, <a href="/login" style="color:#1a4be0">войдите в S10</a>.</p>';
+    document.body.appendChild(box); document.title = 'Моя неделя · S10.run';
+    return 'S10 «Моя неделя»: нужен вход';
+  }
   const id = new URLSearchParams(location.search).get('id') || me.id;
   const [main, startParam, results, spRes, libRes] = await Promise.all([
     get(`/apiweb/task.php?action=main&id=${id}`).catch(() => ({})),
@@ -228,7 +235,7 @@
   function fillPreview() {
     const p = plan(); if (!p || !race) return null;
     const weeks = p.plan.weeks.slice().sort((a, b) => a.week - b.week).map((w) => layWeek(w, p));
-    const all = weeks.flatMap((w) => w.days).filter((t) => t.d > today);
+    const all = weeks.flatMap((w) => w.days).filter((t) => t.d > today && t.d !== race.d); // the main race day stays as set on «Настройка плана»
     const keep = keepExisting ? all.filter((t) => isRun(days.get(t.d))) : [];
     const write = all.filter((t) => !keep.includes(t));
     return { weeks, write, keep };
@@ -345,7 +352,7 @@
   const planTotal = () => PL.rows.reduce((a, r) => a + (+r.prekm || 0) + (r.task.trim().startsWith('Потрусите медленно') && !+r.prekm ? 8 : 0), 0);
   async function writeTasks(list) {
     const fd = new FormData();
-    fd.append('tasks', JSON.stringify(list.map((r) => ({ d: r.d, task: r.task, prekm: String(r.prekm), typtrain: r.typtrain, main6: 0, location: r.location || null, prediction: r.prediction || null }))));
+    fd.append('tasks', JSON.stringify(list.map((r) => ({ d: r.d, task: r.task, prekm: String(r.prekm), typtrain: r.typtrain, main6: race && r.d === race.d && +r.typtrain === 6 ? 1 : 0, location: r.location || null, prediction: r.prediction || null }))));
     await post(`/apiweb/task.php?id=${id}&action=update`, fd);
   }
   async function saveWeek() {
@@ -415,10 +422,10 @@
     const rows = (list, src) => list.length ? `<ul class="w-plans">${list.map((p) => {
       const on = sel && sel.src === src && sel.id === p.id, n = p.plan?.weeks?.length || 0, peak = Math.max(...(p.plan?.weeks || []).map((w) => +w.km || 0));
       return `<li class="${on ? 'on' : ''}"><div class="w-pl"><b>${esc(p.name || 'Без названия')}</b><span class="w-muted num">${esc((p.distance || '').split(' · ')[0])}${p.distance ? ' · ' : ''}${n} ${plural(n, 'неделя', 'недели', 'недель')} · пик ${n1(peak)} км · ${p.savedAt ? `сохранён ${dayLbl(String(p.savedAt).slice(0, 10))}` : ''}${p.student?.t42 ? ` · свои темпа, T42 ${hms(p.student.t42)}` : ''}</span></div>${on ? '<span class="w-pill neutral">Выбран</span>' : `<button class="w-btn sm" data-act="psel" data-src="${src}" data-id="${esc(p.id)}">Выбрать</button>`}</li>`;
-    }).join('')}</ul>` : `<p class="w-note">${src === 'version' ? 'Сохранённых версий пока нет. Выберите план из библиотеки или сделайте новый.' : 'В библиотеке пока пусто.'}</p>`;
+    }).join('')}</ul>` : `<p class="w-note">${src === 'version' ? 'Сохранённых версий пока нет. Их сохраняет тренер на странице «План ученика» или вы сами кнопкой «Сохранить версию». Можно сделать новый план по описанию.' : 'В библиотеке пока пусто.'}</p>`;
     return `<div class="w-chooser">
       <div class="w-tabs" role="tablist" aria-label="Откуда взять план">
-        ${[['version', `Мои версии (${versions.length})`], ['library', `Библиотека (${library.length})`], ['new', 'Новый по описанию']].map(([k, l]) => `<button role="tab" aria-selected="${chooserTab === k}" tabindex="${chooserTab === k ? 0 : -1}" data-act="ptab" data-k="${k}">${l}</button>`).join('')}
+        ${[['version', `Мои версии (${versions.length})`], library.length ? ['library', `Библиотека (${library.length})`] : null, ['new', 'Новый по описанию']].filter(Boolean).map(([k, l]) => `<button role="tab" aria-selected="${chooserTab === k}" tabindex="${chooserTab === k ? 0 : -1}" data-act="ptab" data-k="${k}">${l}</button>`).join('')}
       </div>
       ${chooserTab === 'version' ? rows(versions, 'version') : chooserTab === 'library' ? rows(library, 'library') : `
         <div class="w-gen">
@@ -434,7 +441,7 @@
     const p = plan();
     const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
     if (!race) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. Выберите его на странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
-    if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите сохранённую версию, шаблон из библиотеки или сгенерируйте новый.</p>${chooserHTML()}</section>`;
+    if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите версию, которую сохранил тренер, или сделайте новый по описанию: это займёт около минуты.</p>${chooserHTML()}</section>`;
     const f = fillPreview(), src = sel.src === 'version' ? 'ваша версия' : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
     const ws = f.weeks, first = ws[0], last = ws.at(-1);
     const curMon = monday(today);
@@ -457,16 +464,17 @@
             <span class="w-wworks">${works.map((d) => `<span>${glyph(LEVEL[d.typtrain], d.typtrain === 6)}${SHORT[d.typtrain]} ${n1(d.prekm)}</span>`).join('')}</span>
             <span class="num w-wkm">${n1(w.total)} км</span>${past ? '<span class="w-pill neutral">Прошла</span>' : now ? '<span class="w-pill now">Сейчас</span>' : '<span class="w-pill-sp"></span>'}
           </button>
-          ${isOpen ? `<ol class="w-wdays">${w.days.map((d) => { const ex = days.get(d.d); const keep = keepExisting && d.d > today && isRun(ex);
+          ${isOpen ? `<ol class="w-wdays">${w.days.map((d) => { const ex = days.get(d.d); const isMain = d.d === race.d; const keep = !isMain && keepExisting && d.d > today && isRun(ex);
             return `<li class="${d.d <= today ? 'gone' : ''}"><span class="w-wdd"><b>${DN[dow(d.d)]}</b><small class="num">${dayLbl(d.d)}</small></span>
-              <div class="w-wdb"><span class="w-name ${d.typtrain ? '' : 'w-muted'}">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}${keep ? `<span class="w-muted">В дневнике уже стоит: ${esc(TYPES[ex.type] || 'тренировка').toLowerCase()} ${n1(+ex.target || 0)} км, её не трогаем</span>` : ''}</div>
+              <div class="w-wdb"><span class="w-name ${d.typtrain ? '' : 'w-muted'}">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}${keep ? `<span class="w-muted">В дневнике уже стоит: ${esc(TYPES[ex.type] || 'тренировка').toLowerCase()} ${n1(+ex.target || 0)} км, её не трогаем</span>` : ''}${isMain ? '<span class="w-muted">Главный старт: он уже в дневнике, страница его не меняет</span>' : ''}</div>
               <span class="num w-wdk">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`; }).join('')}</ol>` : ''}
         </li>`;
       }).join('')}</ol>
       <div class="w-sum">
         <div><span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, f.write.at(-1).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>
           <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label></div>
-        <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy ? '' : 'disabled'}>Заполнить календарь</button></div>
+        <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium ? '' : 'disabled'}>Заполнить календарь</button></div>
+        ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи в календарь можно с премиум-подпиской S10, как на странице «Настройка плана».</p>'}
       </div>
       ${fill.confirm ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')} в дневник?</b> ${range(f.write[0].d, f.write.at(-1).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'}</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? 'Записываю…' : 'Записать'}</button></div></div>` : ''}
       ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}
@@ -547,7 +555,7 @@
         </ol>
         <div class="w-sum">
           <div><span class="w-lb">Итого за ${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}</span><b class="num" id="w-total">${n1(planTotal())} км</b>${PL.sum?.['за последние 7 дней'] ? `<span class="w-muted num">Последние 7 дней: пробежано ${PL.sum['за последние 7 дней'].km0} из ${PL.sum['за последние 7 дней'].km1} км</span>` : ''}</div>
-          <button class="w-btn primary" data-act="wsave" ${PL.busy || PL.stale ? 'disabled' : ''}>${PL.busy ? 'Ставлю задачи…' : 'Поставить задачи'}</button>
+          <button class="w-btn primary" data-act="wsave" ${PL.busy || PL.stale || !me.isPremium ? 'disabled' : ''}>${PL.busy ? 'Ставлю задачи…' : 'Поставить задачи'}</button>${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи можно с премиум-подпиской S10.</p>'}
         </div>` : ''}
     </section>`;
   }
@@ -746,6 +754,7 @@
   .w-ig[data-race] i{background:var(--text)!important}
   .w-note{padding:8px 20px 18px;color:var(--faint);font-size:13px;line-height:1.45}
   .w-err{color:var(--bad)!important;font-size:14px}
+  .w-sum .w-prem{flex-basis:100%;padding:0;text-align:right}
   .w-foot{color:var(--faint);font-size:12px}
   .w-btn{height:38px;padding:0 16px;border-radius:6px;border:1px solid var(--control);background:var(--surface);font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,transform .12s}
   .w-btn:hover:not(:disabled){background:var(--rule)}
@@ -891,7 +900,7 @@
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
-    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
+    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
     .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
     .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
     .w-paces label{flex-direction:column;align-items:flex-start;gap:8px}.w-paces input{width:100%}.w-ptab th[scope=row] small{display:block}}
