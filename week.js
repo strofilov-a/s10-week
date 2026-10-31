@@ -645,7 +645,7 @@
     return `<div class="w-head"><h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
       <div class="w-navs"><div class="w-nav" role="group" aria-label="Выбор недели">
         <button data-w="-1" aria-label="Предыдущая неделя">‹</button><span>${weekRel()}</span><button data-w="1" aria-label="Следующая неделя">›</button>
-      </div>${cur ? '' : '<button class="w-btn sm" data-act="today">К этой неделе</button>'}</div></div>`;
+      </div><button class="w-btn sm w-tonow" data-act="today" ${cur ? 'aria-hidden="true" tabindex="-1" disabled' : ''}>К этой неделе</button></div></div>`;
   }
   // the week's volume as one long scale: the fill is the true ratio of what was run to the plan, both ends labelled
   function weekScale(W) {
@@ -699,7 +699,8 @@
   .w-app{--ground:#f4f4f4;--surface:#fff;--border:#e1e1e1;--rule:#eeeeee;--control:#c8c8c8;--text:#111111;--muted:#6b6b6b;--faint:#6b6b6b;--accent:#1a4be0;--accent-bg:#e4eafc;--glyph-off:#d6d6d6;--primary:#d62b1f;--primary-hover:#b8251b;--primary-ink:#fff;--key:#d62b1f;--field:#fff;--soft:#f9f9f9;--accent-soft:#f4f6fe;--warn-bg:#fffbeb;
     --ok-bg:#dcfae5;--ok:#04250e;--bad-bg:#ffedea;--bad:#831c1e;--neutral-bg:#eceef2;--neutral:#3d424b;
     min-height:100vh;background:var(--ground);color:var(--text);font:15px/1.5 Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;text-align:left}
-  .w-app.w-over{position:fixed;inset:0;overflow:auto;z-index:2147483000}
+  .w-app.w-over{position:fixed;inset:0;overflow:auto;z-index:2147483000;scrollbar-gutter:stable}
+  html:has(.w-app:not(.w-over)){scrollbar-gutter:stable}
   .w-app *{box-sizing:border-box;margin:0;padding:0}
   .w-app .num{font-variant-numeric:tabular-nums}
   .w-app button,.w-app select,.w-app input,.w-app textarea{font:inherit;color:inherit}
@@ -834,7 +835,8 @@
   .w-fact{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;color:var(--muted);font-size:14px}
   .w-fact b{color:var(--text);font-weight:500}
   .w-flash:focus{outline:none}.w-flash:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  .w-navs{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .w-navs{display:flex;align-items:center;gap:8px}
+  .w-tonow{order:-1}.w-tonow:disabled{visibility:hidden}
   .w-flash button{border:0;background:none;color:inherit;cursor:pointer;font-size:18px;width:32px;height:32px}
   .w-chooser{padding:4px 20px 18px;display:grid;gap:12px}
   .w-plans{border:1px solid var(--border);border-radius:8px}
@@ -915,7 +917,7 @@
     .w-wkh{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w" "n p s"}.w-wkh>span:nth-child(2){grid-area:d}
     .w-gen{grid-template-columns:1fr}}
   @media (max-width:560px){.w-main{padding:16px 16px 40px;gap:16px}.w-top{padding:0 16px}.w-topin{height:auto;flex-wrap:wrap;gap:0 14px}.w-wm{height:52px;display:flex;align-items:center}
-    .w-tabbar{order:3;flex-basis:100%;height:44px;gap:24px}
+    .w-tabbar{order:3;flex-basis:100%;height:44px;gap:24px}.w-tonow{order:0}
     .w-head h1{font-size:22px}.w-today{padding:20px}.w-vol{padding:20px 20px 12px}.w-scale{padding:0 20px 18px}.w-stats2>div{padding:14px 20px}
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
