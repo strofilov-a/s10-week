@@ -1,23 +1,21 @@
 # S10 «Моя неделя»
 
-Everything on one page, in three views switched from the header (Неделя / План до старта / Мои темпа). The page reads like a
-training diary: on «Неделя» the heading says what today is («Сегодня восстановительная, 8 км», the task, what is done), then
-three figures (the week's volume against the plan, the long run, the days to the race) and the week as a ruled table
-День / Тренировка / План / Факт:
+Everything on one page. At the top a card holds today's workout, the week's volume against the plan (one long scale),
+the long run and the days to the race; under it three tabs (Неделя / План до старта / Мои темпа):
 - **Неделя**: each day with plan and fact; «Запланировать неделю» runs calc3's flow (two key workouts from the chosen plan →
   schedule computed by the S10 server → edit or move any day → «Поставить задачи»).
 - **План до старта**: choose the master plan (your saved versions from calc5, the calc4 library, or a new one generated
-  from a prompt with calc4's generator), see the weekly volumes as a chart grouped by training period and every week to the race laid over the dates with your paces, set the first-week
+  from a prompt with calc4's generator), see every week to the race laid over the dates with your paces, set the first-week
   volume and which day holds which workout, then «Заполнить календарь» writes the whole plan into the diary (optionally
   leaving days that already have a task). «Сохранить версию» saves it where calc5 sees it.
 - **Мои темпа**: T5/T10/T21/T42 from the chosen plan, the S10 forecast, or your own; every workout on the page uses them.
-  One table: per zone the pace per km (editable) and the 400 m lap time, plus the easy-run range.
+  The four paces are edited at the top; below, the time per 1 km and per 400 m lap for each zone and the easy-run range.
 - Each day shows the fact next to the plan: distance and average pace from the diary tracks, and for pace-only tasks
   whether the run was faster, slower or within the task. Diary texts are shown as Разминка / работа / Заминка lines
   (display only; nothing written to the diary changes).
 - The tab and the week are in the address (`?tab=plan`, `?week=2026-10-19`), so links open the same view and «назад» works.
 
-Colours: palette №3 «Лист, синяя и красная ручка» is the fixed default. The page is ink on white with grey panels and no borders; the main button is ink. The blue pen #1a4be0 is what you ran: the fact column, today, the volume scale, the current week. The red pen #d62b1f marks only the key sessions (intervals, repeats, race) and the race week. Add `?colors` to the URL to bring back the picker with all 20 three-colour schemes.
+Colours: palette №3 «Лист, синяя и красная ручка» is the fixed default. Grey page with white cards; blue #1a4be0 marks the wordmark, the tabs, today, links and the volume scale; red #d62b1f is the main buttons and the load bars next to each workout. Add `?colors` to the URL to bring back the picker with all 20 three-colour schemes.
 
 ## Files
 | File | What it is |
