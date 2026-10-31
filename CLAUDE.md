@@ -110,7 +110,10 @@ Never write to the owner's real diary or profile without his explicit yes in the
 
 ## Open items
 
-- The profile write with the new fields (`active`, `filled`, `undo`, `student.layout`) is not yet tested on the live server.
+- Profile write with the new fields: tested on the live server 31.10.2026 (owner's profile, then restored byte for byte).
+  The server stores the `studentPlans<ID>` string unchanged (`active`, `student.layout/volume/t5…t42`, `filled`, `undo`,
+  «», `\`, ё); week.js `dff8104` reads it back (active version picked, layout, «в календаре по…», undo button).
+  Still untested live: `patchVersion` clearing `undo` after «Вернуть как было» (runs only together with diary writes).
 - Race week: with the race on Sunday the plan leaves Thu–Sat as rest (its volume already includes the marathon). Ask the
   owner whether easy runs should replace that.
 - Where the site loads `week.js` from: the S10 server (the developer copies each release) or this repo.
