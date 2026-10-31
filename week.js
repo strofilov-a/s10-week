@@ -9,6 +9,7 @@
   const FX = window.S10_FIXTURES || null;
   const ORIGIN = location.origin;
   const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  const last = (a) => a[a.length - 1];
   async function get(u) {
     if (LIVE) { const r = await fetch(ORIGIN + u, { credentials: 'include' }); if (!r.ok) throw new Error(r.status); return r.json(); }
     if (!FX) throw new Error('нет демо-данных');
@@ -17,7 +18,7 @@
     if (u.includes('task.php?action=main')) return FX.main;
     if (u.includes('studentMainStart')) return FX.startParam;
     if (u.includes('planresults.php')) return FX.results;
-    if (u.startsWith('/student?')) return FX.diary;
+    if (u.startsWith('/student?')) return demoDiary(new URLSearchParams(u.split('?')[1]));
     if (u.includes('tasktemplates.php')) return FX.templates;
     if (u.includes('param[]=studentPlans')) return { param: { [`studentPlans${FX.me.id}`]: JSON.stringify(FX.versions) } };
     if (u.includes('param[]=planTemplates')) return { param: { planTemplates: JSON.stringify(FX.library) } };
@@ -46,6 +47,13 @@
     const rd = r.body.getReader(), dec = new TextDecoder(); let out = '';
     for (;;) { const { done, value } = await rd.read(); if (done) break; out += dec.decode(value, { stream: true }); onProgress(out); }
     return out + dec.decode();
+  }
+  // the demo answers like the real diary API: up to `limit` days with date <= last_date (Moscow day), newest first
+  function demoDiary(q) {
+    const lim = +q.get('limit') || 60, end = iso(new Date((+q.get('last_date') + 3 * 3600) * 1000));
+    const all = FX.diary.diaryTasksInfo.filter((x) => x.date <= end).sort((a, b) => b.date.localeCompare(a.date));
+    const list = all.slice(0, lim), old = list.length ? last(list).date : null;
+    return { diaryTasksInfo: list, diaryTasksisMoreExist: all.length > lim ? Date.parse(add(old, -1) + 'T00:00:00Z') / 1000 - 3 * 3600 : 0 };
   }
   function demoSchedule(q) {
     const start = FX.base.dselect[q.get('dselect')]?.date || FX.base.dselect[2].date;
@@ -110,14 +118,28 @@
   const PACE_S10 = paceRow?.t ? Object.fromEntries(Object.entries(paceRow.t).map(([k, v]) => [k, hms(v)])) : null;
   const today = iso(new Date(((me.nowmsk || Date.now() / 1000) + 3 * 3600) * 1000)); // the site counts days in Moscow time
   const days = new Map();
-  async function loadUntil(lastDay) {
-    const ts = Math.floor(d8(add(lastDay, 1)).getTime() / 1000);
-    const res = await get(`/student?user_id=${id}&last_date=${ts}&limit=60`);
-    for (const x of res.diaryTasksInfo || []) days.set(x.date, x);
+  const loadedWeeks = new Set(); // Mondays of the weeks whose every diary day is in `days`
+  // the diary API gives up to `limit` days with date <= last_date, newest first, and diaryTasksisMoreExist = the
+  // last_date for the next page (0 when nothing older is left); so a long plan to the race takes several pages
+  async function loadRange(from, to, force) {
+    const mons = []; for (let m = monday(from); m <= to; m = add(m, 7)) mons.push(m);
+    if (!force && mons.every((m) => loadedWeeks.has(m))) return;
+    let cursor = Math.floor(d8(add(to, 1)).getTime() / 1000);
+    for (let page = 0; page < 40; page++) {
+      const res = await get(`/student?user_id=${id}&last_date=${cursor}&limit=60`);
+      const list = res.diaryTasksInfo || [];
+      for (const x of list) days.set(x.date, x);
+      const oldest = list.reduce((a, x) => (x.date < a ? x.date : a), '9999');
+      const more = +res.diaryTasksisMoreExist || 0;
+      if (!list.length || !more || oldest <= from || more >= cursor) break;
+      cursor = more;
+    }
+    mons.forEach((m) => loadedWeeks.add(m));
   }
   let wk = monday(today);
-  const horizon = () => { const a = add(wk, 13), b = raceMon ? add(raceMon, 6) : a; return a > b ? a : b; };
-  await loadUntil(horizon());
+  const raceEnd = raceMon ? add(raceMon, 6) : null;
+  const horizon = () => { const a = add(wk, 13); return raceEnd && raceEnd > a ? raceEnd : a; };
+  await loadRange(add(monday(today), -7), horizon()); // last week, this week and every day to the race
 
   /* ================= the chosen plan and the paces ================= */
   // sel: { src: 'version' | 'library' | 'new', id } ; the newly generated plan lives in memory until it is saved
@@ -236,8 +258,9 @@
     const p = plan(); if (!p || !race) return null;
     const weeks = p.plan.weeks.slice().sort((a, b) => a.week - b.week).map((w) => layWeek(w, p));
     const all = weeks.flatMap((w) => w.days).filter((t) => t.d > today && t.d !== race.d); // the main race day stays as set on «Настройка плана»
+    const same = (t) => { const x = days.get(t.d); return x && +x.type === +t.typtrain && +x.target === +t.prekm && String(x.comment || '').trim() === String(t.task).trim(); };
     const keep = keepExisting ? all.filter((t) => isRun(days.get(t.d))) : [];
-    const write = all.filter((t) => !keep.includes(t));
+    const write = all.filter((t) => !keep.includes(t) && !same(t)); // a day that already says exactly this is not sent again
     return { weeks, write, keep };
   }
 
@@ -249,7 +272,8 @@
   let palId = SHOW_COLORS ? store.get('palette', DEFAULT_PAL) : DEFAULT_PAL, colorsOpen = false;
   function applyPalette() {
     const P = PALETTES.find((x) => x.id === palId) || PALETTES.find((x) => x.id === DEFAULT_PAL);
-    const mix = (a, pct, b) => `color-mix(in srgb, ${a} ${pct}%, ${b})`;
+    const rgb = (h) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16));
+    const mix = (a, pct, b) => { const A = rgb(a), B = rgb(b); return '#' + A.map((v, k) => Math.round((v * pct + B[k] * (100 - pct)) / 100).toString(16).padStart(2, '0')).join(''); }; // = color-mix(in srgb, a pct%, b), works in every browser
     const card = P.id === 's10' ? '#ffffff' : P.dark ? P.surface : (P.bg.toLowerCase() === '#ffffff' ? '#ffffff' : mix(P.bg, 30, '#ffffff'));
     const ground = P.id === 's10' ? P.bg : P.dark ? P.bg : (P.bg.toLowerCase() === '#ffffff' ? P.surface : P.bg);
     const v = {
@@ -280,7 +304,7 @@
   let tab = store.get('tab', 'week');
   let chooser = !plan(), chooserTab = versions.length ? 'version' : library.length ? 'library' : 'new';
   let gen = { distance: plan()?.distance || DISTANCES[0], weeks: raceMon ? Math.max(1, Math.round((d8(raceMon) - d8(monday(add(today, 1)))) / 6048e5) + 1) : 8, prompt: '', busy: false, lines: 0, err: '' };
-  let fill = { confirm: false, busy: false, err: '' };
+  let fill = { confirm: false, busy: false, err: '', progress: '' };
   let openWeek = null;
   const persistSel = () => { store.set(`plan.${id}`, sel && sel.src !== 'new' ? sel : null); };
   const reprice = () => { PACE = activePaces(); };
@@ -321,7 +345,7 @@
     try {
       const [base, tt] = await Promise.all([get(`/apiweb/calc.php?id=${id}`), get('/apiweb/tasktemplates.php').catch(() => [])]);
       const dsels = Object.entries(base.dselect || {}).map(([k, v]) => ({ k: String(k), date: v.date }));
-      PL = { base, tt, dsels, dsel: String(base.dselected || dsels.at(-1)?.k || 1), rows: null, pre: [], sum: null, busy: false, err: '' };
+      PL = { base, tt, dsels, dsel: String(base.dselected || last(dsels)?.k || 1), rows: null, pre: [], sum: null, busy: false, err: '' };
       maxrecov = +base.param?.maxrecov?.v || maxrecov;
       pickWorks();
     } catch (e) { PL = { err: `Не удалось загрузить ограничения и шаблоны (${e.message}). Обновите страницу.` }; }
@@ -362,27 +386,37 @@
     PL.busy = true; PL.err = ''; render();
     try {
       await writeTasks(PL.rows);
-      const first = PL.rows[0].d, last = PL.rows.at(-1).d, n = PL.rows.length;
-      await loadUntil(horizon());
+      const first = PL.rows[0].d, lastD = last(PL.rows).d, n = PL.rows.length;
+      await loadRange(first, lastD, true).catch(() => {});
       mode = 'view'; wk = monday(first); PL = null;
-      flash = `${LIVE ? 'Задачи поставлены' : 'Демо: задачи поставлены только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(first, last)}.`;
+      flash = `${LIVE ? 'Задачи поставлены' : 'Демо: задачи поставлены только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(first, lastD)}.`;
     } catch (e) { PL.busy = false; PL.err = `Сервер не принял задачи (${e.message}). В дневнике ничего не изменилось.`; }
     render();
   }
 
   /* ================= whole plan: fill, save version, generate ================= */
   async function fillCalendar() {
-    const f = fillPreview(); if (!f || !f.write.length) return;
     if (!me.isPremium) { fill.err = 'Ставить задачи можно с премиум-подпиской S10.'; return render(); }
-    fill.busy = true; fill.err = ''; render();
-    try {
-      await writeTasks(f.write);
-      await loadUntil(horizon());
-      fill = { confirm: false, busy: false, err: '' };
-      const a = f.write[0].d, b = f.write.at(-1).d;
-      flash = `${LIVE ? 'Календарь заполнен' : 'Демо: календарь заполнен только на этой странице'}: ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}, ${range(a, b)}.`;
-      wk = monday(a);
-    } catch (e) { fill.busy = false; fill.err = `Сервер не принял задачи (${e.message}). В дневнике ничего не изменилось.`; }
+    fill.busy = true; fill.err = ''; fill.progress = 'Проверяю дневник…'; render();
+    try { await loadRange(add(today, 1), raceEnd || add(today, 1)); } catch { /* the preview below still uses what is loaded */ }
+    const f = fillPreview(); if (!f || !f.write.length) { fill = { confirm: false, busy: false, err: '', progress: '' }; return render(); }
+    const weeks = []; for (const t of f.write) { const g = last(weeks); if (g && g.mon === monday(t.d)) g.list.push(t); else weeks.push({ mon: monday(t.d), list: [t] }); }
+    let done = 0, upto = null, error = null;
+    for (let i = 0; i < weeks.length; i++) {
+      fill.progress = `Записываю неделю ${i + 1} из ${weeks.length}…`; render();
+      try { await writeTasks(weeks[i].list); done += weeks[i].list.length; upto = last(weeks[i].list).d; } catch (e) { error = e; break; }
+    }
+    await loadRange(f.write[0].d, last(f.write).d, true).catch(() => {});
+    const a = f.write[0].d, b = last(f.write).d, n = f.write.length;
+    if (error) {
+      fill = { confirm: false, busy: false, progress: '', err: done
+        ? `Записано ${done} ${plural(done, 'день', 'дня', 'дней')} из ${n}, по ${dayLbl(upto)}. Дальше сервер не принял задачи (${error.message}). Нажмите «Заполнить календарь» ещё раз, чтобы дописать остальное.`
+        : `Сервер не принял задачи (${error.message}). В дневнике ничего не изменилось.` };
+      return render();
+    }
+    fill = { confirm: false, busy: false, err: '', progress: '' };
+    flash = `${LIVE ? 'Календарь заполнен' : 'Демо: календарь заполнен только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(a, b)}.`;
+    wk = monday(a);
     render();
   }
   async function saveVersion() {
@@ -443,12 +477,12 @@
     if (!race) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. Выберите его на странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
     if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите версию, которую сохранил тренер, или сделайте новый по описанию: это займёт около минуты.</p>${chooserHTML()}</section>`;
     const f = fillPreview(), src = sel.src === 'version' ? 'ваша версия' : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
-    const ws = f.weeks, first = ws[0], last = ws.at(-1);
+    const ws = f.weeks, first = ws[0], lastW = last(ws);
     const curMon = monday(today);
     return `<section class="w-card" aria-labelledby="w-plan2-h">${head}
       ${chooser ? chooserHTML() : ''}
       <div class="w-step">
-        <div class="w-pmeta"><span class="w-muted num">${src} · ${ws.length} ${plural(ws.length, 'неделя', 'недели', 'недель')} · ${range(first.mon, add(last.mon, 6))} · темпа ${esc(paceLabel())}</span></div>
+        <div class="w-pmeta"><span class="w-muted num">${src} · ${ws.length} ${plural(ws.length, 'неделя', 'недели', 'недель')} · ${range(first.mon, add(lastW.mon, 6))} · темпа ${esc(paceLabel())}</span></div>
         <div class="w-pset">
           <label class="w-f w-f-s"><span>Объём первой недели</span><span class="w-inl"><input data-p="volume" class="num" inputmode="numeric" value="${volume || firstKm(p)}"> км</span></label>
           <div class="w-f w-f-wide"><span>Дни недели</span><div class="w-roles">${layout.map((r, i) => `<label class="w-role"><small>${DN[i]}</small><select data-p="role" data-i="${i}" aria-label="${DNF[i]}">${Object.entries(ROLE).map(([k, l]) => `<option value="${k}" ${r === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div></div>
@@ -471,12 +505,12 @@
         </li>`;
       }).join('')}</ol>
       <div class="w-sum">
-        <div><span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, f.write.at(-1).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>
+        <div><span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>
           <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label></div>
         <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium ? '' : 'disabled'}>Заполнить календарь</button></div>
         ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи в календарь можно с премиум-подпиской S10, как на странице «Настройка плана».</p>'}
       </div>
-      ${fill.confirm ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')} в дневник?</b> ${range(f.write[0].d, f.write.at(-1).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'}</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? 'Записываю…' : 'Записать'}</button></div></div>` : ''}
+      ${fill.confirm ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')} в дневник?</b> ${range(f.write[0].d, last(f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'}</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}
       ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}
     </section>`;
   }
@@ -548,7 +582,7 @@
         <div class="w-go"><button class="w-btn ${PL.rows && !PL.stale ? '' : 'primary'}" data-act="wgen" ${PL.busy ? 'disabled' : ''}>${PL.busy && !PL.rows ? 'Считаю расписание…' : PL.rows ? 'Пересчитать расписание' : 'Рассчитать расписание'}</button><span class="w-muted">${PL.stale ? 'Работы изменились, пересчитайте расписание.' : 'Остальные дни подберёт S10 по вашим лимитам.'}</span></div>
       </div>
       ${PL.err ? `<p class="w-note w-err" role="alert">${esc(PL.err)}</p>` : ''}
-      ${PL.rows ? `<div class="w-step w-step-list"><div class="w-steph"><h3>Расписание</h3><span class="num">${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}, ${dayLbl(PL.rows[0].d)} – ${dayLbl(PL.rows.at(-1).d)}</span></div></div>
+      ${PL.rows ? `<div class="w-step w-step-list"><div class="w-steph"><h3>Расписание</h3><span class="num">${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}, ${dayLbl(PL.rows[0].d)} – ${dayLbl(last(PL.rows).d)}</span></div></div>
         <ol class="w-plist">
           ${PL.pre.map((x) => `<li class="w-pday locked"><div class="w-pd"><b>${DNF[dow(x.d)]}</b><small class="num">${dayLbl(x.d)}</small></div><div class="w-pbody"><div class="w-ph"><span class="w-name">${glyph(LEVEL[+x.typtrain] || 1)}${TYPES[+x.typtrain] || 'Тренировка'}</span><span class="num w-pkm">${n1(+x.prekm || 0)} км</span></div>${taskHTML(x.task)}</div><div class="w-pa"><span class="w-pill neutral">Уже в дневнике</span></div></li>`).join('')}
           ${PL.rows.map(dayRow).join('')}
@@ -639,7 +673,7 @@
     const q = new URLSearchParams(location.search);
     const t = q.get('tab'); tab = ['plan', 'paces'].includes(t) ? t : (first && !t && !q.has('week') ? tab : 'week');
     const w = q.get('week'); wk = /^\d{4}-\d{2}-\d{2}$/.test(w || '') ? monday(w) : monday(today);
-    if (![...Array(7)].some((_, i) => days.has(add(wk, i)))) await loadUntil(add(wk, 6)).catch(() => {});
+    await loadRange(wk, add(wk, 6)).catch(() => {});
   }
   function render() {
     const W = week(wk), cur = wk === monday(today);
@@ -942,7 +976,7 @@
     }
     const b = e.target.closest('button[data-w]'); if (!b) return;
     wk = add(wk, 7 * +b.dataset.w);
-    if (![...Array(7)].some((_, i) => days.has(add(wk, i)))) await loadUntil(add(wk, 6)).catch(() => {});
+    await loadRange(wk, add(wk, 6)).catch(() => {});
     syncURL(true); render();
   });
   root.addEventListener('keydown', (e) => {
