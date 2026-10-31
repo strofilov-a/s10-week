@@ -939,9 +939,9 @@
   .w-alt label{display:inline-flex;gap:8px;align-items:center;cursor:pointer}
   .w-sum{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;padding:18px 20px;border-top:1px solid var(--rule);background:var(--soft)}
   .w-card>.w-sum:last-child{border-radius:0 0 8px 8px}
-  .w-sum>div{display:grid;gap:2px;flex:1 1 360px;min-width:0}.w-sum>.w-acts{flex:none}
+  .w-sum>div{display:grid;gap:2px;flex:1 1 360px;min-width:0}.w-sum>.w-acts{flex:none;align-self:flex-end}
   .w-span button{font-weight:500}
-  .w-hint{display:grid;margin-top:4px}.w-hint>span{display:block}
+  .w-hint{display:grid;align-content:start;margin-top:4px;min-height:calc(2 * 1.5em)}.w-hint>span{display:block}
   .w-sum b{font-size:24px;font-weight:500;line-height:1.2}
   .w-acts{display:flex;gap:10px;flex-wrap:wrap}
   .w-chk{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-top:6px;cursor:pointer}
@@ -1021,7 +1021,7 @@
   .w-pal-prev em{position:absolute;right:36px;bottom:8px;width:22px;height:10px;border-radius:3px}.w-pal-prev em.k{right:8px}
   .w-pal-n{font-size:14px;font-weight:500}
   .w-pal small{color:var(--faint);font-size:12px}
-  @media (max-width:1000px){.w-duo{grid-template-columns:minmax(0,1fr)}.w-duo>.w-calc{order:-1}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
+  @media (max-width:1000px){.w-hint{min-height:calc(3 * 1.5em)}.w-duo{grid-template-columns:minmax(0,1fr)}.w-duo>.w-calc{order:-1}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
     .w-wkh{grid-template-columns:40px 110px minmax(0,1fr) 64px;grid-template-areas:"n d w k" "n p w s"}.w-wn{grid-area:n}.w-per{grid-area:p}.w-wworks{grid-area:w}.w-wkm{grid-area:k}.w-wkh>.w-pill,.w-wkh>.w-pill-sp{grid-area:s}
     .w-wdays{padding-left:20px}}
   @media (max-width:760px){.w-works{grid-template-columns:1fr}
@@ -1037,7 +1037,7 @@
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
-    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-hint{min-height:calc(4 * 1.45em)}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
+    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-hint{min-height:calc(4 * 1.5em)}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
     .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
     .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
     .w-paces label{flex-direction:column;align-items:flex-start;gap:8px}.w-paces input{width:100%}.w-ptab th[scope=row] small{display:block}}
