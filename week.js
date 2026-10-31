@@ -139,7 +139,7 @@
   let wk = monday(today);
   const raceEnd = raceMon ? add(raceMon, 6) : null;
   const horizon = () => { const a = add(wk, 13); return raceEnd && raceEnd > a ? raceEnd : a; };
-  await loadRange(add(monday(today), -7), horizon()); // last week, this week and every day to the race
+  { const h = horizon(), c = add(monday(today), 41); await loadRange(add(monday(today), -7), h > c ? h : c); } // last week, this week, every day to the race (or 6 weeks)
 
   /* ================= the chosen plan and the paces ================= */
   // sel: { src: 'version' | 'library' | 'new', id } ; the newly generated plan lives in memory until it is saved
@@ -254,10 +254,12 @@
     return { mon, target, total: out.reduce((a, t) => a + t.prekm, 0), days: out };
   }
   let keepExisting = true;
+  let fillSpan = store.get('fillSpan', '2w'); // '2w': tomorrow + 14 days, so the athlete can adjust before the next fill; 'race': to the race
   function fillPreview() {
     const p = plan(); if (!p || !race) return null;
     const weeks = p.plan.weeks.slice().sort((a, b) => a.week - b.week).map((w) => layWeek(w, p));
-    const all = weeks.flatMap((w) => w.days).filter((t) => t.d > today && t.d !== race.d); // the main race day stays as set on «Настройка плана»
+    const until = fillSpan === '2w' ? add(today, 14) : '9999-12-31';
+    const all = weeks.flatMap((w) => w.days).filter((t) => t.d > today && t.d <= until && t.d !== race.d); // the main race day stays as set on «Настройка плана»
     const same = (t) => { const x = days.get(t.d); return x && +x.type === +t.typtrain && +x.target === +t.prekm && String(x.comment || '').trim() === String(t.task).trim(); };
     const keep = keepExisting ? all.filter((t) => isRun(days.get(t.d))) : [];
     const write = all.filter((t) => !keep.includes(t) && !same(t)); // a day that already says exactly this is not sent again
@@ -283,6 +285,7 @@
       '--glyph-off': mix(P.ink, 16, card), '--primary': P.key, '--primary-ink': P.keyInk, '--primary-hover': mix(P.key, 86, P.dark ? '#ffffff' : '#000000'), '--key': P.keyData || P.key,
       '--ok-bg': P.dark ? mix('#3fc07a', 20, card) : '#dcfae5', '--ok': P.dark ? '#86e3ae' : '#04250e',
       '--bad-bg': P.dark ? mix('#e5566f', 22, card) : '#ffedea', '--bad': P.dark ? '#ff9aa9' : '#831c1e',
+      '--cell': mix(P.ink, 4, card), '--cell-hover': mix(P.ink, 8, card), '--key-bg': mix(P.keyData || P.key, 10, card), '--key-line': mix(P.keyData || P.key, 45, card),
       '--neutral-bg': mix(P.ink, 9, card), '--neutral': P.ink, '--warn-bg': P.dark ? mix('#d9a441', 16, card) : '#fffbeb',
     };
     for (const [k, val] of Object.entries(v)) root.style.setProperty(k, val);
@@ -505,7 +508,8 @@
         </li>`;
       }).join('')}</ol>
       <div class="w-sum">
-        <div><span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>
+        <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${[['2w', 'Ближайшие 2 недели'], ['race', 'До старта']].map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
+          <span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span>${fillSpan === '2w' ? '<span class="w-muted">Поправьте задачи в календаре, а следующие недели допишите этой же кнопкой.</span>' : ''}
           <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label></div>
         <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium ? '' : 'disabled'}>Заполнить календарь</button></div>
         ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи в календарь можно с премиум-подпиской S10, как на странице «Настройка плана».</p>'}
@@ -622,6 +626,44 @@
     if (r.d === today) return '<span class="w-pill neutral">Сегодня</span>';
     return '<span class="w-pill bad">Не выполнено</span>';
   }
+  // the calendar: one row per week, from last week to the race week; a click opens that week below
+  let calFrom = null, calAll = false;
+  function calRange() {
+    const curMon = monday(today);
+    let from = calFrom || add(curMon, -7);
+    let to = raceMon && raceMon > curMon ? raceMon : add(curMon, 35);
+    if (wk < from) from = wk;
+    if (wk > to) to = wk;
+    const mons = []; for (let m = from; m <= to; m = add(m, 7)) mons.push(m);
+    while (mons.length < 6) mons.push(add(last(mons), 7));
+    return mons;
+  }
+  function calCell(d) {
+    const x = days.get(d), run = isRun(x), fact = runKm(x), isRace = (race && d === race.d) || +x?.type === 6;
+    const rest = !run && !!x && /отдых/i.test(x.comment || '');
+    const cls = [d < today ? 'past' : '', d === today ? 'today' : '', isRace ? 'race' : '', run ? 'run' : '', rest ? 'rest' : '', fact ? 'done' : ''].filter(Boolean).join(' ');
+    const dt = d8(d), num = dt.getUTCDate() === 1 ? `${dt.getUTCDate()} ${MONS[dt.getUTCMonth()]}` : d === calRange()[0] ? `${dt.getUTCDate()}<span class="w-cdm"> ${MONS[dt.getUTCMonth()]}</span>` : String(dt.getUTCDate());
+    const what = isRace ? 'Старт' : run ? (SHORT[+x.type] || 'Бег') : rest ? 'отдых' : '';
+    const km = run && +x.target ? n1(+x.target) : '';
+    const label = `${DNF[dow(d)]}, ${dayLbl(d)}: ${isRace ? `старт${raceName && race?.d === d ? ` ${raceName}` : ''}` : run ? `${(TYPES[+x.type] || 'тренировка').toLowerCase()}${km ? `, ${km} км` : ''}` : rest ? 'отдых' : 'ничего не стоит'}${fact ? `, сделано ${n1(fact)} км` : ''}`;
+    return `<button class="w-cd ${cls}" data-act="cal" data-d="${d}" aria-label="${esc(label)}" title="${esc(run || isRace ? plain(x?.comment || '').slice(0, 160) : '')}"${d === today ? ' aria-current="date"' : ''}>
+      <span class="w-cdh"><span class="num">${num}</span>${fact ? `<span class="w-cdf num">${n1(fact)}</span>` : ''}</span>
+      <span class="w-cdt">${what ? `<span class="w-cdl">${what}</span>` : ''}${km ? ` <b class="num">${km}</b>` : ''}</span></button>`;
+  }
+  function calHTML() {
+    const mons = calRange(), hidden = !calAll && mons.length > 8 && mons.indexOf(wk) < 8 ? mons.length - 8 : 0;
+    const shown = hidden ? mons.slice(0, 8) : mons;
+    return `<section class="w-card w-calc" aria-labelledby="w-cal-h">
+      <div class="w-ch"><h2 id="w-cal-h">${race && raceMon > monday(today) ? 'Календарь до старта' : 'Календарь'}</h2>
+        <span class="w-cal-key" aria-hidden="true"><span><i class="k-done"></i>сделано</span><span><i class="k-race"></i>старт</span><span><i class="k-today"></i>сегодня</span></span>
+        <button class="w-btn sm" data-act="calback">Раньше</button></div>
+      <div class="w-cal">
+        <div class="w-cwh" aria-hidden="true">${DN.map((n) => `<span>${n}</span>`).join('')}</div>
+        ${shown.map((m) => `<div class="w-cw ${m === wk ? 'sel' : ''}" role="group" aria-label="Неделя ${wLabel(m)}">${[...Array(7)].map((_, i) => calCell(add(m, i))).join('')}</div>`).join('')}
+      </div>
+      ${hidden ? `<button class="w-cal-all" data-act="calall">Показать все недели до старта: ещё ${hidden}</button>` : ''}
+    </section>`;
+  }
   function todayCard(W) {
     const r = W.list.find((q) => q.d === today);
     if (!r) {
@@ -689,10 +731,8 @@
       ${colorsOpen ? colorsPanel() : ''}
       <div class="w-head">
         <h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
-        <div class="w-navs"><div class="w-nav" role="group" aria-label="Выбор недели">
-          <button data-w="-1" aria-label="Предыдущая неделя">‹</button><span>${weekRel()}</span><button data-w="1" aria-label="Следующая неделя">›</button>
-        </div><button class="w-btn sm w-tonow" data-act="today" ${cur ? 'aria-hidden="true" tabindex="-1" disabled' : ''}>К этой неделе</button></div>
       </div>
+      ${calHTML()}
       <section class="w-card w-hero" aria-label="Сегодня и итоги недели">
         ${todayCard(W)}
         <div class="w-stats">
@@ -736,7 +776,33 @@
   .w-main{max-width:1160px;margin:0 auto;padding:28px max(24px,env(safe-area-inset-right)) 48px max(24px,env(safe-area-inset-left));display:grid;gap:24px}
   .w-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:12px 16px}
   .w-head h1{padding-top:3px}
-  .w-head h1{font-size:26px;line-height:1.2;font-weight:500;letter-spacing:-.01em}
+  .w-head h1{font-size:26px;line-height:1.2;font-weight:500;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* the calendar: rectangular days, one row per week */
+  .w-calc .w-ch{padding-bottom:10px}
+  .w-cal-key{display:inline-flex;flex-wrap:wrap;gap:4px 14px;color:var(--faint);font-size:12px}
+  .w-cal-key i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .k-done{background:var(--accent)}.k-race{background:var(--key)}.k-today{box-shadow:inset 0 0 0 2px var(--accent)}
+  .w-cal{display:grid;gap:4px;padding:0 17px 17px}
+  .w-cwh,.w-cw{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+  .w-cwh span{font-size:12px;color:var(--faint);padding:0 9px}
+  .w-cw{padding:3px;margin:0 -3px;border-radius:9px;transition:background .15s}
+  .w-cw.sel{background:var(--accent-bg)}
+  .w-cd{min-width:0;height:54px;border:0;border-radius:6px;background:var(--cell);padding:6px 9px;text-align:left;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;color:var(--text);overflow:hidden;transition:background .15s}
+  .w-cd:hover{background:var(--cell-hover)}
+  .w-cw.sel .w-cd{background:var(--surface)}.w-cw.sel .w-cd:hover{background:var(--soft)}
+  .w-cdh{display:flex;justify-content:space-between;align-items:baseline;gap:4px;font-size:12px;color:var(--muted);line-height:1.2}
+  .w-cdf{color:var(--accent);font-weight:500}
+  .w-cdt{font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .w-cdt b{font-weight:500}
+  .w-cd.rest .w-cdt{color:var(--faint)}
+  .w-cd.past .w-cdt{color:var(--muted)}.w-cd.past .w-cdt b{font-weight:400}
+  .w-cd.today{box-shadow:inset 0 0 0 2px var(--accent)}
+  .w-cd.race,.w-cw.sel .w-cd.race{background:var(--key-bg);box-shadow:inset 0 0 0 1px var(--key-line)}
+  .w-cd.race .w-cdh,.w-cd.race .w-cdt{color:var(--key)}.w-cd.race .w-cdt{font-weight:500}
+  .w-cd.race.today{box-shadow:inset 0 0 0 2px var(--key)}
+  .w-cal-all{display:block;width:calc(100% - 34px);margin:0 17px 17px;height:36px;border:1px dashed var(--control);border-radius:6px;background:none;color:var(--muted);cursor:pointer;font-size:14px}
+  .w-cal-all:hover{color:var(--text);border-color:var(--text)}
+  .w-span{margin-bottom:12px}
   .w-nav{display:flex;align-items:center;height:38px;border:1px solid var(--control);border-radius:6px;background:var(--surface)}
   .w-nav button{width:40px;height:36px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;border-radius:6px}
   .w-nav button:hover{color:var(--text);background:var(--rule)}
@@ -931,6 +997,9 @@
     .w-gen{grid-template-columns:1fr}}
   @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-top{padding:0 16px}.w-topin{gap:14px}.w-demo{padding:8px 16px}
     .w-head h1{font-size:22px}.w-today{padding:20px}.w-stat{padding:16px}
+    .w-cal{padding:0 12px 12px;gap:3px}.w-cwh,.w-cw{gap:3px}.w-cw{padding:2px;margin:0 -2px}.w-cwh span{padding:0 4px;font-size:11px}
+    .w-cd{height:46px;padding:5px 5px;border-radius:5px}.w-cdh{font-size:11px}.w-cdt{font-size:12px}.w-cdl,.w-cdm{display:none}.w-cd.race b{font-weight:600}
+    .w-calc .w-ch{padding:14px 16px 8px}.w-cal-key{order:3;flex-basis:100%}.w-cal-all{width:calc(100% - 24px);margin:0 12px 12px}
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
@@ -961,6 +1030,10 @@
       if (act === 'redit') { const r = PL.rows[+a.dataset.r]; r.edit = !r.edit; return render(); }
       if (act === 'tab') { tab = a.dataset.k; store.set('tab', tab); syncURL(true); return render(); }
       if (act === 'today') { wk = monday(today); syncURL(true); return render(); }
+      if (act === 'cal') { const d = a.dataset.d; wk = monday(d); tab = 'week'; store.set('tab', tab); mode = 'view'; PL = null; syncURL(true); render(); root.querySelector(`[data-act=cal][data-d="${d}"]`)?.focus({ preventScroll: true }); return; }
+      if (act === 'calback') { const from = calRange()[0]; calFrom = add(from, -28); a.disabled = true; await loadRange(calFrom, add(from, -1)).catch(() => {}); render(); root.querySelector('[data-act=calback]')?.focus({ preventScroll: true }); return; }
+      if (act === 'calall') { calAll = true; return render(); }
+      if (act === 'span') { fillSpan = a.dataset.k; store.set('fillSpan', fillSpan); fill.confirm = false; return render(); }
       if (act === 'colors') { colorsOpen = !colorsOpen; return render(); }
       if (act === 'pal') { palId = a.dataset.id; store.set('palette', palId); applyPalette(); return render(); }
       if (act === 'pchoose') { chooser = !chooser; return render(); }
@@ -980,6 +1053,12 @@
     syncURL(true); render();
   });
   root.addEventListener('keydown', (e) => {
+    const c = e.target.closest('.w-cd');
+    if (c && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+      const nx = root.querySelector(`.w-cd[data-d="${add(c.dataset.d, step)}"]`); if (nx) { e.preventDefault(); nx.focus(); }
+      return;
+    }
     const t = e.target.closest('[role=tab]'); if (!t || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
     const list = [...t.parentElement.querySelectorAll('[role=tab]')], label = t.parentElement.getAttribute('aria-label');
     let i = list.indexOf(t);
