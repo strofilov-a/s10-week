@@ -4,8 +4,8 @@ Everything on one page. At the top a card holds today's workout, the week's volu
 the long run and the days to the race; under it three tabs (Неделя / План до старта / Мои темпа):
 - **Неделя**: each day with plan and fact; «Запланировать неделю» runs calc3's flow (two key workouts from the chosen plan →
   schedule computed by the S10 server → edit or move any day → «Поставить задачи»).
-- **План до старта**: choose the master plan (your saved versions from calc5, the calc4 library, or a new one generated
-  from a prompt with calc4's generator), see every week to the race laid over the dates with your paces, set the first-week
+- **План до старта**: choose the master plan (versions saved by the coach in calc5, the user's own calc4 library when it is not empty, or a new one
+  generated from a prompt with calc4's generator), see every week to the race laid over the dates with your paces, set the first-week
   volume and which day holds which workout, then «Заполнить календарь» writes the whole plan into the diary (optionally
   leaving days that already have a task). «Сохранить версию» saves it where calc5 sees it.
 - **Мои темпа**: T5/T10/T21/T42 from the chosen plan, the S10 forecast, or your own; every workout on the page uses them.
@@ -47,7 +47,11 @@ Writes (only on a button press, each with its own confirmation where it touches 
 - `POST https://s10.run/t7/plan-templates/public/api/generate.php` JSON `{distance, weeks, prompt}` (calc4's generator, streamed text)
 - the diary:
 - `POST /apiweb/task.php?id=ID&action=update`, FormData `tasks` = JSON `[{d, task, prekm, typtrain, main6:0, location, prediction}]`
-  (the exact payload calc3's «Поставить задачи» sends; premium required, as in calc3).
+  (the exact payload calc3's «Поставить задачи» sends; premium required, as in calc3). `main6` is 1 only for the main race
+  day, and «Заполнить календарь» never rewrites the main race day.
+
+Not logged in (`student/self/info` answers `null`): the page shows «войдите в S10» with a link to `/login`.
+Deploy brief for the developer, in Russian: `ЗАДАНИЕ.md` in the deploy package.
 
 "Done" counts runs only (track type `run`); hikes and rides are listed under the day.
 Not ported from calc3: the optional chat message to the coach after saving.
