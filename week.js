@@ -329,6 +329,12 @@
   let chooser = !plan(), chooserTab = versions.length ? 'version' : library.length ? 'library' : 'new';
   let gen = { distance: plan()?.distance || DISTANCES[0], weeks: raceMon ? Math.max(1, Math.round((d8(raceMon) - d8(monday(add(today, 1)))) / 6048e5) + 1) : 8, prompt: '', busy: false, lines: 0, err: '' };
   let fill = { confirm: false, busy: false, err: '', progress: '' };
+  let undo = { confirm: false, where: 'card', busy: false, err: '', progress: '' }, flashUndo = '';
+  // «Вернуть как было»: before a fill the page keeps what stood in those days; the record lives with the active plan in
+  // the profile (and in the browser as a fallback). Each day: [date, before: type, km, text, place, forecast (type null =
+  // the day was empty), after: type, km, text hash] — a day changed after the fill is left alone.
+  const fp = (t) => { let h = 5381; for (const c of String(t || '').trim()) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; return h.toString(36); };
+  const lastUndo = () => versions.find((v) => v.active)?.undo || store.get(`undo.${id}`, null);
   let openWeek = null;
   const persistSel = () => { store.set(`plan.${id}`, sel && sel.src !== 'new' ? sel : null); };
   const reprice = () => { PACE = activePaces(); };
@@ -425,6 +431,8 @@
     try { await loadRange(add(today, 1), raceEnd || add(today, 1)); } catch { /* the preview below still uses what is loaded */ }
     const f = fillPreview(); if (!f || !f.write.length) { fill = { confirm: false, busy: false, err: '', progress: '' }; return render(); }
     fill.snap = f.write.slice();
+    const before = f.write.map((t) => { const x = days.get(t.d); return [t.d, x ? +x.type || 0 : null, x ? +x.target || 0 : 0, x?.comment || '', x?.location || '', x?.prediction || '', +t.typtrain, +t.prekm, fp(t.task)]; });
+    const prevFilled = sel.src === 'version' ? plan()?.filled || null : null;
     const weeks = []; for (const t of f.write) { const g = last(weeks); if (g && g.mon === monday(t.d)) g.list.push(t); else weeks.push({ mon: monday(t.d), list: [t] }); }
     let done = 0, upto = null, error = null;
     for (let i = 0; i < weeks.length; i++) {
@@ -433,23 +441,26 @@
     }
     await loadRange(f.write[0].d, last(f.write).d, true).catch(() => {});
     const a = f.write[0].d, b = last(f.write).d, n = f.write.length;
+    const rec = done ? { at: new Date().toISOString(), prevFilled, days: before.slice(0, done) } : null;
+    if (rec) store.set(`undo.${id}`, rec);
     if (error) {
-      if (done) await storePlan({ filled: { from: a, to: upto } }).catch(() => {}); // what did get written is still linked to the plan
+      if (done) await storePlan({ filled: { from: a, to: upto }, undo: rec }).catch(() => {}); // what did get written is still linked to the plan
       fill = { confirm: false, busy: false, progress: '', err: done
         ? `Записано ${done} ${plural(done, 'день', 'дня', 'дней')} из ${n}, по ${dayLbl(upto)}. Дальше сервер не принял задачи (${error.message}). Нажмите «Заполнить календарь» ещё раз, чтобы дописать остальное.`
         : `Сервер не принял задачи (${error.message}). В дневнике ничего не изменилось.` };
       return render();
     }
     fill.progress = 'Сохраняю план в профиль…'; render();
-    let saved = true; try { await storePlan({ filled: { from: a, to: b } }); } catch { saved = false; }
+    let saved = true; try { await storePlan({ filled: { from: a, to: b }, undo: rec }); } catch { saved = false; }
     fill = { confirm: false, busy: false, err: '', progress: '' };
     flash = `${LIVE ? 'Календарь заполнен' : 'Демо: календарь заполнен только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(a, b)}.${saved ? ' План и настройки сохранены в профиле.' : ' План в профиль сохранить не удалось, задачи при этом записаны.'}`;
+    flashUndo = flash;
     wk = monday(a);
     render();
   }
   // writes the chosen plan with the current settings to the profile and marks it active; re-reads the list first,
   // so a version the coach saved meanwhile in calc5 is kept
-  async function storePlan({ asNew = false, filled = null } = {}) {
+  async function storePlan({ asNew = false, filled = null, undo: undoRec } = {}) {
     const p = plan(); if (!p) return null;
     let list = versions;
     try { const r = await get(`/apiweb/userparam.php?action=get&param[]=studentPlans${id}`); list = parseList(r.param?.[`studentPlans${id}`]); } catch { /* keep what we have */ }
@@ -461,7 +472,7 @@
       name: old?.name || `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${p.plan.weeks.length} нед.`, savedAt: new Date().toISOString(),
       templateId: old?.templateId || (sel.src === 'library' ? p.id : p.templateId || null), distance: p.distance || null, plan: { weeks: p.plan.weeks },
       student: { ...(old?.student || {}), raceDate: race?.d || null, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], volume: String(volume || firstKm(p)), layout: layout.slice() },
-      active: true, filled: f,
+      active: true, filled: f, undo: undoRec === undefined ? old?.undo || null : undoRec,
     };
     const next = [v, ...list.filter((x) => x.id !== v.id).map((x) => { const { active, ...rest } = x; return rest; })];
     const fd = new FormData(); fd.append('action', 'set'); fd.append('id', id); fd.append(`param[studentPlans${id}]`, JSON.stringify(next));
@@ -469,6 +480,52 @@
     versions = next.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))); sel = { src: 'version', id: v.id }; persistSel(); fresh = null;
     return v;
   }
+  // changes one saved version in the profile (re-read first), e.g. to drop the undo record after «Вернуть как было»
+  async function patchVersion(vid, patch) {
+    let list = versions;
+    try { const r = await get(`/apiweb/userparam.php?action=get&param[]=studentPlans${id}`); list = parseList(r.param?.[`studentPlans${id}`]); } catch { /* keep what we have */ }
+    const next = list.map((v) => (v.id === vid ? { ...v, ...patch } : v));
+    const fd = new FormData(); fd.append('action', 'set'); fd.append('id', id); fd.append(`param[studentPlans${id}]`, JSON.stringify(next));
+    await post('/apiweb/userparam.php', fd);
+    versions = next.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+  }
+  async function undoFill() {
+    const u = lastUndo(); if (!u?.days?.length) return;
+    if (!me.isPremium) { undo.err = 'Ставить задачи можно с премиум-подпиской S10.'; return render(); }
+    undo.busy = true; undo.err = ''; undo.progress = 'Проверяю дневник…'; render();
+    const ds = u.days.map((r) => r[0]).sort();
+    await loadRange(ds[0], last(ds), true).catch(() => {});
+    const back = [], changed = [];
+    for (const [d, wt, wk, wc, wl, wp, nt, nk, nf] of u.days) {
+      const x = days.get(d);
+      if (!(x && +x.type === nt && +x.target === nk && fp(x.comment) === nf)) { changed.push(d); continue; } // changed after the fill: not ours to touch
+      back.push(wt === null ? { d, typtrain: 0, task: '', prekm: 0, location: '', prediction: '' } : { d, typtrain: wt, task: wc, prekm: wk, location: wl, prediction: wp });
+    }
+    const weeks = []; for (const t of back) { const g = last(weeks); if (g && g.mon === monday(t.d)) g.list.push(t); else weeks.push({ mon: monday(t.d), list: [t] }); }
+    let done = 0, error = null;
+    for (let i = 0; i < weeks.length; i++) {
+      undo.progress = `Возвращаю неделю ${i + 1} из ${weeks.length}…`; render();
+      try { await writeTasks(weeks[i].list); done += weeks[i].list.length; } catch (e) { error = e; break; }
+    }
+    await loadRange(ds[0], last(ds), true).catch(() => {});
+    const keptNote = changed.length ? ` ${changed.length} ${plural(changed.length, 'день', 'дня', 'дней')} поменяли после заполнения, ${changed.length === 1 ? 'его' : 'их'} не трогали.` : '';
+    if (error) {
+      undo = { confirm: false, where: 'card', busy: false, progress: '', err: `Вернули ${done} из ${back.length} ${plural(back.length, 'дня', 'дней', 'дней')}, дальше сервер не принял задачи (${error.message}). Нажмите «Вернуть как было» ещё раз.` };
+      return render();
+    }
+    store.set(`undo.${id}`, null);
+    const v = versions.find((x) => x.active && x.undo);
+    if (v) await patchVersion(v.id, { undo: null, filled: u.prevFilled || null }).catch(() => {});
+    undo = { confirm: false, where: 'card', busy: false, err: '', progress: '' };
+    flash = `${LIVE ? 'Календарь вернули как было' : 'Демо: календарь вернули как было'}: ${back.length} ${plural(back.length, 'день', 'дня', 'дней')}, ${range(ds[0], last(ds))}.${keptNote}`; flashUndo = '';
+    wk = monday(ds[0]);
+    render();
+  }
+  const undoHTML = (where) => {
+    const u = lastUndo(); if (!undo.confirm || undo.where !== where || !u?.days?.length) return '';
+    const ds = u.days.map((r) => r[0]).sort(), n = ds.length;
+    return `<div class="w-confirm" role="alertdialog" aria-labelledby="w-un-h"><p id="w-un-h"><b>Вернуть ${n} ${plural(n, 'день', 'дня', 'дней')} как было до заполнения?</b> ${range(ds[0], last(ds))}. Дни, которые вы или тренер поменяли после заполнения, останутся как есть.</p><div class="w-acts"><button class="w-btn" data-act="undono">Отмена</button><button class="w-btn primary" data-act="undoyes" ${undo.busy ? 'disabled' : ''}>${undo.busy ? esc(undo.progress || 'Возвращаю…') : 'Вернуть'}</button></div></div>`;
+  };
   async function saveVersion() {
     try { const v = await storePlan({ asNew: true }); if (v) flash = `Версия «${v.name}» сохранена в вашем профиле. Её видно и на странице «План ученика».`; }
     catch (e) { flash = `Версию не удалось сохранить (${e.message}).`; }
@@ -548,12 +605,14 @@
       <div class="w-sum">
         <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${[['2w', '2 беговые недели'], ['race', 'До старта']].map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
           <span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span><span class="w-muted w-hint">${fillSpan === '2w' ? `<span>Беговая неделя в S10 начинается ${DNIN[dow(f.span ? f.span[0] : runStart)]}.</span><span>Поправьте задачи, а следующие две недели допишите этой же кнопкой.</span>` : '<span>Все оставшиеся недели плана сразу, до старта.</span><span>Поправить отдельные задачи можно потом в календаре S10.</span>'}</span>
-          <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label></div>
+          <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label>
+          ${(() => { const u = lastUndo(); if (!u?.days?.length) return ''; const ds = u.days.map((r) => r[0]).sort(); return `<span class="w-undo">Последнее заполнение: ${range(ds[0], last(ds))} · <button class="w-link" data-act="undoask" data-where="card">Вернуть как было</button></span>`; })()}</div>
         <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium ? '' : 'disabled'}>Заполнить календарь</button></div>
         ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи в календарь можно с премиум-подпиской S10, как на странице «Настройка плана».</p>'}
       </div>
       ${fill.confirm && (fill.snap || f.write.length) ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${(fill.snap || f.write).length} ${plural((fill.snap || f.write).length, 'день', 'дня', 'дней')} в дневник?</b> ${range((fill.snap || f.write)[0].d, last(fill.snap || f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'} План и настройки сохранятся в вашем профиле.</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}
       ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}
+      ${undoHTML('card')}${undo.err ? `<p class="w-note w-err" role="alert">${esc(undo.err)}</p>` : ''}
     </section>`;
   }
   function pacesCard() {
@@ -776,7 +835,8 @@
       </section>
       ${calHTML()}
       </div>
-      ${flash ? `<div class="w-flash" role="status" tabindex="-1"><span>${esc(flash)}</span><button data-act="flash" aria-label="Скрыть сообщение">×</button></div>` : ''}
+      ${flash ? `<div class="w-flash" role="status" tabindex="-1"><span>${esc(flash)}${flash === flashUndo && lastUndo() ? ' <button class="w-link" data-act="undoask" data-where="flash">Отменить</button>' : ''}</span><button data-act="flash" aria-label="Скрыть сообщение">×</button></div>` : ''}
+      ${undoHTML('flash')}
       <div class="w-tabbar" role="tablist" aria-label="Разделы">
         ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпа']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
       </div>
@@ -942,6 +1002,8 @@
   .w-sum>div{display:grid;gap:2px;flex:1 1 360px;min-width:0}.w-sum>.w-acts{flex:none;align-self:flex-end}
   .w-span button{font-weight:500}
   .w-hint{display:grid;align-content:start;margin-top:4px;min-height:calc(2 * 1.5em)}.w-hint>span{display:block}
+  .w-undo{color:var(--muted);font-size:13px;margin-top:6px}.w-undo .w-link,.w-flash .w-link{font-size:inherit;padding:0}
+  .w-main>.w-confirm{margin:0}
   .w-sum b{font-size:24px;font-weight:500;line-height:1.2}
   .w-acts{display:flex;gap:10px;flex-wrap:wrap}
   .w-chk{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-top:6px;cursor:pointer}
@@ -1076,7 +1138,10 @@
       if (act === 'psel') { sel = { src: a.dataset.src, id: a.dataset.id }; persistSel(); chooser = false; volume = null; if (sel.src === 'version') applyVersion(plan()); if (paceSrc === 'plan') paceSrc = null; reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } flash = `Выбран план «${plan().name}». Задания и темпа на странице пересчитаны.`; tab = 'plan'; return render(); }
       if (act === 'gen') return runGenerate();
       if (act === 'wopen') { const w = +a.dataset.w; openWeek = openWeek === w ? NaN : w; return render(); }
-      if (act === 'fillask') { fill.confirm = true; fill.err = ''; return render(); }
+      if (act === 'fillask') { fill.confirm = true; fill.err = ''; undo.confirm = false; return render(); }
+      if (act === 'undoask') { undo = { ...undo, confirm: true, where: a.dataset.where || 'card', err: '' }; fill.confirm = false; return render(); }
+      if (act === 'undono') { undo.confirm = false; return render(); }
+      if (act === 'undoyes') return undoFill();
       if (act === 'fillno') { fill.confirm = false; return render(); }
       if (act === 'fillyes') return fillCalendar();
       if (act === 'pversion') return saveVersion();
