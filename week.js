@@ -468,7 +468,7 @@
         <div class="w-gen">
           <label class="w-f"><span>Дистанция</span><select data-g="distance">${DISTANCES.map((d) => `<option ${d === gen.distance ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
           <label class="w-f w-f-s"><span>Недель</span><input data-g="weeks" class="num" inputmode="numeric" value="${gen.weeks}"></label>
-          <label class="w-f w-f-wide"><span>Бегун и цель</span><textarea data-g="prompt" rows="3" placeholder="Марафон 3 декабря на 3:20. 5 км 18:59, полумарафон 1:38. Сейчас ~40 км в неделю, 6 тренировок, четверг отдых, среда стадион, воскресенье длительная.">${esc(gen.prompt)}</textarea></label>
+          <label class="w-f w-f-wide"><span>Бегун и цель</span><textarea data-g="prompt" rows="3" placeholder="Марафон 6 декабря на 3:20. 5 км 18:59, полумарафон 1:38. Сейчас ~40 км в неделю, 6 тренировок, четверг отдых, среда стадион, воскресенье длительная.">${esc(gen.prompt)}</textarea></label>
           <div class="w-go"><button class="w-btn primary" data-act="gen" ${gen.busy ? 'disabled' : ''}>${gen.busy ? 'Генерирую…' : 'Сгенерировать план'}</button><span class="w-muted" id="w-gen-status">${gen.busy ? 'Модель думает…' : `${gen.weeks} ${plural(gen.weeks, 'неделя', 'недели', 'недель')} до старта. Генерация занимает до минуты.`}</span></div>
           ${gen.err ? `<p class="w-err" role="alert">${esc(gen.err)}</p>` : ''}
         </div>`}
@@ -639,29 +639,24 @@
     return mons;
   }
   function calCell(d) {
-    const x = days.get(d), run = isRun(x), fact = runKm(x), isRace = (race && d === race.d) || +x?.type === 6;
-    const rest = !run && !!x && /отдых/i.test(x.comment || '');
-    const cls = [d < today ? 'past' : '', d === today ? 'today' : '', isRace ? 'race' : '', run ? 'run' : '', rest ? 'rest' : '', fact ? 'done' : ''].filter(Boolean).join(' ');
-    const dt = d8(d), num = dt.getUTCDate() === 1 ? `${dt.getUTCDate()} ${MONS[dt.getUTCMonth()]}` : d === calRange()[0] ? `${dt.getUTCDate()}<span class="w-cdm"> ${MONS[dt.getUTCMonth()]}</span>` : String(dt.getUTCDate());
-    const what = isRace ? 'Старт' : run ? (SHORT[+x.type] || 'Бег') : rest ? 'отдых' : '';
+    const x = days.get(d), run = isRun(x), fact = runKm(x) > 0, isRace = (race && d === race.d) || +x?.type === 6;
     const km = run && +x.target ? n1(+x.target) : '';
-    const label = `${DNF[dow(d)]}, ${dayLbl(d)}: ${isRace ? `старт${raceName && race?.d === d ? ` ${raceName}` : ''}` : run ? `${(TYPES[+x.type] || 'тренировка').toLowerCase()}${km ? `, ${km} км` : ''}` : rest ? 'отдых' : 'ничего не стоит'}${fact ? `, сделано ${n1(fact)} км` : ''}`;
-    return `<button class="w-cd ${cls}" data-act="cal" data-d="${d}" aria-label="${esc(label)}" title="${esc(run || isRace ? plain(x?.comment || '').slice(0, 160) : '')}"${d === today ? ' aria-current="date"' : ''}>
-      <span class="w-cdh"><span class="num">${num}</span>${fact ? `<span class="w-cdf num">${n1(fact)}</span>` : ''}</span>
-      <span class="w-cdt">${what ? `<span class="w-cdl">${what}</span>` : ''}${km ? ` <b class="num">${km}</b>` : ''}</span></button>`;
+    const cls = [d < today ? 'past' : '', d === today ? 'today' : '', isRace ? 'race' : '', run ? 'run' : '', fact ? 'done' : ''].filter(Boolean).join(' ');
+    const label = `${DNF[dow(d)]}, ${dayLbl(d)}: ${isRace ? `старт${raceName && race?.d === d ? ` ${raceName}` : ''}` : run ? `${(TYPES[+x.type] || 'тренировка').toLowerCase()}${km ? `, ${km} км` : ''}` : 'без тренировки'}${fact ? `, сделано ${n1(runKm(x))} км` : ''}`;
+    return `<button class="w-cd ${cls}" data-act="cal" data-d="${d}" aria-label="${esc(label)}" title="${esc(label)}"${d === today ? ' aria-current="date"' : ''}><span class="w-cdn num">${d8(d).getUTCDate()}</span><i class="w-dot"></i></button>`;
   }
   function calHTML() {
     const mons = calRange(), hidden = !calAll && mons.length > 8 && mons.indexOf(wk) < 8 ? mons.length - 8 : 0;
     const shown = hidden ? mons.slice(0, 8) : mons;
+    const monthOf = (m, k) => { const first = [...Array(7)].map((_, i) => add(m, i)).find((d) => d.endsWith('-01')); return first ? MONS[+first.slice(5, 7) - 1] : k === 0 ? MONS[+m.slice(5, 7) - 1] : ''; };
     return `<section class="w-card w-calc" aria-labelledby="w-cal-h">
-      <div class="w-ch"><h2 id="w-cal-h">${race && raceMon > monday(today) ? 'Календарь до старта' : 'Календарь'}</h2>
-        <span class="w-cal-key" aria-hidden="true"><span><i class="k-done"></i>сделано</span><span><i class="k-race"></i>старт</span><span><i class="k-today"></i>сегодня</span></span>
-        <button class="w-btn sm" data-act="calback">Раньше</button></div>
+      <div class="w-ch"><h2 id="w-cal-h">${race && raceMon > monday(today) ? 'Календарь до старта' : 'Календарь'}</h2><button class="w-link" data-act="calback">Раньше</button></div>
       <div class="w-cal">
-        <div class="w-cwh" aria-hidden="true">${DN.map((n) => `<span>${n}</span>`).join('')}</div>
-        ${shown.map((m) => `<div class="w-cw ${m === wk ? 'sel' : ''}" role="group" aria-label="Неделя ${wLabel(m)}">${[...Array(7)].map((_, i) => calCell(add(m, i))).join('')}</div>`).join('')}
+        <div class="w-cwh" aria-hidden="true"><span></span>${DN.map((n) => `<span>${n}</span>`).join('')}</div>
+        ${shown.map((m, k) => `<div class="w-cw ${m === wk ? 'sel' : ''}" role="group" aria-label="Неделя ${wLabel(m)}"><span class="w-cm" aria-hidden="true">${monthOf(m, k)}</span>${[...Array(7)].map((_, i) => calCell(add(m, i))).join('')}</div>`).join('')}
       </div>
-      ${hidden ? `<button class="w-cal-all" data-act="calall">Показать все недели до старта: ещё ${hidden}</button>` : ''}
+      ${hidden ? `<button class="w-cal-all" data-act="calall">Все недели до старта: ещё ${hidden}</button>` : ''}
+      <div class="w-cal-key" aria-hidden="true"><span><i class="k-plan"></i>в плане</span><span><i class="k-done"></i>сделано</span><span><i class="k-race"></i>старт</span></div>
     </section>`;
   }
   function todayCard(W) {
@@ -732,7 +727,7 @@
       <div class="w-head">
         <h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
       </div>
-      ${calHTML()}
+      <div class="w-duo">
       <section class="w-card w-hero" aria-label="Сегодня и итоги недели">
         ${todayCard(W)}
         <div class="w-stats">
@@ -742,6 +737,8 @@
           <div class="w-stat"><span class="w-lb">${race ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${race ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : 'не выбран'}</span></div>
         </div>
       </section>
+      ${calHTML()}
+      </div>
       ${flash ? `<div class="w-flash" role="status" tabindex="-1"><span>${esc(flash)}</span><button data-act="flash" aria-label="Скрыть сообщение">×</button></div>` : ''}
       <div class="w-tabbar" role="tablist" aria-label="Разделы">
         ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпа']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
@@ -777,31 +774,31 @@
   .w-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:12px 16px}
   .w-head h1{padding-top:3px}
   .w-head h1{font-size:26px;line-height:1.2;font-weight:500;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* the calendar: rectangular days, one row per week */
-  .w-calc .w-ch{padding-bottom:10px}
-  .w-cal-key{display:inline-flex;flex-wrap:wrap;gap:4px 14px;color:var(--faint);font-size:12px}
-  .w-cal-key i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
-  .k-done{background:var(--accent)}.k-race{background:var(--key)}.k-today{box-shadow:inset 0 0 0 2px var(--accent)}
-  .w-cal{display:grid;gap:4px;padding:0 17px 17px}
-  .w-cwh,.w-cw{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-  .w-cwh span{font-size:12px;color:var(--faint);padding:0 9px}
-  .w-cw{padding:3px;margin:0 -3px;border-radius:9px;transition:background .15s}
+  /* the calendar: a small card beside the week's summary; dots for workouts, a red disc for a race */
+  .w-duo{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:16px;align-items:start}
+  .w-calc .w-ch{padding:14px 16px 6px}.w-calc .w-ch h2{font-size:15px}
+  .w-calc .w-link{font-size:13px;padding:2px 0}
+  .w-cal{display:grid;gap:2px;padding:0 10px}
+  .w-cwh,.w-cw{display:grid;grid-template-columns:30px repeat(7,minmax(0,1fr));gap:2px;align-items:center}
+  .w-cwh span{font-size:11px;color:var(--faint);text-align:center;line-height:20px}
+  .w-cw{border-radius:8px;transition:background .15s}
   .w-cw.sel{background:var(--accent-bg)}
-  .w-cd{min-width:0;height:54px;border:0;border-radius:6px;background:var(--cell);padding:6px 9px;text-align:left;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;color:var(--text);overflow:hidden;transition:background .15s}
+  .w-cm{font-size:11px;color:var(--faint);padding-left:6px}
+  .w-cd{height:32px;min-width:0;border:0;background:none;border-radius:6px;cursor:pointer;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--text)}
   .w-cd:hover{background:var(--cell-hover)}
-  .w-cw.sel .w-cd{background:var(--surface)}.w-cw.sel .w-cd:hover{background:var(--soft)}
-  .w-cdh{display:flex;justify-content:space-between;align-items:baseline;gap:4px;font-size:12px;color:var(--muted);line-height:1.2}
-  .w-cdf{color:var(--accent);font-weight:500}
-  .w-cdt{font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .w-cdt b{font-weight:500}
-  .w-cd.rest .w-cdt{color:var(--faint)}
-  .w-cd.past .w-cdt{color:var(--muted)}.w-cd.past .w-cdt b{font-weight:400}
-  .w-cd.today{box-shadow:inset 0 0 0 2px var(--accent)}
-  .w-cd.race,.w-cw.sel .w-cd.race{background:var(--key-bg);box-shadow:inset 0 0 0 1px var(--key-line)}
-  .w-cd.race .w-cdh,.w-cd.race .w-cdt{color:var(--key)}.w-cd.race .w-cdt{font-weight:500}
-  .w-cd.race.today{box-shadow:inset 0 0 0 2px var(--key)}
-  .w-cal-all{display:block;width:calc(100% - 34px);margin:0 17px 17px;height:36px;border:1px dashed var(--control);border-radius:6px;background:none;color:var(--muted);cursor:pointer;font-size:14px}
-  .w-cal-all:hover{color:var(--text);border-color:var(--text)}
+  .w-cdn{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;font-size:13px;line-height:1}
+  .w-dot{width:4px;height:4px;border-radius:50%}
+  .w-cd.run .w-dot{background:var(--control)}
+  .w-cd.done .w-dot{background:var(--accent)}
+  .w-cd.past .w-cdn{color:var(--muted)}
+  .w-cd.today .w-cdn{box-shadow:inset 0 0 0 1.5px var(--accent);color:var(--accent);font-weight:500}
+  .w-cd.race .w-cdn{background:var(--key);color:#fff;font-weight:500;box-shadow:none}
+  .w-cd.race .w-dot{background:none}
+  .w-cal-all{display:block;margin:4px 16px 0;padding:4px 0;border:0;background:none;color:var(--muted);cursor:pointer;font-size:13px;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--control)}
+  .w-cal-all:hover{color:var(--text)}
+  .w-cal-key{display:flex;flex-wrap:wrap;gap:4px 14px;padding:8px 16px 14px;font-size:11px;color:var(--faint)}
+  .w-cal-key i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:1px}
+  .k-plan{background:var(--control)}.k-done{background:var(--accent)}.k-race{background:var(--key);width:9px!important;height:9px!important;vertical-align:0!important}
   .w-span{margin-bottom:12px}
   .w-nav{display:flex;align-items:center;height:38px;border:1px solid var(--control);border-radius:6px;background:var(--surface)}
   .w-nav button{width:40px;height:36px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;border-radius:6px}
@@ -985,7 +982,7 @@
   .w-pal-prev em{position:absolute;right:36px;bottom:8px;width:22px;height:10px;border-radius:3px}.w-pal-prev em.k{right:8px}
   .w-pal-n{font-size:14px;font-weight:500}
   .w-pal small{color:var(--faint);font-size:12px}
-  @media (max-width:1000px){.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
+  @media (max-width:1000px){.w-duo{grid-template-columns:minmax(0,1fr)}.w-duo>.w-calc{order:-1}.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
     .w-wkh{grid-template-columns:40px 110px minmax(0,1fr) 64px;grid-template-areas:"n d w k" "n p w s"}.w-wn{grid-area:n}.w-per{grid-area:p}.w-wworks{grid-area:w}.w-wkm{grid-area:k}.w-wkh>.w-pill,.w-wkh>.w-pill-sp{grid-area:s}
     .w-wdays{padding-left:20px}}
   @media (max-width:760px){.w-works{grid-template-columns:1fr}
@@ -997,9 +994,7 @@
     .w-gen{grid-template-columns:1fr}}
   @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-top{padding:0 16px}.w-topin{gap:14px}.w-demo{padding:8px 16px}
     .w-head h1{font-size:22px}.w-today{padding:20px}.w-stat{padding:16px}
-    .w-cal{padding:0 12px 12px;gap:3px}.w-cwh,.w-cw{gap:3px}.w-cw{padding:2px;margin:0 -2px}.w-cwh span{padding:0 4px;font-size:11px}
-    .w-cd{height:46px;padding:5px 5px;border-radius:5px}.w-cdh{font-size:11px}.w-cdt{font-size:12px}.w-cdl,.w-cdm{display:none}.w-cd.race b{font-weight:600}
-    .w-calc .w-ch{padding:14px 16px 8px}.w-cal-key{order:3;flex-basis:100%}.w-cal-all{width:calc(100% - 24px);margin:0 12px 12px}
+    .w-cal{padding:0 6px}.w-cwh,.w-cw{grid-template-columns:26px repeat(7,minmax(0,1fr))}.w-cm{padding-left:4px}
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
