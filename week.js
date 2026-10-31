@@ -974,6 +974,7 @@
   .w-gen .w-go{grid-column:1/-1}
   .w-pmeta{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
   .w-pset{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+  .w-pset>.w-f-s{display:flex;align-items:center;gap:12px;justify-self:start}.w-pset>.w-f-s>span:first-child{white-space:nowrap}
   .w-pset input[data-p=volume]{width:80px;text-align:right}
   .w-pset .w-f-wide{grid-column:auto}
   .w-roles{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
