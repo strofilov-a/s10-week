@@ -23,21 +23,22 @@ Colours: palette №3 «Лист, синяя и красная ручка» is t
 ## Files
 | File | What it is |
 |---|---|
-| `week.js` | The whole page (no build step, no dependencies). Live data on s10.run, demo mode anywhere else. |
+| `solo.js` | The whole page (no build step, no dependencies). Live data on s10.run, demo mode anywhere else. |
 | `index.html` | GitHub Pages root: redirects to the demo outside s10.run. |
-| `deploy/week.html`, `deploy/ЗАДАНИЕ.md` | The page shell for s10.run and the one-page brief for the S10 developer. |
+| `deploy/solo.html`, `deploy/ЗАДАНИЕ.md` | The page shell for s10.run and the one-page brief for the S10 developer. |
 | `tests/check.cjs` | Browser checks against the demo (`tests/README.md`). |
 | `CLAUDE.md` | Context, decisions and rules for Claude Code. |
 | `demo/index.html`, `demo/fixtures.js` | Demo with an anonymised snapshot of real data (31.10.2026; no name, email or GPS). Live demo: https://strofilov-a.github.io/s10-week/demo/. For GitHub Pages or any static host. Nothing is sent anywhere. `?open=plan` opens the planner with a computed schedule. |
 
 ## Going live on s10.run (for the developer)
-1. Put `week.js` at `/t5/week/week.js`.
-2. Serve `deploy/week.html` at `https://s10.run/week`, the way `/calc3` is served (not `index.html`: that one only
-   redirects to the demo on GitHub Pages).
+1. Put `solo.js` at `/t5/solo/solo.js`.
+2. Serve `deploy/solo.html` at `https://s10.run/solo/plan`, the way `/calc3` is served (not `index.html`: that one only
+   redirects to the demo on GitHub Pages). Today every `/solo/…` path goes to the S10 Solo club page (`/solo/plan`
+   answers 500), so the route has to come before the club's; `/solo` itself stays the club page.
 3. Open it logged in. A coach can view an athlete with `?id=<athlete id>`.
 4. Add «Моя неделя» to the site menu.
 
-For each new release: replace `/t5/week/week.js` and bump `?v=` in `week.html`. It must be served from s10.run itself:
+For each new release: replace `/t5/solo/solo.js` and bump `?v=` in `solo.html`. It must be served from s10.run itself:
 it uses the logged-in session cookie for the API. The same steps in Russian: `deploy/ЗАДАНИЕ.md`.
 
 ## API used (all existing endpoints, same calls calc3/calc5 make)
