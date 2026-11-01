@@ -85,7 +85,10 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 - Paces: easy runs are T42 + 55…75 s unless the paces carry an explicit `easy` range. Without any paces the window
   offers a new athlete's defaults (owner's call 01.11.2026: someone running 3×/week 5–7 km without a plan; 5 km in 30:00,
   Riegel k = 1.08, rounded): T5 6:00, T10 6:20, T21 6:45, T42 7:10, easy 7:00–7:30 (the formula would give 8:05–8:25).
-  Saved as the athlete's own (`easy` too, also in `student.easy`). «Заполнить календарь» needs all four paces, so the
+  With a goal (typed in the window, or the site race's forecast) the paces follow it instead: the goal's pace on its
+  distance, the others by Riegel with k from 1.06 (marathon pace 4:45; matches S10's forecast 3:20 → 4:11/4:20/4:33/4:44)
+  to 1.08 (7:10), easy from T42 + 55…75 s to T42 − 10…+20 s on the same scale (`pacesFromGoal`); a pace edited by hand
+  stops the following. Saved as the athlete's own (`easy` too, also in `student.easy`). «Заполнить календарь» needs all four paces, so the
   diary never gets «T5+5» instead of minutes per km.
 
 ## Design decisions (from the owner; keep them)
@@ -105,7 +108,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # serves the repo itself on 127.0.0.1; 54 checks, exit 1 on failure
+npm test                                     # serves the repo itself on 127.0.0.1; 59 checks, exit 1 on failure
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same checks on every push and pull request.

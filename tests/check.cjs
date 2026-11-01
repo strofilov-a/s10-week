@@ -195,6 +195,23 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const txt = (await p.innerText('#s10-week')).replace(/\s+/g, ' ');
     check('saved race: «До старта» and the plan to it', !(await p.$('.w-dlg')) && txt.includes('старт Барселона, 7 мар') && txt.includes('До старта 127'), (txt.match(/До старта.{0,40}/) || [''])[0]);
     await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(NEWBIE) });
+    const val = async () => Promise.all(['t5', 't10', 't21', 't42', 'easy'].map((k) => p.inputValue(`[data-o=${k}]`))).then((v) => v.join(' '));
+    await p.fill('[data-o=goal]', '3:20');
+    check('goal marathon 3:20: paces from the goal (≈ S10 forecast 4:11/4:20/4:33/4:44)', (await val()) === '4:10 4:21 4:33 4:44 5:40-6:00', await val());
+    await p.selectOption('[data-o=dist]', '10 км'); await p.fill('[data-o=goal]', '50:00');
+    check('goal 10 km 50:00: T10 5:00', (await val()).startsWith('4:47 5:00'), await val());
+    await p.fill('[data-o=goal]', '');
+    check('no goal: back to the new athlete defaults', (await val()) === '6:00 6:20 6:45 7:10 7:00-7:30', await val());
+    await p.fill('[data-o=t5]', '5:55'); await p.fill('[data-o=goal]', '45:00');
+    check('a pace edited by hand stays when the goal changes', (await val()).startsWith('5:55 6:20'), await val());
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(NEWBIE) });
+    await p.fill('[data-o=d]', '2026-12-06'); await p.fill('[data-o=goal]', '3:20'); await p.click('[data-act=onbok]'); await wait(800);
+    await p.click('#tab-paces'); await wait(200);
+    const own = await Promise.all(['5', '10', '21', '42'].map((k) => p.inputValue(`input[data-k="${k}"]`)));
+    check('saved race with a goal: own paces from it', own.join(' ') === '4:10 4:21 4:33 4:44' && (await p.$eval('.w-ptab', (x) => x.innerText)).includes('5:40–6:00'), own.join(' '));
+    await p.close(); }
   { const p = await open({ path: '?tab=plan', init: hook(`${NEWBIE} x.diary.diaryTasksInfo.push({ date: '2026-12-12', type: 1, comment: 'Задача тренера', target: 10, tracks: [] });`) });
     await p.fill('[data-o=d]', '2026-12-12'); await p.selectOption('[data-o=dist]', '5 км'); await p.fill('[data-o=goal]', '22:30');
     await p.click('[data-act=onbok]'); await wait(500);
