@@ -39,8 +39,15 @@
     if (u.includes('userparam.php')) { for (const [k, v] of fd.entries()) if (k.startsWith('param[studentPlans')) FX.versions = JSON.parse(v); }
     return { ok: true };
   }
+  // demo: the saved answer is a 5-week marathon plan; it is stretched or cut to the weeks asked (the build weeks repeat,
+  // the two taper weeks stay last), so «Недель» works in the demo too; on s10.run the generator writes the plan itself
+  function demoPlanText(n) {
+    const blocks = FX.generated.trim().split(/\n(?=## )/), build = blocks.slice(0, -2), taper = blocks.slice(-2);
+    const pick = n <= taper.length ? taper.slice(-n) : [...Array.from({ length: n - taper.length }, (_, i) => build[i % build.length]), ...taper];
+    return pick.map((blk, i) => blk.replace(/^## -\d+/, `## -${n - i}`).replace(/^-\d+,/gm, `-${n - i},`)).join('\n');
+  }
   async function generatePlanText(body, onProgress) {
-    if (!LIVE) { const txt = FX.generated; let out = ''; for (const line of txt.split('\n')) { out += line + '\n'; onProgress(out); await wait(60); } return out; }
+    if (!LIVE) { const lines = demoPlanText(body.weeks).split('\n'); let out = ''; for (const line of lines) { out += line + '\n'; onProgress(out); await wait(Math.min(60, 3000 / lines.length)); } return out; }
     const r = await fetch('https://s10.run/t7/plan-templates/public/api/generate.php', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error(b.error || `ошибка ${r.status}`); }
     if (!r.body) { const t = await r.text(); onProgress(t); return t; }
