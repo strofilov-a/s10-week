@@ -1,5 +1,5 @@
 // Builds the release for the S10 developer: one folder, no demo.
-//   npm run build                    → release/  (t5/solo/solo.js for /t5/solo/, solo.html for /solo/plan, ЗАДАНИЕ.md)
+//   npm run build                    → release/  (t5/solo/solo.js for /t5/solo/, solo.html for /solo/plan, README.md = the brief)
 // Cuts every /*<demo>*/ … /*</demo>*/ out of solo.js (the demo mode, its fixtures and texts), then checks that nothing
 // of the demo is left and that the result still parses. Exit code 1 if a check fails.
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
@@ -25,6 +25,6 @@ try { execFileSync(process.execPath, ['--check', path.join(OUT, 't5', 'solo', 's
 const html = fs.readFileSync(path.join(ROOT, 'deploy', 'solo.html'), 'utf8').replace(/\/t5\/solo\/solo\.js\?v=[^"]*/, `/t5/solo/solo.js?v=${stamp}`);
 if (!html.includes(`?v=${stamp}`)) fail('solo.html: no /t5/solo/solo.js?v= to stamp');
 fs.writeFileSync(path.join(OUT, 'solo.html'), html);
-fs.copyFileSync(path.join(ROOT, 'deploy', 'ЗАДАНИЕ.md'), path.join(OUT, 'ЗАДАНИЕ.md'));
+fs.copyFileSync(path.join(ROOT, 'deploy', 'ЗАДАНИЕ.md'), path.join(OUT, 'README.md')); // a Latin name survives any zip tool
 const kb = (f) => (fs.statSync(path.join(OUT, f)).size / 1024).toFixed(0) + ' KB';
-console.log(`release ${stamp}\n  release/t5/solo/solo.js  ${kb('t5/solo/solo.js')} (source ${(Buffer.byteLength(src) / 1024).toFixed(0)} KB, ${opens} demo blocks cut)\n  release/solo.html\n  release/ЗАДАНИЕ.md`);
+console.log(`release ${stamp}\n  release/t5/solo/solo.js  ${kb('t5/solo/solo.js')} (source ${(Buffer.byteLength(src) / 1024).toFixed(0)} KB, ${opens} demo blocks cut)\n  release/solo.html\n  release/README.md`);
