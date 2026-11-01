@@ -202,10 +202,23 @@
   const NEWBIE_PACES = { 5: '6:00', 10: '6:20', 21: '6:45', 42: '7:10', easy: '7:00-7:30' };
   // easy-run range in seconds: an explicit one (new athletes' paces) or T42 + 55…75 s
   const easyRange = (P) => { const e = String(P?.easy || '').split(/[-–]/).map(paceSec); return e.length === 2 && e[0] && e[1] && e[0] <= e[1] ? e : [toSec(P[42]) + 55, toSec(P[42]) + 75]; };
+  // paces from a goal: the goal's own pace on its distance, the other distances by Riegel with k from 1.06 (marathon
+  // pace 4:45, as in S10's own forecasts: 3:20 with T5 4:11) to 1.08 (7:10, the new athlete above), and easy runs on the
+  // same scale, from T42 + 55…75 s (the usual formula) to T42 − 10…+20 s (7:00–7:30 at 7:10)
+  const level = (t42) => Math.min(1, Math.max(0, (t42 - 285) / (430 - 285))); // 0 trained … 1 new athlete
+  function pacesFromGoal(km, sec) {
+    const D = { 42.2: 42.195, 21.1: 21.0975 }[km] || km, at = (d, k) => sec * (d / D) ** k / d;
+    let k = 1.07;
+    for (let i = 0; i < 3; i++) k = 1.06 + 0.02 * level(at(42.195, k)); // k depends on the level, the level on k: settles at once
+    const t42 = at(42.195, k), L = level(t42), lo = t42 + 55 - 65 * L, hi = lo + 20 + 10 * L, r5 = (x) => Math.round(x / 5) * 5;
+    return { 5: fmtSec(at(5, k)), 10: fmtSec(at(10, k)), 21: fmtSec(at(21.0975, k)), 42: fmtSec(t42), easy: `${fmtSec(r5(lo))}-${fmtSec(r5(hi))}` };
+  }
+  const hmsSec = (t) => String(t).split(':').reduce((a, x) => a * 60 + +x, 0);
   const pacesOk = (P) => !!P && [5, 10, 21, 42].every((k) => paceSec(P[k]));
   // the start window, for a new athlete only: asks for what is missing (a main race, paces) and nothing else
-  const newOnb = (needRace, needPace, manual = false) => ({ race: needRace, pace: needPace, manual, d: '', dist: DISTANCES[0], name: '', goal: '', P: { ...NEWBIE_PACES }, busy: false, err: '', focused: false });
+  const newOnb = (needRace, needPace, manual = false) => ({ race: needRace, pace: needPace, manual, d: '', dist: DISTANCES[0], name: '', goal: '', P: { ...NEWBIE_PACES }, touched: false, busy: false, err: '', focused: false });
   let onb = isSelf && ((!race && !noRace) || !pacesOk(PACE)) ? newOnb(!race && !noRace, !pacesOk(PACE)) : null;
+  if (onb?.pace && race?.prediction && +race.prekm) onb.P = pacesFromGoal(+race.prekm, hmsSec(race.prediction)); // a race already set on the site
   const plain = (t) => (PACE ? String(t).replace(PRE, (m, d, sg, n) => { let s = toSec(PACE[d]); if (sg) s += (sg === '+' ? 1 : -1) * +n; return fmtSec(s); }) : String(t))
     .replace(/(\d)\s*[xх×]\s*(\d)/g, '$1×$2').replace(/(\d)(км|м)(?=[\s,;.]|$)/g, '$1 $2').replace(/\s{2,}/g, ' ').trim();
   const isPaceOnly = (t) => /^\s*\d{1,2}:\d{2}(\s*[-–]\s*\d{1,2}:\d{2})?\s*$/.test(t || '');
@@ -858,6 +871,16 @@
     const n = plan()?.plan?.weeks?.length || 0;
     setEnd(n ? add(monday(runStart), (n - 1) * 7) : null);
   }
+  // the window's paces follow the goal (or the defaults without one) until the athlete edits a pace by hand
+  const onbGoal = (o) => { const km = parseFloat(o.dist.match(/([\d.]+) км/)[1]), g = o.goal.trim().replace(/[.,]/g, ':'), goal = g ? goalOf(g, km) : null; return goal ? { km, goal } : null; };
+  const onbPaceNote = (o) => { const g = o.race && onbGoal(o); return o.touched ? 'Темпа ваши.' : g ? `Посчитаны от цели ${g.goal.replace(/^00:/, '').replace(/^0/, '')} на ${o.dist.split(' · ')[0].toLowerCase()}.` : race?.prediction && !o.race ? `Посчитаны от прогноза на старт ${raceName || ''} ${hms(race.prediction)}.`.replace('  ', ' ') : 'Не знаете свои — оставьте как есть: это темпа человека, который бегает 3 раза в неделю по 5–7 км (5 км примерно за 30 минут). Укажете цель — посчитаем от неё.'; };
+  function onbFollowGoal() {
+    const o = onb; if (!o?.pace || o.touched) return;
+    const g = onbGoal(o); o.P = g ? pacesFromGoal(g.km, hmsSec(g.goal)) : { ...NEWBIE_PACES };
+    for (const k of [5, 10, 21, 42]) { const x = root.querySelector(`[data-o="t${k}"]`); if (x) x.value = o.P[k]; }
+    const e = root.querySelector('[data-o="easy"]'); if (e) e.value = o.P.easy;
+    const n = root.querySelector('#w-onb-pn'); if (n) n.textContent = onbPaceNote(o);
+  }
   function onbHTML() {
     const o = onb, f = (k, label, extra = '') => `<label class="w-f"><span>${label}</span><input data-o="${k}" value="${esc(o[k])}" ${extra}></label>`;
     return `<div class="w-modal"><section class="w-dlg" role="dialog" aria-modal="true" aria-labelledby="w-onb-h">
@@ -869,7 +892,7 @@
         ${f('name', 'Название', 'placeholder="Например, Valencia"')}
         ${f('goal', 'Цель, необязательно', 'class="num" inputmode="numeric" placeholder="3:20 или 22:30"')}
       </div>` : ''}
-      ${o.pace ? `${o.race ? '<h3>Темпа</h3>' : ''}<p class="w-muted">По ним в задания встанут минуты на километр вместо T5…T42. Не знаете свои — оставьте как есть: это темпа человека, который бегает 3 раза в неделю по 5–7 км (5 км примерно за 30 минут). Поменять можно потом на вкладке «Мои темпа».</p>
+      ${o.pace ? `${o.race ? '<h3>Темпа</h3>' : ''}<p class="w-muted">По ним в задания встанут минуты на километр вместо T5…T42. <span id="w-onb-pn">${onbPaceNote(o)}</span> Поменять можно потом на вкладке «Мои темпа».</p>
       <label class="w-f"><span>Лёгкий бег, мин/км</span><input data-o="easy" class="num" inputmode="numeric" value="${esc(o.P.easy)}"></label>
       <div class="w-onb-p">${[5, 10, 21, 42].map((k) => `<label class="w-f"><span>T${k}</span><input data-o="t${k}" class="num" inputmode="numeric" value="${esc(o.P[k])}"></label>`).join('')}</div>` : ''}
       ${o.err ? `<p class="w-err" role="alert">${esc(o.err)}</p>` : ''}
@@ -1327,7 +1350,9 @@
     if (t.dataset.g === 'prompt') { gen.prompt = t.value; return; }
     if (t.dataset.o && onb) { // the start window keeps what is typed without redrawing (focus stays)
       const k = t.dataset.o;
-      if (/^t\d+$/.test(k)) onb.P[k.slice(1)] = t.value; else if (k === 'easy') onb.P.easy = t.value; else onb[k] = t.value;
+      if (/^t\d+$/.test(k) || k === 'easy') { onb.P[k === 'easy' ? 'easy' : k.slice(1)] = t.value; onb.touched = true; return; }
+      onb[k] = t.value;
+      if (k === 'goal' || k === 'dist') onbFollowGoal();
       return;
     }
     if (!f || f === 'pick' || f === 'move' || f === 'typtrain' || f === 't') return;
