@@ -301,13 +301,17 @@
     const out = [];
     const work = { w1: slots[0], w2: slots[1], long: slots.find((s) => s.t === 5) || slots[2], race: raceSlot };
     const used = roles.map((r) => (work[r] ? work[r].km : 0)).reduce((a, b) => a + b, 0);
-    const easyDays = roles.filter((r) => r === 'easy').length;
+    const easyIdx = roles.map((r, i) => (r === 'easy' ? i : -1)).filter((i) => i >= 0);
     const rest = Math.max(0, target - used);
-    const easyKm = easyDays ? Math.min(maxrecov, Math.max(rest ? 6 : 0, Math.round(rest / easyDays))) : 0;
+    // easy runs of at least 6 km on every easy day, unless the week's volume has no room for that: then only as many
+    // runs as fit (6 km each or more, at least one), spread over the easy days, so a small week is not inflated
+    const nEasy = !rest || !easyIdx.length ? 0 : Math.min(easyIdx.length, Math.max(1, Math.floor(rest / 6)));
+    const easyKm = nEasy ? Math.min(maxrecov, Math.round(rest / nEasy)) : 0;
+    const easyOn = new Set(Array.from({ length: nEasy }, (_, j) => easyIdx[Math.floor((j + 0.5) * easyIdx.length / nEasy)]));
     roles.forEach((r, i) => {
       const d = add(mon, i), s = work[r];
       if (s) out.push({ d, typtrain: s.t, task: plain(s.desc), prekm: s.km, location: s.t === 6 ? (race?.location || '') : '', prediction: s.t === 6 ? hms(race?.prediction || '') : '' });
-      else if (r === 'easy' && easyKm) out.push({ d, typtrain: 1, task: easyText(), prekm: easyKm, location: '', prediction: '' });
+      else if (easyOn.has(i) && easyKm) out.push({ d, typtrain: 1, task: easyText(), prekm: easyKm, location: '', prediction: '' });
       else out.push({ d, typtrain: 0, task: 'отдых', prekm: 0, location: '', prediction: '' });
     });
     return { mon, target, total: out.reduce((a, t) => a + t.prekm, 0), days: out };

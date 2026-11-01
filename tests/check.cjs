@@ -230,6 +230,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.fill('textarea[data-g=prompt]', 'Марафон'); await p.click('[data-act=gen]'); await wait(3500);
     check('new athlete without premium: fill stays disabled', await p.$eval('[data-act=fillask]', (b) => b.disabled));
     await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(`const w = x.versions[0]; delete w.student.volume; w.plan.weeks.find((k) => k.week === -7).km = 44;`) });
+    const row = ((await p.innerText('#s10-week')).replace(/\s+/g, ' ').match(/-7 \d+[^А-Я]{0,12}МПК[^-]*?(\d+) км/) || [])[1];
+    check('small week: easy runs fit the volume (44 km week, works 40 → 44, not 58)', row === '44', row);
+    await p.close(); }
   { const p = await open({ path: '?newbie' });
     await p.click('[data-act=onbnone]'); await wait(200); await p.click('[data-act=ptab][data-k=new]').catch(() => {}); await wait(150);
     const def = await p.inputValue('[data-g=weeks]');
