@@ -165,7 +165,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // 7b. a new athlete: the start window, a plan without a race date, own paces
   { const p = await open({ path: '?tab=plan', init: hook(NEWBIE) });
     const dlg = await p.$('.w-dlg');
-    check('new athlete: start window asks for the race and paces', dlg && await p.$('.w-dlg input[type=date]') && (await p.inputValue('[data-o=easy]')) === '7:00-7:30' && (await p.inputValue('[data-o=t5]')) === '6:00' && (await p.inputValue('[data-o=t10]')) === '6:20' && (await p.inputValue('[data-o=t21]')) === '6:45' && (await p.inputValue('[data-o=t42]')) === '7:10');
+    check('new athlete: start window asks for the race and paces', dlg && await p.$('.w-dlg input[type=date]') && (await p.inputValue('[data-o=easy]')) === '7:00-7:30' && (await p.inputValue('[data-o=t5]')) === '6:00' && (await p.inputValue('[data-o=t10]')) === '6:15' && (await p.inputValue('[data-o=t21]')) === '6:30' && (await p.inputValue('[data-o=t42]')) === '6:50');
     await p.fill('[data-o=easy]', '7:30-7:00'); await p.click('[data-act=onbnone]'); await wait(200);
     check('start window: easy range must be from–to', (await p.$eval('.w-dlg .w-err', (x) => x.innerText).catch(() => '')).includes('Лёгкий бег'));
     await p.fill('[data-o=easy]', '7:00-7:30');
@@ -200,11 +200,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.fill('[data-o=goal]', '3:20');
     check('goal marathon 3:20: paces from the goal (≈ S10 forecast 4:11/4:20/4:33/4:44)', (await val()) === '4:10 4:21 4:33 4:44 5:40-6:00', await val());
     await p.selectOption('[data-o=dist]', '10 км'); await p.fill('[data-o=goal]', '50:00');
-    check('goal 10 km 50:00: T10 5:00', (await val()).startsWith('4:47 5:00'), await val());
+    check('goal 10 km 50:00: T10 5:00', (await val()).startsWith('4:48 5:00'), await val());
     await p.fill('[data-o=goal]', '');
-    check('no goal: back to the new athlete defaults', (await val()) === '6:00 6:20 6:45 7:10 7:00-7:30', await val());
+    check('no goal: back to the new athlete defaults', (await val()) === '6:00 6:15 6:30 6:50 7:00-7:30', await val());
     await p.fill('[data-o=t5]', '5:55'); await p.fill('[data-o=goal]', '45:00');
-    check('a pace edited by hand stays when the goal changes', (await val()).startsWith('5:55 6:20'), await val());
+    check('a pace edited by hand stays when the goal changes', (await val()).startsWith('5:55 6:15'), await val());
     await p.close(); }
   { const p = await open({ path: '?tab=plan', init: hook(NEWBIE) });
     await p.fill('[data-o=d]', '2026-12-06'); await p.fill('[data-o=goal]', '3:20'); await p.click('[data-act=onbok]'); await wait(800);

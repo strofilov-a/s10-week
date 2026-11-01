@@ -196,22 +196,20 @@
   // «4:48», «4.48», «448» → seconds, or null
   const paceSec = (v) => { const m = String(v || '').trim().replace(/[.,]/g, ':').match(/^(\d{1,2}):?(\d{2})$/); return m && +m[2] < 60 ? +m[1] * 60 + +m[2] : null; };
   // a new athlete's paces when there are none: someone who already runs 3 times a week, 5–7 km, without a plan. 5 km in
-  // 30:00 is the middle of recreational results; longer distances by Riegel with k = 1.08 (less endurance than a trained
-  // runner's ~1.05), rounded: 10 km ~1:03, half ~2:22, marathon ~5:02. Easy runs for this level are 7:00–7:30, set
-  // explicitly: the usual T42 + 55…75 s would make them 8:05–8:25
-  const NEWBIE_PACES = { 5: '6:00', 10: '6:20', 21: '6:45', 42: '7:10', easy: '7:00-7:30' };
+  // 30:00 is the middle of recreational results; longer distances by Riegel (k = 1.06, the spread of S10's own forecasts),
+  // rounded (owner's choice 01.11.2026): 10 km ~1:02:30, half ~2:17, marathon ~4:48. Easy runs for this level are
+  // 7:00–7:30, set explicitly: the usual T42 + 55…75 s would make them 7:45–8:05
+  const NEWBIE_PACES = { 5: '6:00', 10: '6:15', 21: '6:30', 42: '6:50', easy: '7:00-7:30' };
   // easy-run range in seconds: an explicit one (new athletes' paces) or T42 + 55…75 s
   const easyRange = (P) => { const e = String(P?.easy || '').split(/[-–]/).map(paceSec); return e.length === 2 && e[0] && e[1] && e[0] <= e[1] ? e : [toSec(P[42]) + 55, toSec(P[42]) + 75]; };
-  // paces from a goal: the goal's own pace on its distance, the other distances by Riegel with k from 1.06 (marathon
-  // pace 4:45, as in S10's own forecasts: 3:20 with T5 4:11) to 1.08 (7:10, the new athlete above), and easy runs on the
-  // same scale, from T42 + 55…75 s (the usual formula) to T42 − 10…+20 s (7:00–7:30 at 7:10)
-  const level = (t42) => Math.min(1, Math.max(0, (t42 - 285) / (430 - 285))); // 0 trained … 1 new athlete
+  // paces from a goal: the goal's own pace on its distance, the other distances by Riegel with the same k = 1.06 (S10's
+  // forecast for 3:20 is 4:11/4:20/4:33/4:44, this gives 4:10/4:21/4:33/4:44), easy runs from T42 + 55…75 s for a trained
+  // runner (marathon pace 4:45) to T42 + 10…40 s at 6:50 (7:00–7:30, the new athlete above), linear in between
+  const level = (t42) => Math.min(1, Math.max(0, (t42 - 285) / (410 - 285))); // 0 trained … 1 new athlete
   function pacesFromGoal(km, sec) {
-    const D = { 42.2: 42.195, 21.1: 21.0975 }[km] || km, at = (d, k) => sec * (d / D) ** k / d;
-    let k = 1.07;
-    for (let i = 0; i < 3; i++) k = 1.06 + 0.02 * level(at(42.195, k)); // k depends on the level, the level on k: settles at once
-    const t42 = at(42.195, k), L = level(t42), lo = t42 + 55 - 65 * L, hi = lo + 20 + 10 * L, r5 = (x) => Math.round(x / 5) * 5;
-    return { 5: fmtSec(at(5, k)), 10: fmtSec(at(10, k)), 21: fmtSec(at(21.0975, k)), 42: fmtSec(t42), easy: `${fmtSec(r5(lo))}-${fmtSec(r5(hi))}` };
+    const D = { 42.2: 42.195, 21.1: 21.0975 }[km] || km, at = (d) => sec * (d / D) ** 1.06 / d;
+    const t42 = at(42.195), L = level(t42), lo = t42 + 55 - 45 * L, hi = lo + 20 + 10 * L, r5 = (x) => Math.round(x / 5) * 5;
+    return { 5: fmtSec(at(5)), 10: fmtSec(at(10)), 21: fmtSec(at(21.0975)), 42: fmtSec(t42), easy: `${fmtSec(r5(lo))}-${fmtSec(r5(hi))}` };
   }
   const hmsSec = (t) => String(t).split(':').reduce((a, x) => a * 60 + +x, 0);
   const pacesOk = (P) => !!P && [5, 10, 21, 42].every((k) => paceSec(P[k]));
