@@ -23,7 +23,7 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 | `demo/index.html`, `demo/fixtures.js` | Demo on an anonymised snapshot (31.10.2026). Published on GitHub Pages: https://strofilov-a.github.io/s10-week/demo/ (`?newbie`: as a just-signed-up athlete, afresh each visit; `&free`: no premium) |
 | `index.html` | GitHub Pages root: redirects to `demo/` outside s10.run. |
 | `deploy/solo.html` | The page shell for s10.run (copied from the `/calc3` template: `/t5` Roboto fonts, icons, cookie consent). |
-| `deploy/ЗАДАНИЕ.md` | The one-page brief for the S10 developer (copied into `release/`). |
+| `deploy/ЗАДАНИЕ.md` | The one-page brief for the S10 developer (copied into `release/` as `README.md`). |
 | `deploy/build.cjs` | `npm run build`: cuts every demo-marked block (`/*<demo>*/…/*</demo>*/`) out of `solo.js` into `release/`, stamps `?v=` with a hash of the code, checks no demo is left and that it parses. Mark any new demo-only code so. |
 | `release/` | What goes to the S10 developer, committed; CI fails if it differs from a fresh build. |
 | `tests/release.cjs` | Runs the release build at `/solo/plan` against a stand-in of the site's API (the demo snapshot), writes recorded. |
