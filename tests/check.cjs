@@ -1,9 +1,23 @@
 // Checks for the S10 «Моя неделя» page, run against the demo (no network, nothing is sent anywhere).
-//   python3 -m http.server 8766 --bind 127.0.0.1     (in the repo root, in a second terminal)
-//   node tests/check.cjs                              (needs Playwright with Chromium: npm i -D playwright && npx playwright install chromium)
-// BASE=<url of demo/> overrides the address. Exit code 1 if any check fails.
+//   npm ci && npx playwright install chromium        (once)
+//   npm test                                          (serves the repo root itself on a free local port)
+// BASE=<url of demo/> checks another address instead (e.g. GitHub Pages). Exit code 1 if any check fails.
 const { chromium } = require('playwright');
-const BASE = process.env.BASE || 'http://127.0.0.1:8766/demo/';
+const http = require('http'), fs = require('fs'), path = require('path');
+
+// a tiny static server for the repo root, 127.0.0.1 only
+const ROOT = path.resolve(__dirname, '..');
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const serve = () => new Promise((resolve) => {
+  const srv = http.createServer((req, res) => {
+    let f = path.join(ROOT, decodeURIComponent(new URL(req.url, 'http://x').pathname));
+    if (!f.startsWith(ROOT)) { res.writeHead(403); return res.end(); }
+    if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
+    fs.readFile(f, (err, body) => { if (err) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); res.end(body); });
+  });
+  srv.listen(0, '127.0.0.1', () => resolve(srv));
+});
+let BASE = process.env.BASE;
 
 // a 20-week build: race on Sun 21 Mar 2027, the coach already set Tue/Thu/Sat until the race, every plan has 20 weeks
 const LONG = `
@@ -25,6 +39,8 @@ const check = (name, ok, info = '') => { results.push({ name, ok: !!ok }); conso
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
+  const srv = BASE ? null : await serve();
+  if (srv) BASE = `http://127.0.0.1:${srv.address().port}/demo/`;
   const browser = await chromium.launch();
   const open = async ({ w = 1280, h = 900, path = '', init = null } = {}) => {
     const p = await browser.newPage({ viewport: { width: w, height: h } }); p.errors = [];
@@ -146,6 +162,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   }
 
   await browser.close();
+  if (srv) srv.close();
   const failed = results.filter((r) => !r.ok).length;
   console.log(`\n${results.length - failed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

@@ -32,11 +32,13 @@ Colours: palette №3 «Лист, синяя и красная ручка» is t
 
 ## Going live on s10.run (for the developer)
 1. Put `week.js` at `/t5/week/week.js`.
-2. Serve `index.html` at `https://s10.run/week` (or add the route to the site's router).
+2. Serve `deploy/week.html` at `https://s10.run/week`, the way `/calc3` is served (not `index.html`: that one only
+   redirects to the demo on GitHub Pages).
 3. Open it logged in. A coach can view an athlete with `?id=<athlete id>`.
-4. Optional: add «Моя неделя» to the site menu.
+4. Add «Моя неделя» to the site menu.
 
-It must be served from s10.run itself: it uses the logged-in session cookie for the API.
+For each new release: replace `/t5/week/week.js` and bump `?v=` in `week.html`. It must be served from s10.run itself:
+it uses the logged-in session cookie for the API. The same steps in Russian: `deploy/ЗАДАНИЕ.md`.
 
 ## API used (all existing endpoints, same calls calc3/calc5 make)
 Reads:
@@ -51,20 +53,18 @@ Reads:
 Writes (only on a button press, each with its own confirmation where it touches the diary):
 - `POST /apiweb/userparam.php` FormData `action=set`, `id`, `param[studentPlans<ID>]` = JSON list (save version, same storage as calc5)
 - `POST https://s10.run/t7/plan-templates/public/api/generate.php` JSON `{distance, weeks, prompt}` (calc4's generator, streamed text)
-- the diary:
-- `POST /apiweb/task.php?id=ID&action=update`, FormData `tasks` = JSON `[{d, task, prekm, typtrain, main6:0, location, prediction}]`
-  (the exact payload calc3's «Поставить задачи» sends; premium required, as in calc3). `main6` is 1 only for the main race
-  day, and «Заполнить календарь» never rewrites the main race day.
+- `POST /apiweb/task.php?id=ID&action=update` (the diary), FormData `tasks` = JSON
+  `[{d, task, prekm, typtrain, main6:0, location, prediction}]` (the exact payload calc3's «Поставить задачи» sends;
+  premium required, as in calc3). `main6` is 1 only for the main race day, and «Заполнить календарь» never rewrites the
+  main race day.
 
 Not logged in (`student/self/info` answers `null`): the page shows «войдите в S10» with a link to `/login`.
-Deploy brief for the developer, in Russian: `ЗАДАНИЕ.md` in the deploy package.
 
 "Done" counts runs only (track type `run`); hikes and rides are listed under the day.
 Not ported from calc3: the optional chat message to the coach after saving.
 
-## Demo on GitHub Pages (no server access needed)
-1. github.com → New repository → name `s10-week` → Public → Create.
-2. «uploading an existing file» → drag in everything from this folder (`week.js`, `index.html`, `README.md`, the `demo` folder) → Commit.
-3. Settings → Pages → Source: Deploy from a branch → Branch `main`, folder `/ (root)` → Save.
-4. After about a minute the demo is at `https://<username>.github.io/s10-week/demo/`.
-   It shows an anonymised snapshot from 31.10.2026 and never sends anything. Live data only works on s10.run itself.
+## Demo and checks
+- Demo: https://strofilov-a.github.io/s10-week/demo/ (GitHub Pages from `main`, root folder; updates about a minute
+  after a push). It shows an anonymised snapshot from 31.10.2026 and never sends anything; live data only on s10.run.
+- Checks: `npm ci && npx playwright install chromium` once, then `npm test` (`tests/README.md`). GitHub Actions runs
+  them on every push.

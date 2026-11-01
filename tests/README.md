@@ -5,10 +5,12 @@ clicks, filling two running weeks and the whole plan, saving to the profile, und
 no premium, logged out, own paces, the one-week planner, phone widths. It also measures that nothing moves on clicks.
 
 ```
-npm i -D playwright && npx playwright install chromium   # once
-python3 -m http.server 8766 --bind 127.0.0.1              # in the repo root, keep it running
-node tests/check.cjs                                       # PASS/FAIL per check, exit code 1 on any failure
+npm ci && npx playwright install chromium   # once
+npm test                                    # PASS/FAIL per check, exit code 1 on any failure
 ```
 
-`BASE=https://strofilov-a.github.io/s10-week/demo/ node tests/check.cjs` runs the same checks against GitHub Pages.
+`npm test` serves the repo root itself on a free port of 127.0.0.1 and stops it at the end; no second terminal needed.
+`BASE=https://strofilov-a.github.io/s10-week/demo/ npm test` runs the same checks against GitHub Pages.
 Nothing is sent anywhere: the demo answers from `demo/fixtures.js`.
+
+GitHub Actions (`.github/workflows/check.yml`) runs the same checks on every push and pull request.
