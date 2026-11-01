@@ -108,7 +108,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # serves the repo itself on 127.0.0.1; 62 checks, exit 1 on failure
+npm test                                     # serves the repo itself on 127.0.0.1; 63 checks, exit 1 on failure
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same checks on every push and pull request.
