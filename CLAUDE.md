@@ -94,7 +94,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # serves the repo itself on 127.0.0.1; 36 checks, exit 1 on failure
+npm test                                     # serves the repo itself on 127.0.0.1; 39 checks, exit 1 on failure
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same checks on every push and pull request.
@@ -113,10 +113,14 @@ Never write to the owner's real diary or profile without his explicit yes in the
 
 ## Open items
 
-- Profile write with the new fields: tested on the live server 31.10.2026 (owner's profile, then restored byte for byte).
-  The server stores the `studentPlans<ID>` string unchanged (`active`, `student.layout/volume/t5…t42`, `filled`, `undo`,
-  «», `\`, ё); week.js `dff8104` reads it back (active version picked, layout, «в календаре по…», undo button).
-  Still untested live: `patchVersion` clearing `undo` after «Вернуть как было» (runs only together with diary writes).
+- Live checks done on the owner's account (each restored afterwards, profile byte for byte):
+  - 31.10.2026, profile write with the new fields: the server stores the `studentPlans<ID>` string unchanged (`active`,
+    `student.layout/volume/t5…t42`, `filled`, `undo`, «», `\`, ё); week.js `dff8104` reads it back (active version,
+    layout, «в календаре по…», undo button).
+  - 01.11.2026, diary: one task written to an empty future day and shown on the site; `{typtrain:0, task:'', prekm:0}`
+    removes the day's row entirely (server: «Удалена задача»); the main race day untouched.
+  - 01.11.2026, «Вернуть как было» on the live page (`6826798`): one diary write clearing the day + `patchVersion`;
+    afterwards the day is empty and the version has `undo: null`, `filled: null`.
 - Race week: with the race on Sunday the plan leaves Thu–Sat as rest (its volume already includes the marathon). Ask the
   owner whether easy runs should replace that.
 - Where the site loads `week.js` from: the S10 server (the developer copies each release) or this repo.

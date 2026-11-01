@@ -87,7 +87,13 @@
   const n1 = (v) => (Math.round(v * 10) / 10).toLocaleString('ru-RU');
   const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 12 || h > 14) ? b : c; };
   const dayLbl = (s) => { const d = d8(s); return `${d.getUTCDate()} ${MONS[d.getUTCMonth()]}`; };
-  const range = (a, b) => d8(a).getUTCMonth() === d8(b).getUTCMonth() ? `${d8(a).getUTCDate()}–${d8(b).getUTCDate()} ${MONS[d8(b).getUTCMonth()]}` : `${dayLbl(a)} – ${dayLbl(b)}`;
+  const range = (a, b) => {
+    if (a === b) return dayLbl(a);
+    const A = d8(a), B = d8(b), dy = B.getUTCFullYear() - A.getUTCFullYear();
+    if (dy > 1 || (dy === 1 && B.getUTCMonth() >= A.getUTCMonth())) return `${dayLbl(a)} ${A.getUTCFullYear()} – ${dayLbl(b)} ${B.getUTCFullYear()}`; // a year or more: months alone would repeat
+    if (!dy && A.getUTCMonth() === B.getUTCMonth()) return `${A.getUTCDate()}–${B.getUTCDate()} ${MONS[B.getUTCMonth()]}`;
+    return `${dayLbl(a)} – ${dayLbl(b)}`;
+  };
   const wLabel = (k) => { const a = d8(k), b = d8(add(k, 6)); return a.getUTCMonth() === b.getUTCMonth() ? `${a.getUTCDate()}–${b.getUTCDate()} ${MON[b.getUTCMonth()]}` : `${a.getUTCDate()} ${MONS[a.getUTCMonth()]} – ${b.getUTCDate()} ${MONS[b.getUTCMonth()]}`; };
   const hms = (t) => String(t || '').replace(/^0(\d):/, '$1:');
   const store = { get(k, d) { try { const v = localStorage.getItem('s10week.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('s10week.' + k, JSON.stringify(v)); } catch { /* storage blocked */ } } };
@@ -269,7 +275,7 @@
   }
   let keepExisting = true;
   let fillSpan = store.get('fillSpan', '2w'); // '2w': tomorrow + 14 days, so the athlete can adjust before the next fill; 'race': to the race
-  function fillPreview() {
+  function fillPreview(span = fillSpan) {
     const p = plan(); if (!p || !race) return null;
     const weeks = p.plan.weeks.slice().sort((a, b) => a.week - b.week).map((w) => layWeek(w, p));
     const base = weeks.flatMap((w) => w.days).filter((t) => t.d > today && t.d !== race.d); // the main race day stays as set on «Настройка плана»
@@ -279,7 +285,7 @@
       const keep = keepExisting ? all.filter((t) => isRun(days.get(t.d))) : [];
       return { keep, write: all.filter((t) => !keep.includes(t) && !same(t)) }; // a day that already says exactly this is not sent again
     };
-    if (fillSpan !== '2w') return { weeks, ...pick(add(today, 1), '9999-12-31'), span: null };
+    if (span !== '2w') return { weeks, ...pick(add(today, 1), '9999-12-31'), span: null };
     // two running weeks: the first pair from the next running week on that still has something to write,
     // so after a fill the same button offers the next two weeks
     const end = raceEnd || add(runStart, 13);
@@ -569,6 +575,21 @@
         </div>`}
     </div>`;
   }
+  // the fill block's mode-dependent text: both modes drawn in one grid cell, the inactive one hidden, so the block is as
+  // tall as the taller mode with any font and width and the buttons below never move when the mode is switched
+  const SPANS = { '2w': '2 беговые недели', race: 'До старта' };
+  function fillModes(f) {
+    const other = fillSpan === '2w' ? 'race' : '2w', F = { [fillSpan]: f, [other]: fillPreview(other) };
+    const off = (k) => (k === fillSpan ? '' : ' aria-hidden="true"');
+    const body = (k) => {
+      const g = F[k], hint = k === '2w' ? [`Беговая неделя в S10 начинается ${DNIN[dow(g.span ? g.span[0] : runStart)]}.`, 'Поправьте задачи, а следующие две недели допишите этой же кнопкой.'] : ['Все оставшиеся недели плана сразу, до старта.', 'Поправить отдельные задачи можно потом в календаре S10.'];
+      return `<div class="w-modev"${off(k)}><span class="w-lb">Запишется в дневник</span><b class="num">${g.write.length} ${plural(g.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${g.write.length ? `${range(g.write[0].d, last(g.write).d)}, всего ${n1(g.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span><span class="w-muted w-hint">${hint.map((x) => `<span>${x}</span>`).join('')}</span></div>`;
+    };
+    const count = (k) => `<span${off(k)}>${F[k].keep.length ? `(${F[k].keep.length})` : ''}</span>`;
+    const modes = Object.keys(SPANS);
+    return `<div class="w-modes">${modes.map(body).join('')}</div>
+          <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> <span>Не трогать дни, где задача уже стоит <span class="w-modes w-chk-n">${modes.map(count).join('')}</span></span></label>`;
+  }
   function planCard() {
     const p = plan();
     const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
@@ -603,9 +624,8 @@
         </li>`;
       }).join('')}</ol>
       <div class="w-sum">
-        <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${[['2w', '2 беговые недели'], ['race', 'До старта']].map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
-          <span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span><span class="w-muted w-hint"><span${fillSpan === '2w' ? '' : ' aria-hidden="true"'}><span>Беговая неделя в S10 начинается ${DNIN[dow(f.span ? f.span[0] : runStart)]}.</span><span>Поправьте задачи, а следующие две недели допишите этой же кнопкой.</span></span><span${fillSpan === '2w' ? ' aria-hidden="true"' : ''}><span>Все оставшиеся недели плана сразу, до старта.</span><span>Поправить отдельные задачи можно потом в календаре S10.</span></span></span>
-          <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> <span>Не трогать дни, где задача уже стоит <span class="w-chk-n"${f.keep.length ? '' : ' aria-hidden="true"'}>(${f.keep.length})</span></span></label>
+        <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${Object.entries(SPANS).map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
+          ${fillModes(f)}
           ${(() => { const u = lastUndo(); if (!u?.days?.length) return ''; const ds = u.days.map((r) => r[0]).sort(); return `<span class="w-undo">Последнее заполнение: ${range(ds[0], last(ds))} · <button class="w-link" data-act="undoask" data-where="card">Вернуть как было</button></span>`; })()}</div>
         <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium ? '' : 'disabled'}>Заполнить календарь</button></div>
         ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи в календарь можно с премиум-подпиской S10, как на странице «Настройка плана».</p>'}
@@ -1001,15 +1021,14 @@
   .w-card>.w-sum:last-child{border-radius:0 0 8px 8px}
   .w-sum>div{display:grid;gap:2px;flex:1 1 360px;min-width:0}.w-sum>.w-acts{flex:none;align-self:flex-end}
   .w-span button{font-weight:500}
-  /* both hint variants share one grid cell, the hidden one keeps the height: the fill buttons never move, whatever the font */
-  .w-hint{display:grid;margin-top:4px}.w-hint>span{grid-area:1/1;display:grid;align-content:start}.w-hint>span>span{display:block}.w-hint>[aria-hidden]{visibility:hidden}
+  .w-modes{display:grid}.w-modes>*{grid-area:1/1}.w-modes>[aria-hidden]{visibility:hidden}.w-modev{display:grid;gap:2px;align-content:start}
+  .w-hint{margin-top:4px}.w-hint>span{display:block}
   .w-undo{color:var(--muted);font-size:13px;margin-top:6px}.w-undo .w-link,.w-flash .w-link{font-size:inherit;padding:0}
   .w-main>.w-confirm{margin:0}
   .w-sum b{font-size:24px;font-weight:500;line-height:1.2}
   .w-acts{display:flex;gap:10px;flex-wrap:wrap}
   .w-chk{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-top:6px;cursor:pointer}
-  /* the count always takes its place (hidden at 0), so the label wraps the same in both fill modes */
-  .w-chk-n{display:inline-block;min-width:4ch;white-space:nowrap}.w-chk>input{align-self:flex-start;margin-top:2px}.w-chk-n[aria-hidden]{visibility:hidden}
+  .w-chk-n{display:inline-grid;vertical-align:top;white-space:nowrap}.w-chk>input{align-self:flex-start;margin-top:2px}
   .w-flash{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--ok-bg);color:var(--ok);border-radius:8px;padding:12px 16px}
   .w-nw{white-space:nowrap}
   .w-fact{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;color:var(--muted);font-size:14px}
