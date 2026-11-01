@@ -207,7 +207,8 @@
   // runner (marathon pace 4:45) to T42 + 10…40 s at 6:50 (7:00–7:30, the new athlete above), linear in between
   const level = (t42) => Math.min(1, Math.max(0, (t42 - 285) / (410 - 285))); // 0 trained … 1 new athlete
   function pacesFromGoal(km, sec) {
-    const D = { 42.2: 42.195, 21.1: 21.0975 }[km] || km, at = (d) => sec * (d / D) ** 1.06 / d;
+    // the site stores a marathon as «42», the window's list as «42.2»: both are 42.195 km
+    const D = { 42: 42.195, 42.2: 42.195, 21: 21.0975, 21.1: 21.0975 }[km] || km, at = (d) => sec * (d / D) ** 1.06 / d;
     const t42 = at(42.195), L = level(t42), lo = t42 + 55 - 45 * L, hi = lo + 20 + 10 * L, r5 = (x) => Math.round(x / 5) * 5;
     return { 5: fmtSec(at(5)), 10: fmtSec(at(10)), 21: fmtSec(at(21.0975)), 42: fmtSec(t42), easy: `${fmtSec(r5(lo))}-${fmtSec(r5(hi))}` };
   }

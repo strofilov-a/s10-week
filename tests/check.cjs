@@ -206,6 +206,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.fill('[data-o=t5]', '5:55'); await p.fill('[data-o=goal]', '45:00');
     check('a pace edited by hand stays when the goal changes', (await val()).startsWith('5:55 6:15'), await val());
     await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(`${NEWBIE} x.main = { main: { d: '2027-04-11', task: 'ГОНКА', prekm: '42', typtrain: 6, prediction: '03:45:00', location: 'PARIS' } };`) });
+    const v = await Promise.all(['t42', 'easy'].map((k) => p.inputValue(`[data-o=${k}]`).catch(() => '?')));
+    check('site race «42» km with a forecast 3:45: paces only, T42 5:20 (42.195 km)', !(await p.$('[data-o=d]')) && v[0] === '5:20', v.join(' '));
+    await p.close(); }
   { const p = await open({ path: '?tab=plan', init: hook(NEWBIE) });
     await p.fill('[data-o=d]', '2026-12-06'); await p.fill('[data-o=goal]', '3:20'); await p.click('[data-act=onbok]'); await wait(800);
     await p.click('#tab-paces'); await wait(200);
