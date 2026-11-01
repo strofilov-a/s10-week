@@ -1,17 +1,34 @@
 /* S10 «Моя неделя»: everything on one page.
    Today and this week · the paces · the master plan (your saved versions, the library, or a new one from a prompt) laid
    over the dates to the race · «Заполнить календарь» for the whole plan · «Запланировать неделю» for one week (calc3).
-   On s10.run it reads and writes the logged-in user's data through the site's own API.
-   Anywhere else (GitHub Pages, a local file) it runs as a demo on window.S10_FIXTURES and never sends anything. */
+   It reads and writes the logged-in user's data through the site's own API. */
 (async () => {
-  /* ================= data source: live on s10.run, demo elsewhere ================= */
-  const LIVE = /(^|\.)s10\.run$/.test(location.hostname) && !window.S10_FORCE_DEMO;
-  const FX = window.S10_FIXTURES || null;
+  /* ================= data source: the site's own API ================= */
+  /*<demo>*/const LIVE = /(^|\.)s10\.run$/.test(location.hostname) && !window.S10_FORCE_DEMO, FX = window.S10_FIXTURES || null;/*</demo>*/
   const ORIGIN = location.origin;
   const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
   const last = (a) => a[a.length - 1];
   async function get(u) {
-    if (LIVE) { const r = await fetch(ORIGIN + u, { credentials: 'include' }); if (!r.ok) throw new Error(r.status); return r.json(); }
+    /*<demo>*/if (!LIVE) return demoGet(u);/*</demo>*/
+    const r = await fetch(ORIGIN + u, { credentials: 'include' }); if (!r.ok) throw new Error(r.status); return r.json();
+  }
+  async function post(u, fd) {
+    /*<demo>*/if (!LIVE) return demoPost(u, fd);/*</demo>*/
+    const r = await fetch(ORIGIN + u, { method: 'POST', body: fd, credentials: 'include' }); const b = await r.json().catch(() => ({})); if (!r.ok || b.error) throw new Error(b.error || r.status); return b;
+  }
+  async function generatePlanText(body, onProgress) {
+    /*<demo>*/if (!LIVE) { const lines = demoPlanText(body.weeks).split('\n'); let out = ''; for (const line of lines) { out += line + '\n'; onProgress(out); await wait(Math.min(60, 3000 / lines.length)); } return out; }/*</demo>*/
+    const r = await fetch('https://s10.run/t7/plan-templates/public/api/generate.php', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error(b.error || `ошибка ${r.status}`); }
+    if (!r.body) { const t = await r.text(); onProgress(t); return t; }
+    const rd = r.body.getReader(), dec = new TextDecoder(); let out = '';
+    for (;;) { const { done, value } = await rd.read(); if (done) break; out += dec.decode(value, { stream: true }); onProgress(out); }
+    return out + dec.decode();
+  }
+  /*<demo>*/
+  // off s10.run the page runs as a demo on window.S10_FIXTURES and never sends anything; the build (deploy/build.cjs)
+  // cuts every demo-marked block out of the release
+  async function demoGet(u) {
     if (!FX) throw new Error('нет демо-данных');
     await wait(100);
     if (u.includes('/student/self/info')) return FX.me;
@@ -26,8 +43,7 @@
     if (u.includes('calc.php')) return FX.base;
     throw new Error('нет демо-данных для ' + u);
   }
-  async function post(u, fd) {
-    if (LIVE) { const r = await fetch(ORIGIN + u, { method: 'POST', body: fd, credentials: 'include' }); const b = await r.json().catch(() => ({})); if (!r.ok || b.error) throw new Error(b.error || r.status); return b; }
+  async function demoPost(u, fd) {
     await wait(250);
     if (u.includes('task.php')) {
       for (const t of JSON.parse(fd.get('tasks'))) {
@@ -46,15 +62,6 @@
     const pick = n <= taper.length ? taper.slice(-n) : [...Array.from({ length: n - taper.length }, (_, i) => build[i % build.length]), ...taper];
     return pick.map((blk, i) => blk.replace(/^## -\d+/, `## -${n - i}`).replace(/^-\d+,/gm, `-${n - i},`)).join('\n');
   }
-  async function generatePlanText(body, onProgress) {
-    if (!LIVE) { const lines = demoPlanText(body.weeks).split('\n'); let out = ''; for (const line of lines) { out += line + '\n'; onProgress(out); await wait(Math.min(60, 3000 / lines.length)); } return out; }
-    const r = await fetch('https://s10.run/t7/plan-templates/public/api/generate.php', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error(b.error || `ошибка ${r.status}`); }
-    if (!r.body) { const t = await r.text(); onProgress(t); return t; }
-    const rd = r.body.getReader(), dec = new TextDecoder(); let out = '';
-    for (;;) { const { done, value } = await rd.read(); if (done) break; out += dec.decode(value, { stream: true }); onProgress(out); }
-    return out + dec.decode();
-  }
   // the demo answers like the real diary API: up to `limit` days with date <= last_date (Moscow day), newest first
   function demoDiary(q) {
     const lim = +q.get('limit') || 60, end = iso(new Date((+q.get('last_date') + 3 * 3600) * 1000));
@@ -71,6 +78,7 @@
     const prev = FX.diary.diaryTasksInfo.find((x) => x.date === add(start, -1));
     return { task, pretask: prev && prev.date > today ? { [prev.date]: { d: prev.date, typtrain: prev.type, task: prev.comment, prekm: prev.target } } : {}, tasksummary: { 'за последние 7 дней': { km0: 20, km1: 48 } } };
   }
+  /*</demo>*/
 
   /* ================= words and dates ================= */
   const TYPES = { 0: 'Тренировка', 1: 'Восстановительная', 2: 'Развивающая', 3: 'Интервальная', 4: 'Повторная', 5: 'Длительная', 6: 'Соревнование' };
@@ -482,7 +490,7 @@
       const first = PL.rows[0].d, lastD = last(PL.rows).d, n = PL.rows.length;
       await loadRange(first, lastD, true).catch(() => {});
       mode = 'view'; wk = monday(first); PL = null;
-      flash = `${LIVE ? 'Задачи поставлены' : 'Демо: задачи поставлены только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(first, lastD)}.`;
+      flash = `${/*<demo>*/!LIVE ? 'Демо: задачи поставлены только на этой странице' : /*</demo>*/'Задачи поставлены'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(first, lastD)}.`;
     } catch (e) { PL.busy = false; PL.err = `Сервер не принял задачи (${e.message}). В дневнике ничего не изменилось.`; }
     render();
   }
@@ -516,7 +524,7 @@
     fill.progress = 'Сохраняю план в профиль…'; render();
     let saved = true; try { await storePlan({ filled: { from: a, to: b }, undo: rec }); } catch { saved = false; }
     fill = { confirm: false, busy: false, err: '', progress: '' };
-    flash = `${LIVE ? 'Календарь заполнен' : 'Демо: календарь заполнен только на этой странице'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(a, b)}.${saved ? ' План и настройки сохранены в профиле.' : ' План в профиль сохранить не удалось, задачи при этом записаны.'}`;
+    flash = `${/*<demo>*/!LIVE ? 'Демо: календарь заполнен только на этой странице' : /*</demo>*/'Календарь заполнен'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(a, b)}.${saved ? ' План и настройки сохранены в профиле.' : ' План в профиль сохранить не удалось, задачи при этом записаны.'}`;
     flashUndo = flash;
     wk = monday(a);
     render();
@@ -580,7 +588,7 @@
     const v = versions.find((x) => x.active && x.undo);
     if (v) await patchVersion(v.id, { undo: null, filled: u.prevFilled || null }).catch(() => {});
     undo = { confirm: false, where: 'card', busy: false, err: '', progress: '' };
-    flash = `${LIVE ? 'Календарь вернули как было' : 'Демо: календарь вернули как было'}: ${back.length} ${plural(back.length, 'день', 'дня', 'дней')}, ${range(ds[0], last(ds))}.${keptNote}`; flashUndo = '';
+    flash = `${/*<demo>*/!LIVE ? 'Демо: календарь вернули как было' : /*</demo>*/'Календарь вернули как было'}: ${back.length} ${plural(back.length, 'день', 'дня', 'дней')}, ${range(ds[0], last(ds))}.${keptNote}`; flashUndo = '';
     wk = monday(ds[0]);
     render();
   }
@@ -651,7 +659,7 @@
   function planCard() {
     const p = plan();
     const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${!race && raceEnd ? `<span class="w-muted num">без старта, по ${dayLbl(raceEnd)}</span>` : race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
-    if (!race && !noRace) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. ${isSelf ? '<button class="w-link" data-act="onbopen">Укажите его здесь</button> или на' : 'Выберите его на'} странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
+    if (!race && !noRace) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. ${isSelf ? '<button class="w-link" data-act="onbopen">Укажите его здесь</button> или на' : 'Выберите его на'} странице <a href="${/*<demo>*/!LIVE ? 'https://s10.run' : /*</demo>*/''}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
     if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите версию, которую сохранил тренер, или сделайте новый по описанию: это займёт около минуты.</p>${chooserHTML()}</section>`;
     const f = fillPreview(), src = sel.src === 'version' ? (p.active ? `в вашем профиле${p.filled?.to ? `, в календаре по ${dayLbl(p.filled.to)}` : ''}` : 'ваша версия') : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
     const ws = f.weeks, first = ws[0], lastW = last(ws);
@@ -965,7 +973,7 @@
     if (!gen.touched) gen.prompt = promptDefault();
     if (P) { PACE_OWN = P; paceSrc = 'own'; store.set(`paceOwn.${id}`, P); store.set(`paceSrc.${id}`, 'own'); reprice(); }
     onb = null;
-    flash = o.race && withRace ? `${LIVE ? 'Главный старт сохранён' : 'Демо: главный старт сохранён только на этой странице'}: ${dayLbl(race.d)}${raceName ? `, ${raceName}` : ''}. Теперь выберите или сделайте план.` : o.race ? 'План будет без даты старта: со следующей беговой недели вперёд.' : 'Темпа сохранены.';
+    flash = o.race && withRace ? `${/*<demo>*/!LIVE ? 'Демо: главный старт сохранён только на этой странице' : /*</demo>*/'Главный старт сохранён'}: ${dayLbl(race.d)}${raceName ? `, ${raceName}` : ''}. Теперь выберите или сделайте план.` : o.race ? 'План будет без даты старта: со следующей беговой недели вперёд.' : 'Темпа сохранены.';
     if (o.race) tab = 'plan';
     render();
     if (tab === 'plan' && chooser && chooserTab === 'new') focusAsk();
@@ -978,9 +986,9 @@
     const daysToRace = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
     const pct = W.plan ? Math.min(100, (W.done / W.plan) * 100) : 0;
     root.innerHTML = `
-    ${LIVE ? '' : '<div class="w-demo" role="note">Демо на данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</div>'}
+    ${/*<demo>*/!LIVE ? '<div class="w-demo" role="note">Демо на данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</div>' : /*</demo>*/''}
     <header class="w-top" ${onb ? 'inert' : ''}><div class="w-topin">
-      <a class="w-wm" href="${LIVE ? '/' : 'https://s10.run/'}" aria-label="S10.run, главная">${LOGO}</a>
+      <a class="w-wm" href="${/*<demo>*/!LIVE ? 'https://s10.run/' : /*</demo>*/'/'}" aria-label="S10.run, главная">${LOGO}</a>
       <span class="w-who">${esc(me.firstName)} ${esc(me.lastName)}</span>${SHOW_COLORS ? `<button class="w-btn sm" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}
     </div></header>
     <main class="w-main" ${onb ? 'inert' : ''}>
@@ -1005,7 +1013,7 @@
         ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпа']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
       </div>
       <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? planCard() : pacesCard()}</div>
-      <p class="w-foot">${LIVE ? `Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.` : 'Демо-версия страницы «Моя неделя» для S10.run.'}</p>
+      <p class="w-foot">${/*<demo>*/!LIVE ? 'Демо-версия страницы «Моя неделя» для S10.run.' : /*</demo>*/`Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.`} <a href="https://t.me/+wP4aOZ4910I2MTk6" target="_blank" rel="noopener">Чат «Моя неделя» в Telegram: вопросы и отзывы</a></p>
     </main>${onb ? onbHTML() : ''}`;
     if (onb && !onb.focused) { onb.focused = true; root.querySelector('.w-dlg input, .w-dlg select')?.focus(); }
     root.querySelectorAll('textarea').forEach(fit);
@@ -1026,7 +1034,7 @@
   .w-app button,.w-app select,.w-app input,.w-app textarea{font:inherit;color:inherit}
   .w-app :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .w-app a{color:var(--accent)}
-  .w-demo{background:var(--accent-bg);color:var(--accent);font-size:13px;padding:8px max(24px,env(safe-area-inset-left));text-align:center}
+  /*<demo>*/.w-demo{background:var(--accent-bg);color:var(--accent);font-size:13px;padding:8px max(24px,env(safe-area-inset-left));text-align:center}/*</demo>*/
   .w-top{background:#004aad;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
   .w-topin{margin:0 auto;height:48px;display:flex;align-items:center;gap:20px;position:relative}
   .w-wm{position:absolute;left:50%;top:8px;transform:translateX(-50%);display:block;height:32px;line-height:0}
@@ -1271,7 +1279,7 @@
     .w-pset{grid-template-columns:1fr}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}
     .w-wkh{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w" "n p s"}.w-wkh>span:nth-child(2){grid-area:d}
     .w-gen{grid-template-columns:1fr}}
-  @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-topin{gap:14px}.w-who{display:none}.w-demo{padding:8px 16px}
+  @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-topin{gap:14px}.w-who{display:none}/*<demo>*/.w-demo{padding:8px 16px}/*</demo>*/
     .w-head h1{font-size:22px}.w-today{padding:20px}.w-stat{padding:16px}
     .w-cal{padding:0 6px}.w-cwh,.w-cw{grid-template-columns:26px repeat(7,minmax(0,1fr))}.w-cm{padding-left:4px}
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
@@ -1396,10 +1404,12 @@
   applyPalette();
   render();
   window.addEventListener('popstate', async () => { await readURL(); mode = 'view'; PL = null; render(); });
+  /*<demo>*/
   if (!LIVE && q === 'plan') { tab = 'week'; await openPlanner(); await generateWeek(); }
   if (!LIVE && q === 'choose') { tab = 'plan'; chooser = true; render(); }
   if (!LIVE && q === 'colors') { colorsOpen = true; render(); }
   if (!LIVE && q === 'tab-plan') { tab = 'plan'; render(); }
   if (!LIVE && q === 'tab-paces') { tab = 'paces'; render(); }
-  return `S10 «Моя неделя» (${LIVE ? 'live' : 'demo'}) для ${me.firstName} ${me.lastName}`;
+  /*</demo>*/
+  return `S10 «Моя неделя» (${/*<demo>*/!LIVE ? 'demo' : /*</demo>*/'live'}) для ${me.firstName} ${me.lastName}`;
 })();

@@ -6,7 +6,7 @@ no premium, logged out, own paces, the one-week planner, phone widths. It also m
 
 ```
 npm ci && npx playwright install chromium   # once
-npm test                                    # PASS/FAIL per check, exit code 1 on any failure
+npm test                                    # demo checks, then npm run build and the release checks
 ```
 
 `npm test` serves the repo root itself on a free port of 127.0.0.1 and stops it at the end; no second terminal needed.
@@ -14,3 +14,6 @@ npm test                                    # PASS/FAIL per check, exit code 1 o
 Nothing is sent anywhere: the demo answers from `demo/fixtures.js`.
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same checks on every push and pull request.
+
+`release.cjs` runs the production build (`release/`, no demo) at `/solo/plan` with the site's endpoints answered from the
+demo snapshot: the new athlete's path to «Заполнить календарь», with every write recorded.

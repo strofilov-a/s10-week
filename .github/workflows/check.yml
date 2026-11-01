@@ -21,3 +21,5 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm test
+      - name: release/ is committed as built from the current source
+        run: git diff --exit-code -- release/
