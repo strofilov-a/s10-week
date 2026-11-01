@@ -127,8 +127,6 @@ Never write to the owner's real diary or profile without his explicit yes in the
 
 ## Open items
 
-- Live check still to do (with the owner's yes): «Сохранить старт» sets the site's main race with a `main6: 1` task
-  (checked only in the demo). The owner already has a race, so the test must put another one and restore Valencia.
 
 - Live checks done on the owner's account (each restored afterwards, profile byte for byte):
   - 31.10.2026, profile write with the new fields: the server stores the `studentPlans<ID>` string unchanged (`active`,
@@ -138,6 +136,10 @@ Never write to the owner's real diary or profile without his explicit yes in the
     removes the day's row entirely (server: «Удалена задача»); the main race day untouched.
   - 01.11.2026, «Вернуть как было» on the live page (`6826798`): one diary write clearing the day + `patchVersion`;
     afterwards the day is empty and the version has `undo: null`, `filled: null`.
+  - 01.11.2026, main race: the start window's payload (`typtrain 6`, `main6: 1`, `prekm '42.2'`) on 17.01.2027 made it
+    the main race at once (`task.php?action=main`); the server keeps one main race: Valencia's day got `main6: 0`, its
+    text/km/place/forecast intact. No new `planresults` row, `studentMainStart` unchanged. Restoring Valencia with
+    `main6: 1` and clearing the test day gave a state identical to the snapshot taken before.
 - Race week: with the race on Sunday the plan leaves Thu–Sat as rest (its volume already includes the marathon). Ask the
   owner whether easy runs should replace that.
 - Where the site loads `solo.js` from: the S10 server (the developer copies each release) or this repo.
