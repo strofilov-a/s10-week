@@ -125,33 +125,13 @@ npm test                                     # demo checks (67), then the releas
 GitHub Actions (`.github/workflows/check.yml`) runs the same on every push and pull request, and fails if the committed
 `release/` is not the build of the current source.
 
-Live check on s10.run (read-only): in a browser where the owner is logged in to s10.run, open any s10.run page, block
-POSTs and inject the committed file:
-
-```js
-const f = window.fetch; window.fetch = (u, o) => { if (o && o.method === 'POST') throw new Error('blocked'); return f(u, o); };
-const t = await f('https://raw.githubusercontent.com/strofilov-a/s10-week/<commit>/solo.js').then((r) => r.text());
-document.body.innerHTML = ''; const s = document.createElement('script');
-s.src = URL.createObjectURL(new Blob([t], { type: 'text/javascript' })); document.body.appendChild(s);
-```
+Live checks on s10.run (how to inject read-only, what has been verified on the owner's account): the `s10-live-check`
+skill.
 
 Never write to the owner's real diary or profile without his explicit yes in the chat.
 
 ## Open items
 
-
-- Live checks done on the owner's account (each restored afterwards, profile byte for byte):
-  - 31.10.2026, profile write with the new fields: the server stores the `studentPlans<ID>` string unchanged (`active`,
-    `student.layout/volume/t5…t42`, `filled`, `undo`, «», `\`, ё); the page (`dff8104`, then still `week.js`) reads it back (active version,
-    layout, «в календаре по…», undo button).
-  - 01.11.2026, diary: one task written to an empty future day and shown on the site; `{typtrain:0, task:'', prekm:0}`
-    removes the day's row entirely (server: «Удалена задача»); the main race day untouched.
-  - 01.11.2026, «Вернуть как было» on the live page (`6826798`): one diary write clearing the day + `patchVersion`;
-    afterwards the day is empty and the version has `undo: null`, `filled: null`.
-  - 01.11.2026, main race: the start window's payload (`typtrain 6`, `main6: 1`, `prekm '42.2'`) on 17.01.2027 made it
-    the main race at once (`task.php?action=main`); the server keeps one main race: Valencia's day got `main6: 0`, its
-    text/km/place/forecast intact. No new `planresults` row, `studentMainStart` unchanged. Restoring Valencia with
-    `main6: 1` and clearing the test day gave a state identical to the snapshot taken before.
 - Race week: with the race on Sunday the plan leaves Thu–Sat as rest (its volume already includes the marathon). Ask the
   owner whether easy runs should replace that.
 - Where the site loads `solo.js` from: the S10 server (the developer copies each release) or this repo.
