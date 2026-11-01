@@ -604,8 +604,8 @@
       }).join('')}</ol>
       <div class="w-sum">
         <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${[['2w', '2 беговые недели'], ['race', 'До старта']].map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
-          <span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span><span class="w-muted w-hint">${fillSpan === '2w' ? `<span>Беговая неделя в S10 начинается ${DNIN[dow(f.span ? f.span[0] : runStart)]}.</span><span>Поправьте задачи, а следующие две недели допишите этой же кнопкой.</span>` : '<span>Все оставшиеся недели плана сразу, до старта.</span><span>Поправить отдельные задачи можно потом в календаре S10.</span>'}</span>
-          <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> Не трогать дни, где задача уже стоит${f.keep.length ? ` (${f.keep.length})` : ''}</label>
+          <span class="w-lb">Запишется в дневник</span><b class="num">${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${f.write.length ? `${range(f.write[0].d, last(f.write).d)}, всего ${n1(f.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span><span class="w-muted w-hint"><span${fillSpan === '2w' ? '' : ' aria-hidden="true"'}><span>Беговая неделя в S10 начинается ${DNIN[dow(f.span ? f.span[0] : runStart)]}.</span><span>Поправьте задачи, а следующие две недели допишите этой же кнопкой.</span></span><span${fillSpan === '2w' ? ' aria-hidden="true"' : ''}><span>Все оставшиеся недели плана сразу, до старта.</span><span>Поправить отдельные задачи можно потом в календаре S10.</span></span></span>
+          <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> <span>Не трогать дни, где задача уже стоит <span class="w-chk-n"${f.keep.length ? '' : ' aria-hidden="true"'}>(${f.keep.length})</span></span></label>
           ${(() => { const u = lastUndo(); if (!u?.days?.length) return ''; const ds = u.days.map((r) => r[0]).sort(); return `<span class="w-undo">Последнее заполнение: ${range(ds[0], last(ds))} · <button class="w-link" data-act="undoask" data-where="card">Вернуть как было</button></span>`; })()}</div>
         <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium ? '' : 'disabled'}>Заполнить календарь</button></div>
         ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи в календарь можно с премиум-подпиской S10, как на странице «Настройка плана».</p>'}
@@ -1001,12 +1001,15 @@
   .w-card>.w-sum:last-child{border-radius:0 0 8px 8px}
   .w-sum>div{display:grid;gap:2px;flex:1 1 360px;min-width:0}.w-sum>.w-acts{flex:none;align-self:flex-end}
   .w-span button{font-weight:500}
-  .w-hint{display:grid;align-content:start;margin-top:4px;min-height:calc(2 * 1.5em)}.w-hint>span{display:block}
+  /* both hint variants share one grid cell, the hidden one keeps the height: the fill buttons never move, whatever the font */
+  .w-hint{display:grid;margin-top:4px}.w-hint>span{grid-area:1/1;display:grid;align-content:start}.w-hint>span>span{display:block}.w-hint>[aria-hidden]{visibility:hidden}
   .w-undo{color:var(--muted);font-size:13px;margin-top:6px}.w-undo .w-link,.w-flash .w-link{font-size:inherit;padding:0}
   .w-main>.w-confirm{margin:0}
   .w-sum b{font-size:24px;font-weight:500;line-height:1.2}
   .w-acts{display:flex;gap:10px;flex-wrap:wrap}
   .w-chk{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-top:6px;cursor:pointer}
+  /* the count always takes its place (hidden at 0), so the label wraps the same in both fill modes */
+  .w-chk-n{display:inline-block;min-width:4ch;white-space:nowrap}.w-chk>input{align-self:flex-start;margin-top:2px}.w-chk-n[aria-hidden]{visibility:hidden}
   .w-flash{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--ok-bg);color:var(--ok);border-radius:8px;padding:12px 16px}
   .w-nw{white-space:nowrap}
   .w-fact{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;color:var(--muted);font-size:14px}
@@ -1084,7 +1087,7 @@
   .w-pal-prev em{position:absolute;right:36px;bottom:8px;width:22px;height:10px;border-radius:3px}.w-pal-prev em.k{right:8px}
   .w-pal-n{font-size:14px;font-weight:500}
   .w-pal small{color:var(--faint);font-size:12px}
-  @media (max-width:1000px){.w-hint{min-height:calc(3 * 1.5em)}.w-duo{grid-template-columns:minmax(0,1fr)}.w-duo>.w-calc{order:-1}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
+  @media (max-width:1000px){.w-duo{grid-template-columns:minmax(0,1fr)}.w-duo>.w-calc{order:-1}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
     .w-wkh{grid-template-columns:40px 110px minmax(0,1fr) 64px;grid-template-areas:"n d w k" "n p w s"}.w-wn{grid-area:n}.w-per{grid-area:p}.w-wworks{grid-area:w}.w-wkm{grid-area:k}.w-wkh>.w-pill,.w-wkh>.w-pill-sp{grid-area:s}
     .w-wdays{padding-left:20px}}
   @media (max-width:760px){.w-works{grid-template-columns:1fr}
@@ -1100,7 +1103,7 @@
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
-    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-hint{min-height:calc(4 * 1.5em)}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
+    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
     .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
     .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
     .w-paces label{flex-direction:column;align-items:flex-start;gap:8px}.w-paces input{width:100%}.w-ptab th[scope=row] small{display:block}}
