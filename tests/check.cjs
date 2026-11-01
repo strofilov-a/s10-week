@@ -230,6 +230,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.fill('textarea[data-g=prompt]', 'Марафон'); await p.click('[data-act=gen]'); await wait(3500);
     check('new athlete without premium: fill stays disabled', await p.$eval('[data-act=fillask]', (b) => b.disabled));
     await p.close(); }
+  { const p = await open({ path: '?newbie' });
+    const once = !!(await p.$('.w-dlg')); await p.click('[data-act=onbnone]'); await wait(200);
+    await p.reload(); await wait(900);
+    check('demo ?newbie: a new athlete, afresh on every visit', once && !!(await p.$('.w-dlg')) && (await p.innerText('.w-who')).includes('Новый'));
+    await p.close(); }
   { const p = await open({ path: '?tab=plan' });
     check('athlete with a race and paces: no start window', !(await p.$('.w-dlg')));
     await p.close(); }

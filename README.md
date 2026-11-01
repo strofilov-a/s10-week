@@ -67,5 +67,7 @@ Not ported from calc3: the optional chat message to the coach after saving.
 ## Demo and checks
 - Demo: https://strofilov-a.github.io/s10-week/demo/ (GitHub Pages from `main`, root folder; updates about a minute
   after a push). It shows an anonymised snapshot from 31.10.2026 and never sends anything; live data only on s10.run.
+  `?newbie` opens it as someone who has just signed up (start window, no plans, empty diary), afresh on every visit;
+  `?newbie&free` also without premium.
 - Checks: `npm ci && npx playwright install chromium` once, then `npm test` (`tests/README.md`). GitHub Actions runs
   them on every push.
