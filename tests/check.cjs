@@ -231,6 +231,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     check('new athlete without premium: fill stays disabled', await p.$eval('[data-act=fillask]', (b) => b.disabled));
     await p.close(); }
   { const p = await open({ path: '?newbie' });
+    await p.click('[data-act=onbnone]'); await wait(200); await p.click('[data-act=ptab][data-k=new]').catch(() => {}); await wait(150);
+    const def = await p.inputValue('[data-g=weeks]');
+    await p.fill('[data-g=weeks]', '12'); await p.press('[data-g=weeks]', 'Tab'); await wait(150);
+    await p.fill('textarea[data-g=prompt]', 'Марафон'); await p.click('[data-act=gen]'); await wait(4000);
+    check('generator: «Недель» decides the plan length (no race: 8 by default)', def === '8' && (await p.innerText('#s10-week')).includes('План готов: 12 недель'), `default ${def}`);
+    await p.close(); }
+  { const p = await open({ path: '?newbie' });
     const once = !!(await p.$('.w-dlg')); await p.click('[data-act=onbnone]'); await wait(200);
     await p.reload(); await wait(900);
     check('demo ?newbie: a new athlete, afresh on every visit', once && !!(await p.$('.w-dlg')) && (await p.innerText('.w-who')).includes('Новый'));
