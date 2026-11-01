@@ -1,5 +1,5 @@
 /* Anonymised snapshot of an athlete's s10.run data, 31.10.2026, for the demo page only (email and GPS removed).
-   week.js uses it when the page is not served from s10.run. */
+   solo.js uses it when the page is not served from s10.run. */
 window.S10_FIXTURES = {
   me: { id: 1000000001, firstName: 'Спортсмен', lastName: '', isPremium: true, nowmsk: 1793447571 },
   main: { main: { d: '2026-12-06', task: 'гонка', prekm: '42', typtrain: 6, prediction: '03:19:59', location: 'VALENCIA' } },

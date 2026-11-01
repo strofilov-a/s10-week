@@ -9,19 +9,19 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 
 ## Who does what
 
-- The S10 developer only embeds the page into the site once: `deploy/week.html` served at `/week` the way `/calc3` is
-  served, `week.js` at `/t5/week/week.js`, a menu item. For each release we hand over a new `week.js` and he bumps `?v=`
-  in `week.html`. Everything else (logic, texts, design, checks) is ours. Brief for him: `deploy/ЗАДАНИЕ.md`.
+- The S10 developer only embeds the page into the site once: `deploy/solo.html` served at `/solo/plan` the way `/calc3`
+  is served, `solo.js` at `/t5/solo/solo.js`, a menu item. For each release we hand over a new `solo.js` and he bumps
+  `?v=` in `solo.html`. Everything else (logic, texts, design, checks) is ours. Brief for him: `deploy/ЗАДАНИЕ.md`.
 - No backend changes: the page uses only the site's existing endpoints with the session cookie, like calc3/calc4/calc5.
 
 ## Files
 
 | Path | What |
 |---|---|
-| `week.js` | The whole page: one file, no build, no dependencies. Live on s10.run (by hostname), demo anywhere else. |
+| `solo.js` | The whole page: one file, no build, no dependencies. Live on s10.run (by hostname), demo anywhere else. |
 | `demo/index.html`, `demo/fixtures.js` | Demo on an anonymised snapshot (31.10.2026). Published on GitHub Pages: https://strofilov-a.github.io/s10-week/demo/ |
 | `index.html` | GitHub Pages root: redirects to `demo/` outside s10.run. |
-| `deploy/week.html` | The page shell for s10.run (copied from the `/calc3` template: `/t5` Roboto fonts, icons, cookie consent). |
+| `deploy/solo.html` | The page shell for s10.run (copied from the `/calc3` template: `/t5` Roboto fonts, icons, cookie consent). |
 | `deploy/ЗАДАНИЕ.md` | The one-page brief for the S10 developer. |
 | `tests/check.cjs` | Browser checks against the demo (see Testing). |
 | `.github/workflows/check.yml` | Runs `tests/check.cjs` on every push and pull request. |
@@ -104,7 +104,7 @@ POSTs and inject the committed file:
 
 ```js
 const f = window.fetch; window.fetch = (u, o) => { if (o && o.method === 'POST') throw new Error('blocked'); return f(u, o); };
-const t = await f('https://raw.githubusercontent.com/strofilov-a/s10-week/<commit>/week.js').then((r) => r.text());
+const t = await f('https://raw.githubusercontent.com/strofilov-a/s10-week/<commit>/solo.js').then((r) => r.text());
 document.body.innerHTML = ''; const s = document.createElement('script');
 s.src = URL.createObjectURL(new Blob([t], { type: 'text/javascript' })); document.body.appendChild(s);
 ```
@@ -115,7 +115,7 @@ Never write to the owner's real diary or profile without his explicit yes in the
 
 - Live checks done on the owner's account (each restored afterwards, profile byte for byte):
   - 31.10.2026, profile write with the new fields: the server stores the `studentPlans<ID>` string unchanged (`active`,
-    `student.layout/volume/t5…t42`, `filled`, `undo`, «», `\`, ё); week.js `dff8104` reads it back (active version,
+    `student.layout/volume/t5…t42`, `filled`, `undo`, «», `\`, ё); the page (`dff8104`, then still `week.js`) reads it back (active version,
     layout, «в календаре по…», undo button).
   - 01.11.2026, diary: one task written to an empty future day and shown on the site; `{typtrain:0, task:'', prekm:0}`
     removes the day's row entirely (server: «Удалена задача»); the main race day untouched.
@@ -123,6 +123,6 @@ Never write to the owner's real diary or profile without his explicit yes in the
     afterwards the day is empty and the version has `undo: null`, `filled: null`.
 - Race week: with the race on Sunday the plan leaves Thu–Sat as rest (its volume already includes the marathon). Ask the
   owner whether easy runs should replace that.
-- Where the site loads `week.js` from: the S10 server (the developer copies each release) or this repo.
+- Where the site loads `solo.js` from: the S10 server (the developer copies each release) or this repo.
 - Ideas: a reminder on the week view when the filled weeks run out; a race-week sanity check; adapting volume to the
   fact; a coach view of athletes' plans; calendar export (ICS); analytics.
