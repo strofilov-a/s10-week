@@ -81,7 +81,9 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   main race through `writeTasks` (`typtrain 6`, `main6: 1`, like calc3), asking once if that day already has a task;
   the goal reads as h:mm for a half/marathon and mm:ss for 10 km and shorter. «Отсутствует» (`noRace`, in localStorage
   and as `student.noRace` on the stored version): `race` stays null and `raceMon/raceEnd` anchor the plan to its own
-  end, week −n in the week of the next S10 running week; the race slot is not laid, «До старта» reads «Весь план».
+  end, week −n in the week of the next S10 running week; the race slot is not laid, «До старта» reads «Весь план»,
+  and «2 беговые недели» count from the plan's start. A new plan's length («Недель») is the weeks to the race, or 2
+  without one (owner's call 01.11.2026). Distances offered: marathon, half, 10 km, 5 km (no parkrun).
 - Paces: easy runs are T42 + 55…75 s unless the paces carry an explicit `easy` range. Without any paces the window
   offers a new athlete's defaults (owner's choice 01.11.2026: someone running 3×/week 5–7 km without a plan; 5 km in
   30:00, Riegel k = 1.06, rounded): T5 6:00, T10 6:15, T21 6:30, T42 6:50, easy 7:00–7:30 (the formula would give
