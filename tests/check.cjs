@@ -29,6 +29,9 @@ const LONG = `
   for (const v of [...x.versions, ...x.library]) { const src = v.plan.weeks.slice().sort((a, b) => a.week - b.week); const race = src[src.length - 1], body = src.slice(0, -1);
     const out = []; for (let n = 20; n >= 2; n--) { const t = body[(20 - n) % body.length]; out.push({ ...t, week: -n }); } out.push({ ...race, week: -1 }); v.plan.weeks = out; }
 `;
+// the same build with every day already set by the coach: «(N)» next to «Не трогать…» gets three digits
+const FULL = LONG.replace('[2, 4, 6].includes(w)', 'true');
+if (FULL === LONG) throw new Error('FULL: the coach-days condition in LONG changed, update the replace');
 // changes the demo data before the page reads it; also records every task write
 const hook = (mod = '', failOn = 0) => `(() => { let v; Object.defineProperty(window, 'S10_FIXTURES', { configurable: true, get() { return v; }, set(x) { ${mod}; v = x; } });
   window.__posts = 0; window.__days = []; const ap = FormData.prototype.append;
@@ -46,7 +49,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const p = await browser.newPage({ viewport: { width: w, height: h } }); p.errors = [];
     p.on('pageerror', (x) => p.errors.push(x.message));
     await p.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-    if (init) await p.addInitScript(init);
+    for (const s of [].concat(init || [])) await p.addInitScript(s); // one script or a list
     await p.goto(BASE + path); await wait(800); return p;
   };
   const box = (p, sel) => p.evaluate((s) => { const r = document.querySelector(s)?.getBoundingClientRect(); return r ? `${Math.round(r.x)},${Math.round(r.y)}` : null; }, sel);
@@ -76,13 +79,15 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // 3. the fill block: the buttons keep their place when switching «2 беговые недели» / «До старта»
   // «wide text» widens every letter, like a wider fallback font on another OS (the CI runner's font caught a jump the Mac's did not)
   const WIDE = `document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '*{letter-spacing:.06em !important}'; document.head.appendChild(s); });`;
-  for (const [w, wide] of [[1440], [768], [390], [390, true]]) {
-    const p = await open({ w, path: '?tab=plan', init: wide ? WIDE : null });
+  const FILL_CASES = [{ w: 1440 }, { w: 768 }, { w: 390 }, { w: 390, wide: true }, { w: 768, wide: true },
+    { w: 390, wide: true, data: LONG, label: '20-week plan' }, { w: 390, data: FULL, label: '20 weeks all set by the coach' }];
+  for (const { w, wide, data, label } of FILL_CASES) {
+    const p = await open({ w, path: '?tab=plan', init: [data && hook(data), wide && WIDE].filter(Boolean) });
     const rel = () => p.evaluate(() => { const s = document.querySelector('.w-sum').getBoundingClientRect(); return ['[data-act=pversion]', '[data-act=fillask]', '[data-act=span][data-k=race]'].map((q) => { const r = document.querySelector(q).getBoundingClientRect(); return `${Math.round(r.x - s.x)},${Math.round(r.y - s.y)}`; }).join(' '); });
     const a = await rel(); await p.evaluate(() => document.querySelector('[data-act=span][data-k=race]').click()); await wait(150);
     const b = await rel(); await p.evaluate(() => document.querySelector('[data-act=span][data-k="2w"]').click()); await wait(150);
     const c = await rel();
-    check(`fill buttons stay put at ${w}px${wide ? ', wide text' : ''}`, a === b && b === c, a === b && b === c ? '' : `${a} / ${b} / ${c}`);
+    check(`fill buttons stay put at ${w}px${wide ? ', wide text' : ''}${label ? `, ${label}` : ''}`, a === b && b === c, a === b && b === c ? '' : `${a} / ${b} / ${c}`);
     await p.close();
   }
 
