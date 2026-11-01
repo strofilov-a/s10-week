@@ -83,13 +83,13 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   and as `student.noRace` on the stored version): `race` stays null and `raceMon/raceEnd` anchor the plan to its own
   end, week −n in the week of the next S10 running week; the race slot is not laid, «До старта» reads «Весь план».
 - Paces: easy runs are T42 + 55…75 s unless the paces carry an explicit `easy` range. Without any paces the window
-  offers a new athlete's defaults (owner's call 01.11.2026: someone running 3×/week 5–7 km without a plan; 5 km in 30:00,
-  Riegel k = 1.08, rounded): T5 6:00, T10 6:20, T21 6:45, T42 7:10, easy 7:00–7:30 (the formula would give 8:05–8:25).
-  With a goal (typed in the window, or the site race's forecast) the paces follow it instead: the goal's pace on its
-  distance, the others by Riegel with k from 1.06 (marathon pace 4:45; matches S10's forecast 3:20 → 4:11/4:20/4:33/4:44)
-  to 1.08 (7:10), easy from T42 + 55…75 s to T42 − 10…+20 s on the same scale (`pacesFromGoal`); a pace edited by hand
-  stops the following. Saved as the athlete's own (`easy` too, also in `student.easy`). «Заполнить календарь» needs all four paces, so the
-  diary never gets «T5+5» instead of minutes per km.
+  offers a new athlete's defaults (owner's choice 01.11.2026: someone running 3×/week 5–7 km without a plan; 5 km in
+  30:00, Riegel k = 1.06, rounded): T5 6:00, T10 6:15, T21 6:30, T42 6:50, easy 7:00–7:30 (the formula would give
+  7:45–8:05). With a goal (typed in the window, or the site race's forecast) the paces follow it instead
+  (`pacesFromGoal`): the goal's pace on its distance, the others by Riegel k = 1.06 (S10's forecast for 3:20 is
+  4:11/4:20/4:33/4:44, ours 4:10/4:21/4:33/4:44), easy from T42 + 55…75 s at marathon pace 4:45 to T42 + 10…40 s at
+  6:50, linear in between; a pace edited by hand stops the following. Saved as the athlete's own (`easy` too, also in
+  `student.easy`). «Заполнить календарь» needs all four paces, so the diary never gets «T5+5» instead of minutes per km.
 
 ## Design decisions (from the owner; keep them)
 
