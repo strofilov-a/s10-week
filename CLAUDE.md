@@ -82,8 +82,10 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   the goal reads as h:mm for a half/marathon and mm:ss for 10 km and shorter. «Отсутствует» (`noRace`, in localStorage
   and as `student.noRace` on the stored version): `race` stays null and `raceMon/raceEnd` anchor the plan to its own
   end, week −n in the week of the next S10 running week; the race slot is not laid, «До старта» reads «Весь план».
-- Paces: easy runs are T42 + 55…75 s. Without any paces the window offers easy 6:30 → T5 4:48, T10 4:59, T21 5:14,
-  T42 5:25 (calc5's default proportions), saved as the athlete's own. «Заполнить календарь» needs all four paces, so the
+- Paces: easy runs are T42 + 55…75 s unless the paces carry an explicit `easy` range. Without any paces the window
+  offers a new athlete's defaults (owner's call 01.11.2026: someone running 3×/week 5–7 km without a plan; 5 km in 30:00,
+  Riegel k = 1.08, rounded): T5 6:00, T10 6:20, T21 6:45, T42 7:10, easy 7:00–7:30 (the formula would give 8:05–8:25).
+  Saved as the athlete's own (`easy` too, also in `student.easy`). «Заполнить календарь» needs all four paces, so the
   diary never gets «T5+5» instead of minutes per km.
 
 ## Design decisions (from the owner; keep them)
