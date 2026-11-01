@@ -179,7 +179,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     check('no race: plan laid, «Весь план», no race date', txt.includes('Весь план') && txt.includes('без старта') && !(await p.$('.w-cd.race')));
     await p.click('[data-act=fillask]'); await wait(300); await p.click('[data-act=fillyes]'); await wait(2500);
     const t = await p.evaluate(() => window.__tasks);
-    check('no race: 2 weeks written from the running week, paces in numbers', t.length === 14 && t[0].d === '2026-11-04' && !t.some((x) => /T\s*(5|10|21|42)\b/.test(x.task)) && !t.some((x) => +x.typtrain === 6 || x.main6), `${t.length} days from ${t[0]?.d}`);
+    check('no race: 2 weeks written from the plan start, paces in numbers', t.length === 14 && t[0].d === '2026-11-02' && !t.some((x) => /T\s*(5|10|21|42)\b/.test(x.task)) && !t.some((x) => +x.typtrain === 6 || x.main6), `${t.length} days from ${t[0]?.d}`);
     check('new athlete: easy days get the explicit 7:00-7:30', t.filter((x) => +x.typtrain === 1).every((x) => x.task === '7:00-7:30') && t.some((x) => +x.typtrain === 1), [...new Set(t.filter((x) => +x.typtrain === 1).map((x) => x.task))].join(' | '));
     await p.click('[data-act=onbopen]'); await wait(200);
     const cancel = await p.$('[data-act=onbcancel]'); await p.keyboard.press('Escape'); await wait(200);
@@ -239,7 +239,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const def = await p.inputValue('[data-g=weeks]');
     await p.fill('[data-g=weeks]', '12'); await p.press('[data-g=weeks]', 'Tab'); await wait(150);
     await p.fill('textarea[data-g=prompt]', 'Марафон'); await p.click('[data-act=gen]'); await wait(4000);
-    check('generator: «Недель» decides the plan length (no race: 8 by default)', def === '8' && (await p.innerText('#s10-week')).includes('План готов: 12 недель'), `default ${def}`);
+    check('generator: «Недель» decides the plan length (no race: 2 by default)', def === '2' && (await p.innerText('#s10-week')).includes('План готов: 12 недель'), `default ${def}`);
     await p.close(); }
   { const p = await open({ path: '?newbie' });
     const once = !!(await p.$('.w-dlg')); await p.click('[data-act=onbnone]'); await wait(200);
