@@ -32,10 +32,12 @@ const LONG = `
 // the same build with every day already set by the coach: «(N)» next to «Не трогать…» gets three digits
 const FULL = LONG.replace('[2, 4, 6].includes(w)', 'true');
 if (FULL === LONG) throw new Error('FULL: the coach-days condition in LONG changed, update the replace');
+// a brand-new athlete: no main race, no saved plans or library, no S10 forecast, an empty diary
+const NEWBIE = `x.main = { main: null }; x.versions = []; x.library = []; x.results = []; x.startParam = { param: {} }; x.diary.diaryTasksInfo = [];`;
 // changes the demo data before the page reads it; also records every task write
 const hook = (mod = '', failOn = 0) => `(() => { let v; Object.defineProperty(window, 'S10_FIXTURES', { configurable: true, get() { return v; }, set(x) { ${mod}; v = x; } });
-  window.__posts = 0; window.__days = []; const ap = FormData.prototype.append;
-  FormData.prototype.append = function (k, val) { if (k === 'tasks') { window.__posts++; if (${failOn} && window.__posts === ${failOn}) throw new Error('500'); window.__days.push(...JSON.parse(val).map((t) => t.d)); } return ap.apply(this, arguments); }; })()`;
+  window.__posts = 0; window.__days = []; window.__tasks = []; const ap = FormData.prototype.append;
+  FormData.prototype.append = function (k, val) { if (k === 'tasks') { window.__posts++; if (${failOn} && window.__posts === ${failOn}) throw new Error('500'); window.__days.push(...JSON.parse(val).map((t) => t.d)); window.__tasks.push(...JSON.parse(val)); } return ap.apply(this, arguments); }; })()`;
 
 const results = [];
 const check = (name, ok, info = '') => { results.push({ name, ok: !!ok }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${info ? `  (${info})` : ''}`); };
@@ -158,6 +160,58 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   { const p = await open({ path: '?open=plan' }); await wait(800);
     await p.click('[data-act=wsave]'); await wait(1500);
     check('week planner (calc3 flow) puts tasks', (await p.$eval('.w-flash', (x) => x.innerText).catch(() => '')).includes('задачи поставлены'));
+    await p.close(); }
+
+  // 7b. a new athlete: the start window, a plan without a race date, own paces
+  { const p = await open({ path: '?tab=plan', init: hook(NEWBIE) });
+    const dlg = await p.$('.w-dlg');
+    check('new athlete: start window asks for the race and paces', dlg && await p.$('.w-dlg input[type=date]') && (await p.inputValue('[data-o=easy]')) === '6:30' && (await p.inputValue('[data-o=t42]')) === '5:25' && (await p.inputValue('[data-o=t5]')) === '4:48');
+    await p.fill('[data-o=easy]', '6:00');
+    check('start window: easy pace sets T5…T42', (await p.inputValue('[data-o=t42]')) === '4:55', await p.inputValue('[data-o=t42]'));
+    await p.fill('[data-o=easy]', '6:43');
+    check('start window: rounding carries into minutes (6:43 → T5 5:00)', (await p.inputValue('[data-o=t5]')) === '5:00', await p.inputValue('[data-o=t5]'));
+    await p.fill('[data-o=easy]', '6:30');
+    await p.click('[data-act=onbok]'); await wait(200);
+    check('start window: no date, no write', (await p.$eval('.w-dlg .w-err', (x) => x.innerText).catch(() => '')).includes('дату') && await p.evaluate(() => window.__posts) === 0);
+    await p.click('[data-act=onbnone]'); await wait(300);
+    check('«Отсутствует» closes the window, paces saved as own', !(await p.$('.w-dlg')) && (await p.innerText('#s10-week')).includes('План ещё не выбран'));
+    await p.click('[data-act=ptab][data-k=new]').catch(() => {}); await wait(150);
+    await p.fill('textarea[data-g=prompt]', 'Марафон, 40 км в неделю'); await p.click('[data-act=gen]'); await wait(3500);
+    const txt = await p.innerText('#s10-week');
+    check('no race: plan laid, «Весь план», no race date', txt.includes('Весь план') && txt.includes('без старта') && !(await p.$('.w-cd.race')));
+    await p.click('[data-act=fillask]'); await wait(300); await p.click('[data-act=fillyes]'); await wait(2500);
+    const t = await p.evaluate(() => window.__tasks);
+    check('no race: 2 weeks written from the running week, paces in numbers', t.length === 14 && t[0].d === '2026-11-04' && !t.some((x) => /T\s*(5|10|21|42)\b/.test(x.task)) && !t.some((x) => +x.typtrain === 6 || x.main6), `${t.length} days from ${t[0]?.d}`);
+    await p.click('[data-act=onbopen]'); await wait(200);
+    const cancel = await p.$('[data-act=onbcancel]'); await p.keyboard.press('Escape'); await wait(200);
+    check('«указать» opens the window again; Escape closes it, nothing changes', cancel && !(await p.$('.w-dlg')) && (await p.innerText('#s10-week')).includes('без старта'));
+    check('no errors in the new-athlete flow', !p.errors.length, p.errors.join('; '));
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(NEWBIE) });
+    await p.fill('[data-o=d]', '2027-03-07'); await p.selectOption('[data-o=dist]', { index: 1 }); await p.fill('[data-o=name]', 'Барселона'); await p.fill('[data-o=goal]', '1:35');
+    await p.click('[data-act=onbok]'); await wait(800);
+    const t = await p.evaluate(() => window.__tasks);
+    const r = t.find((x) => x.main6 === 1);
+    check('start window saves the main race like calc3 (main6 = 1)', t.length === 1 && r && r.d === '2027-03-07' && r.typtrain === 6 && r.prekm === '21.1' && r.location === 'Барселона' && r.prediction === '01:35:00', JSON.stringify(r));
+    const txt = (await p.innerText('#s10-week')).replace(/\s+/g, ' ');
+    check('saved race: «До старта» and the plan to it', !(await p.$('.w-dlg')) && txt.includes('старт Барселона, 7 мар') && txt.includes('До старта 127'), (txt.match(/До старта.{0,40}/) || [''])[0]);
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(`${NEWBIE} x.diary.diaryTasksInfo.push({ date: '2026-12-12', type: 1, comment: 'Задача тренера', target: 10, tracks: [] });`) });
+    await p.fill('[data-o=d]', '2026-12-12'); await p.selectOption('[data-o=dist]', '5 км'); await p.fill('[data-o=goal]', '22:30');
+    await p.click('[data-act=onbok]'); await wait(500);
+    const warn = await p.$eval('.w-dlg .w-err', (x) => x.innerText).catch(() => '');
+    check('start window asks before replacing a task on the race day', warn.includes('Задача тренера') && await p.evaluate(() => window.__posts) === 0, warn.slice(0, 80));
+    await p.click('[data-act=onbok]'); await wait(800);
+    const r = (await p.evaluate(() => window.__tasks))[0];
+    check('second press saves it; 5 km goal 22:30 is minutes', r && r.d === '2026-12-12' && r.main6 === 1 && r.prekm === '5' && r.prediction === '00:22:30', JSON.stringify(r));
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(`${NEWBIE} x.me.isPremium = false;`) });
+    await p.click('[data-act=onbnone]'); await wait(200); await p.click('[data-act=ptab][data-k=new]').catch(() => {}); await wait(150);
+    await p.fill('textarea[data-g=prompt]', 'Марафон'); await p.click('[data-act=gen]'); await wait(3500);
+    check('new athlete without premium: fill stays disabled', await p.$eval('[data-act=fillask]', (b) => b.disabled));
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan' });
+    check('athlete with a race and paces: no start window', !(await p.$('.w-dlg')));
     await p.close(); }
 
   // 8. no sideways scroll
