@@ -74,13 +74,15 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   }
 
   // 3. the fill block: the buttons keep their place when switching «2 беговые недели» / «До старта»
-  for (const w of [1440, 768, 390]) {
-    const p = await open({ w, path: '?tab=plan' });
+  // «wide text» widens every letter, like a wider fallback font on another OS (the CI runner's font caught a jump the Mac's did not)
+  const WIDE = `document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '*{letter-spacing:.06em !important}'; document.head.appendChild(s); });`;
+  for (const [w, wide] of [[1440], [768], [390], [390, true]]) {
+    const p = await open({ w, path: '?tab=plan', init: wide ? WIDE : null });
     const rel = () => p.evaluate(() => { const s = document.querySelector('.w-sum').getBoundingClientRect(); return ['[data-act=pversion]', '[data-act=fillask]', '[data-act=span][data-k=race]'].map((q) => { const r = document.querySelector(q).getBoundingClientRect(); return `${Math.round(r.x - s.x)},${Math.round(r.y - s.y)}`; }).join(' '); });
     const a = await rel(); await p.evaluate(() => document.querySelector('[data-act=span][data-k=race]').click()); await wait(150);
     const b = await rel(); await p.evaluate(() => document.querySelector('[data-act=span][data-k="2w"]').click()); await wait(150);
     const c = await rel();
-    check(`fill buttons stay put at ${w}px`, a === b && b === c);
+    check(`fill buttons stay put at ${w}px${wide ? ', wide text' : ''}`, a === b && b === c, a === b && b === c ? '' : `${a} / ${b} / ${c}`);
     await p.close();
   }
 
