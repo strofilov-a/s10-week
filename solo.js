@@ -168,7 +168,7 @@
   if (activeV) sel = { src: 'version', id: activeV.id }; // the plan the calendar was filled from, on any device
   if (!findPlan(sel)) sel = versions[0] ? { src: 'version', id: versions[0].id } : library[0] ? { src: 'library', id: library[0].id } : null;
   const plan = () => findPlan(sel);
-  const studentPaces = (p) => p?.student?.t42 ? { 5: hms(p.student.t5), 10: hms(p.student.t10), 21: hms(p.student.t21), 42: hms(p.student.t42) } : null;
+  const studentPaces = (p) => p?.student?.t42 ? { 5: hms(p.student.t5), 10: hms(p.student.t10), 21: hms(p.student.t21), 42: hms(p.student.t42), ...(p.student.easy ? { easy: p.student.easy } : {}) } : null;
   let paceSrc = store.get(`paceSrc.${id}`, null);
   let PACE_OWN = store.get(`paceOwn.${id}`, null);
   function activePaces() {
@@ -195,13 +195,16 @@
   const fmtSec = (s) => { const r = Math.round(s); return Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); }; // taste-skill-ignore: a pace, not a counter
   // «4:48», «4.48», «448» → seconds, or null
   const paceSec = (v) => { const m = String(v || '').trim().replace(/[.,]/g, ':').match(/^(\d{1,2}):?(\d{2})$/); return m && +m[2] < 60 ? +m[1] * 60 + +m[2] : null; };
-  // paces from the easy pace: the page shows easy runs as T42 + 55…75 s, so an easy 6:30 is T42 5:25; T5/T10/T21 keep the
-  // proportions of S10's own default (calc5 saved 4:48 / 4:59 / 5:14 / 5:25 for a new athlete)
-  const pacesFromEasy = (easy) => { const t42 = easy - 65; return { 5: fmtSec(t42 * 288 / 325), 10: fmtSec(t42 * 299 / 325), 21: fmtSec(t42 * 314 / 325), 42: fmtSec(t42) }; };
-  const EASY_DEFAULT = '6:30';
+  // a new athlete's paces when there are none: someone who already runs 3 times a week, 5–7 km, without a plan. 5 km in
+  // 30:00 is the middle of recreational results; longer distances by Riegel with k = 1.08 (less endurance than a trained
+  // runner's ~1.05), rounded: 10 km ~1:03, half ~2:22, marathon ~5:02. Easy runs for this level are 7:00–7:30, set
+  // explicitly: the usual T42 + 55…75 s would make them 8:05–8:25
+  const NEWBIE_PACES = { 5: '6:00', 10: '6:20', 21: '6:45', 42: '7:10', easy: '7:00-7:30' };
+  // easy-run range in seconds: an explicit one (new athletes' paces) or T42 + 55…75 s
+  const easyRange = (P) => { const e = String(P?.easy || '').split(/[-–]/).map(paceSec); return e.length === 2 && e[0] && e[1] && e[0] <= e[1] ? e : [toSec(P[42]) + 55, toSec(P[42]) + 75]; };
   const pacesOk = (P) => !!P && [5, 10, 21, 42].every((k) => paceSec(P[k]));
   // the start window, for a new athlete only: asks for what is missing (a main race, paces) and nothing else
-  const newOnb = (needRace, needPace, manual = false) => ({ race: needRace, pace: needPace, manual, d: '', dist: DISTANCES[0], name: '', goal: '', easy: EASY_DEFAULT, P: pacesFromEasy(paceSec(EASY_DEFAULT)), busy: false, err: '', focused: false });
+  const newOnb = (needRace, needPace, manual = false) => ({ race: needRace, pace: needPace, manual, d: '', dist: DISTANCES[0], name: '', goal: '', P: { ...NEWBIE_PACES }, busy: false, err: '', focused: false });
   let onb = isSelf && ((!race && !noRace) || !pacesOk(PACE)) ? newOnb(!race && !noRace, !pacesOk(PACE)) : null;
   const plain = (t) => (PACE ? String(t).replace(PRE, (m, d, sg, n) => { let s = toSec(PACE[d]); if (sg) s += (sg === '+' ? 1 : -1) * +n; return fmtSec(s); }) : String(t))
     .replace(/(\d)\s*[xх×]\s*(\d)/g, '$1×$2').replace(/(\d)(км|м)(?=[\s,;.]|$)/g, '$1 $2').replace(/\s{2,}/g, ' ').trim();
@@ -255,7 +258,7 @@
   const weekMon = (w) => add(raceMon, (w + 1) * 7);
   const firstKm = (p) => p?.plan?.weeks?.slice().sort((a, b) => a.week - b.week)[0]?.km || 0;
   const scaleK = (p) => { const f = firstKm(p); return volume && f ? volume / f : 1; };
-  const easyText = () => (PACE ? `${fmtSec(toSec(PACE[42]) + 55)}-${fmtSec(toSec(PACE[42]) + 75)}` : 'Лёгкий бег');
+  const easyText = () => (PACE ? easyRange(PACE).map(fmtSec).join('-') : 'Лёгкий бег');
   function layWeek(w, p) {
     const mon = weekMon(w.week), k = scaleK(p);
     const target = Math.round(w.km * k);
@@ -495,7 +498,7 @@
       ...(old || {}), id: keepId || Math.random().toString(36).slice(2, 16),
       name: old?.name || `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${p.plan.weeks.length} нед.`, savedAt: new Date().toISOString(),
       templateId: old?.templateId || (sel.src === 'library' ? p.id : p.templateId || null), distance: p.distance || null, plan: { weeks: p.plan.weeks },
-      student: { ...(old?.student || {}), raceDate: race?.d || null, noRace: !race && noRace ? true : undefined, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], volume: String(volume || firstKm(p)), layout: layout.slice() },
+      student: { ...(old?.student || {}), raceDate: race?.d || null, noRace: !race && noRace ? true : undefined, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], easy: PACE?.easy, volume: String(volume || firstKm(p)), layout: layout.slice() },
       active: true, filled: f, undo: undoRec === undefined ? old?.undo || null : undoRec,
     };
     const next = [v, ...list.filter((x) => x.id !== v.id).map((x) => { const { active, ...rest } = x; return rest; })];
@@ -668,7 +671,7 @@
   }
   function paceTable(P) {
     if (!P?.[42]) return '';
-    const easy = [toSec(P[42]) + 55, toSec(P[42]) + 75];
+    const easy = easyRange(P);
     const rows = [['Лёгкий бег', easy], ['T42', [toSec(P[42])], 'марафон'], ['T21', [toSec(P[21])], 'полумарафон'], ['T10', [toSec(P[10])], '10 км'], ['T5', [toSec(P[5])], '5 км']];
     const cell = (r, m) => (r.length > 1 && m < 1000 ? '<span class="w-muted">—</span>' : r.map((v) => fmtSec(v * m / 1000)).join('–')); // easy runs are not timed on the track
     return `<div class="w-ptab-wrap"><table class="w-ptab num"><caption>Время на отрезок</caption>
@@ -866,8 +869,8 @@
         ${f('name', 'Название', 'placeholder="Например, Valencia"')}
         ${f('goal', 'Цель, необязательно', 'class="num" inputmode="numeric" placeholder="3:20 или 22:30"')}
       </div>` : ''}
-      ${o.pace ? `${o.race ? '<h3>Темпа</h3>' : ''}<p class="w-muted">По ним в задания встанут минуты на километр вместо T5…T42. Не знаете свои — оставьте как есть: это лёгкий бег 6:30 на километр, остальные посчитаны от него. Поменять можно потом на вкладке «Мои темпа».</p>
-      ${f('easy', 'Лёгкий бег, мин/км', 'class="num" inputmode="numeric"')}
+      ${o.pace ? `${o.race ? '<h3>Темпа</h3>' : ''}<p class="w-muted">По ним в задания встанут минуты на километр вместо T5…T42. Не знаете свои — оставьте как есть: это темпа человека, который бегает 3 раза в неделю по 5–7 км (5 км примерно за 30 минут). Поменять можно потом на вкладке «Мои темпа».</p>
+      <label class="w-f"><span>Лёгкий бег, мин/км</span><input data-o="easy" class="num" inputmode="numeric" value="${esc(o.P.easy)}"></label>
       <div class="w-onb-p">${[5, 10, 21, 42].map((k) => `<label class="w-f"><span>T${k}</span><input data-o="t${k}" class="num" inputmode="numeric" value="${esc(o.P[k])}"></label>`).join('')}</div>` : ''}
       ${o.err ? `<p class="w-err" role="alert">${esc(o.err)}</p>` : ''}
       <div class="w-acts">${o.manual ? `<button class="w-btn" data-act="onbcancel">Отмена</button>` : ''}${o.race ? `<button class="w-btn" data-act="onbnone" ${o.busy ? 'disabled' : ''}>Отсутствует</button>` : ''}<button class="w-btn primary" data-act="onbok" ${o.busy ? 'disabled' : ''}>${o.busy ? 'Сохраняю…' : o.race ? 'Сохранить старт' : 'Готово'}</button></div>
@@ -887,7 +890,10 @@
     let P = null;
     if (o.pace) {
       P = {};
-      for (const k of [5, 10, 21, 42]) { const v = paceSec(o.P[k]); if (!v) { o.err = `T${k}: напишите минуты и секунды, например 4:48.`; return render(); } P[k] = fmtSec(v); }
+      for (const k of [5, 10, 21, 42]) { const v = paceSec(o.P[k]); if (!v) { o.err = `T${k}: напишите минуты и секунды, например 6:20.`; return render(); } P[k] = fmtSec(v); }
+      const e = String(o.P.easy).split(/[-–]/).map(paceSec);
+      if (e.length !== 2 || !e[0] || !e[1] || e[0] > e[1]) { o.err = 'Лёгкий бег: от и до, например 7:00-7:30.'; return render(); }
+      P.easy = e.map(fmtSec).join('-');
     }
     if (o.race && withRace) {
       if (!o.d || o.d <= today) { o.err = 'Выберите дату старта позже сегодняшнего дня.'; return render(); }
@@ -1299,8 +1305,8 @@
       const v = paceSec(t.value);
       if (!v) { t.setCustomValidity('Например 4:30'); t.reportValidity(); return; }
       t.setCustomValidity('');
-      // never a partial set: the other three come from the current paces, or from the default easy 6:30
-      PACE_OWN = { ...(pacesOk(PACE) ? PACE : pacesFromEasy(paceSec(EASY_DEFAULT))), [t.dataset.k]: fmtSec(v) }; paceSrc = 'own'; store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render();
+      // never a partial set: the other three come from the current paces, or from a new athlete's defaults
+      PACE_OWN = { ...(pacesOk(PACE) ? PACE : NEWBIE_PACES), [t.dataset.k]: fmtSec(v) }; paceSrc = 'own'; store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render();
     }
     if (pk === 'volume') { const v = +t.value.replace(',', '.'); volume = v > 0 ? v : null; return render(); }
     if (t.dataset.g) { const k = t.dataset.g; gen[k] = k === 'weeks' ? Math.max(1, Math.min(30, +t.value || gen.weeks)) : t.value; if (k !== 'prompt') render(); return; }
@@ -1321,8 +1327,7 @@
     if (t.dataset.g === 'prompt') { gen.prompt = t.value; return; }
     if (t.dataset.o && onb) { // the start window keeps what is typed without redrawing (focus stays)
       const k = t.dataset.o;
-      if (/^t\d+$/.test(k)) onb.P[k.slice(1)] = t.value; else onb[k] = t.value;
-      if (k === 'easy') { const v = paceSec(t.value); if (v && v > 65 + 120) { onb.P = pacesFromEasy(v); for (const n of [5, 10, 21, 42]) { const x = root.querySelector(`[data-o="t${n}"]`); if (x) x.value = onb.P[n]; } } }
+      if (/^t\d+$/.test(k)) onb.P[k.slice(1)] = t.value; else if (k === 'easy') onb.P.easy = t.value; else onb[k] = t.value;
       return;
     }
     if (!f || f === 'pick' || f === 'move' || f === 'typtrain' || f === 't') return;
