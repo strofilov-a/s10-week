@@ -260,6 +260,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.reload(); await wait(900);
     check('demo ?newbie: a new athlete, afresh on every visit', once && !!(await p.$('.w-dlg')) && (await p.innerText('.w-who')).includes('Новый'));
     await p.close(); }
+  { const p = await open();
+    const tg = await p.$eval('.w-foot a[href^="https://t.me/"]', (a) => ({ href: a.href, text: a.innerText, blank: a.target === '_blank' && a.rel.includes('noopener') })).catch(() => null);
+    check('footer: Telegram chat for questions and feedback', tg && tg.href === 'https://t.me/+wP4aOZ4910I2MTk6' && tg.blank && tg.text.includes('Telegram'), JSON.stringify(tg));
+    await p.close(); }
   { const p = await open({ path: '?tab=plan' });
     check('athlete with a race and paces: no start window', !(await p.$('.w-dlg')));
     await p.close(); }

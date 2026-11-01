@@ -26,6 +26,7 @@ Colours: palette №3 «Лист, синяя и красная ручка» is t
 | `solo.js` | The whole page (no build step, no dependencies). Live data on s10.run, demo mode anywhere else. |
 | `index.html` | GitHub Pages root: redirects to the demo outside s10.run. |
 | `deploy/solo.html`, `deploy/ЗАДАНИЕ.md` | The page shell for s10.run and the one-page brief for the S10 developer. |
+| `deploy/build.cjs`, `release/` | `npm run build` makes `release/`, the folder for the S10 developer: production `solo.js` without the demo, `solo.html`, the brief. |
 | `tests/check.cjs` | Browser checks against the demo (`tests/README.md`). |
 | `CLAUDE.md` | Context, decisions and rules for Claude Code. |
 | `demo/index.html`, `demo/fixtures.js` | Demo with an anonymised snapshot of real data (31.10.2026; no name, email or GPS). Live demo: https://strofilov-a.github.io/s10-week/demo/. For GitHub Pages or any static host. Nothing is sent anywhere. `?open=plan` opens the planner with a computed schedule. |

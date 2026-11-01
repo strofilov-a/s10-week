@@ -9,9 +9,10 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 
 ## Who does what
 
-- The S10 developer only embeds the page into the site once: `deploy/solo.html` served at `/solo/plan` the way `/calc3`
-  is served, `solo.js` at `/t5/solo/solo.js`, a menu item. For each release we hand over a new `solo.js` and he bumps
-  `?v=` in `solo.html`. Everything else (logic, texts, design, checks) is ours. Brief for him: `deploy/ЗАДАНИЕ.md`.
+- The S10 developer only embeds the page into the site once: `solo.html` served at `/solo/plan` the way `/calc3` is
+  served, `solo.js` at `/t5/solo/solo.js`, a menu item. We hand him the `release/` folder (`npm run build`): the
+  production `t5/solo/solo.js` with the demo cut out, `solo.html` with a fresh `?v=`, and the brief. For each release he
+  replaces both files. Everything else (logic, texts, design, checks) is ours. Brief for him: `deploy/ЗАДАНИЕ.md`.
 - No backend changes: the page uses only the site's existing endpoints with the session cookie, like calc3/calc4/calc5.
 
 ## Files
@@ -22,7 +23,10 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 | `demo/index.html`, `demo/fixtures.js` | Demo on an anonymised snapshot (31.10.2026). Published on GitHub Pages: https://strofilov-a.github.io/s10-week/demo/ (`?newbie`: as a just-signed-up athlete, afresh each visit; `&free`: no premium) |
 | `index.html` | GitHub Pages root: redirects to `demo/` outside s10.run. |
 | `deploy/solo.html` | The page shell for s10.run (copied from the `/calc3` template: `/t5` Roboto fonts, icons, cookie consent). |
-| `deploy/ЗАДАНИЕ.md` | The one-page brief for the S10 developer. |
+| `deploy/ЗАДАНИЕ.md` | The one-page brief for the S10 developer (copied into `release/`). |
+| `deploy/build.cjs` | `npm run build`: cuts every demo-marked block (`/*<demo>*/…/*</demo>*/`) out of `solo.js` into `release/`, stamps `?v=` with a hash of the code, checks no demo is left and that it parses. Mark any new demo-only code so. |
+| `release/` | What goes to the S10 developer, committed; CI fails if it differs from a fresh build. |
+| `tests/release.cjs` | Runs the release build at `/solo/plan` against a stand-in of the site's API (the demo snapshot), writes recorded. |
 | `tests/check.cjs` | Browser checks against the demo (see Testing). |
 | `.github/workflows/check.yml` | Runs `tests/check.cjs` on every push and pull request. |
 | `README.md` | Feature and API overview (English). |
@@ -105,6 +109,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 - NOTHING may jump on click: the calendar, the week switch, the fill buttons when switching «2 беговые недели» /
   «До старта». `tests/check.cjs` measures positions — keep it green.
 - Fill buttons sit at the bottom of their box; the hint under the count is two lines.
+- Footer: a link to the Telegram chat for questions and feedback, https://t.me/+wP4aOZ4910I2MTk6 (owner, 01.11.2026).
 - Plan generator: the «Расскажите о себе и цели» box comes first, 16/500 label in ink, 2px accent border and an accent
   hint under it (`aria-describedby`); it takes the focus with its text selected. Prefilled: «заполни как есть, там
   посмотрим» without a race, «Марафон 6 дек, Valencia, цель 3:20:00.» with one; typing makes it the athlete's
@@ -114,10 +119,11 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # serves the repo itself on 127.0.0.1; 66 checks, exit 1 on failure
+npm test                                     # demo checks (67), then the release build and its checks (12)
 ```
 
-GitHub Actions (`.github/workflows/check.yml`) runs the same checks on every push and pull request.
+GitHub Actions (`.github/workflows/check.yml`) runs the same on every push and pull request, and fails if the committed
+`release/` is not the build of the current source.
 
 Live check on s10.run (read-only): in a browser where the owner is logged in to s10.run, open any s10.run page, block
 POSTs and inject the committed file:
