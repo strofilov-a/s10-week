@@ -105,12 +105,16 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 - NOTHING may jump on click: the calendar, the week switch, the fill buttons when switching «2 беговые недели» /
   «До старта». `tests/check.cjs` measures positions — keep it green.
 - Fill buttons sit at the bottom of their box; the hint under the count is two lines.
+- Plan generator: the «Расскажите о себе и цели» box comes first, 16/500 label in ink, 2px accent border and an accent
+  hint under it (`aria-describedby`); it takes the focus with its text selected. Prefilled: «заполни как есть, там
+  посмотрим» without a race, «Марафон 6 дек, Valencia, цель 3:20:00.» with one; typing makes it the athlete's
+  (owner, 01.11.2026: the first time he pressed «Сгенерировать» without noticing the box).
 
 ## Testing
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # serves the repo itself on 127.0.0.1; 63 checks, exit 1 on failure
+npm test                                     # serves the repo itself on 127.0.0.1; 66 checks, exit 1 on failure
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same checks on every push and pull request.

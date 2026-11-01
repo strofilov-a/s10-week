@@ -235,6 +235,20 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     check('small week: easy runs fit the volume (44 km week, works 40 → 44, not 58)', row === '44', row);
     await p.close(); }
   { const p = await open({ path: '?newbie' });
+    await p.click('[data-act=onbnone]'); await wait(300);
+    const v = await p.inputValue('textarea[data-g=prompt]'), focused = await p.evaluate(() => document.activeElement?.dataset?.g);
+    check('no race: «о себе и цели» filled «заполни как есть, там посмотрим», focused', v === 'заполни как есть, там посмотрим' && focused === 'prompt', `${v} / ${focused}`);
+    await p.close(); }
+  { const p = await open({ path: '?newbie' });
+    await p.fill('[data-o=d]', '2026-12-06'); await p.fill('[data-o=name]', 'Valencia'); await p.fill('[data-o=goal]', '3:20'); await p.click('[data-act=onbok]'); await wait(800);
+    const v = await p.inputValue('textarea[data-g=prompt]');
+    check('race with a goal: «о себе и цели» filled from it', v === 'Марафон 6 дек, Valencia, цель 3:20:00.', v);
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan' }); await p.click('[data-act=pchoose]'); await wait(200); await p.click('[data-act=ptab][data-k=new]'); await wait(200);
+    const v = await p.inputValue('textarea[data-g=prompt]');
+    check('athlete with a race: the box carries the race and forecast', v === 'Марафон 6 дек, Valencia, цель 3:19:59.', v);
+    await p.close(); }
+  { const p = await open({ path: '?newbie' });
     await p.click('[data-act=onbnone]'); await wait(200); await p.click('[data-act=ptab][data-k=new]').catch(() => {}); await wait(150);
     const def = await p.inputValue('[data-g=weeks]');
     await p.fill('[data-g=weeks]', '12'); await p.press('[data-g=weeks]', 'Tab'); await wait(150);

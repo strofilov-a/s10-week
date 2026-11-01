@@ -379,7 +379,18 @@
   let chooser = !plan(), chooserTab = versions.length ? 'version' : library.length ? 'library' : 'new';
   // the master plan's length: the weeks to the race, or two weeks without one
   const weeksTo = (mon) => Math.max(1, Math.min(30, Math.round((d8(mon) - d8(monday(add(today, 1)))) / 6048e5) + 1));
-  let gen = { distance: plan()?.distance || DISTANCES[0], weeks: race ? weeksTo(raceMon) : 2, prompt: '', busy: false, lines: 0, err: '' };
+  let gen = { distance: plan()?.distance || DISTANCES[0], weeks: race ? weeksTo(raceMon) : 2, prompt: '', touched: false, busy: false, lines: 0, err: '' };
+  // the «о себе и цели» box starts filled: the race and its goal when there is one, or «заполни как есть, там
+  // посмотрим»; once the athlete types in it, the text is theirs and is not replaced
+  const KM_NAME = { 42: 'Марафон', 42.2: 'Марафон', 21: 'Полумарафон', 21.1: 'Полумарафон' };
+  const promptDefault = () => {
+    if (!race) return 'заполни как есть, там посмотрим';
+    const km = +race.prekm, g = race.prediction ? hms(race.prediction).replace(/^0?0:/, '') : '';
+    return `${KM_NAME[km] || `${n1(km)} км`} ${dayLbl(race.d)}${raceName ? `, ${raceName}` : ''}${g ? `, цель ${g}` : ''}.`.replace(/\u00a0/g, ' '); // plain spaces in a text for the model
+  };
+  gen.prompt = promptDefault();
+  // the box takes the focus with its text selected, so typing replaces the filled-in words
+  const focusAsk = () => { const t = root.querySelector('textarea[data-g=prompt]'); if (!t) return; t.focus(); if (!gen.touched) t.select(); };
   let fill = { confirm: false, busy: false, err: '', progress: '' };
   let undo = { confirm: false, where: 'card', busy: false, err: '', progress: '' }, flashUndo = '';
   // «Вернуть как было»: before a fill the page keeps what stood in those days; the record lives with the active plan in
@@ -613,10 +624,10 @@
       </div>
       ${chooserTab === 'version' ? rows(versions, 'version') : chooserTab === 'library' ? rows(library, 'library') : `
         <div class="w-gen">
+          <label class="w-f w-f-wide w-ask"><span>Расскажите о себе и цели</span><textarea data-g="prompt" rows="3" aria-describedby="w-ask-hint" placeholder="Марафон 6 декабря на 3:20. 5 км 18:59, полумарафон 1:38. Сейчас ~40 км в неделю, 6 тренировок, четверг отдых, среда стадион, воскресенье длительная.">${esc(gen.prompt)}</textarea><small id="w-ask-hint">Сколько бегаете сейчас и как часто, лучшие результаты, какие дни свободны. По этому описанию модель составит план.</small></label>
           <label class="w-f"><span>Дистанция</span><select data-g="distance">${DISTANCES.map((d) => `<option ${d === gen.distance ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
           <label class="w-f w-f-s"><span>Недель</span><input data-g="weeks" class="num" inputmode="numeric" value="${gen.weeks}"></label>
-          <label class="w-f w-f-wide"><span>Бегун и цель</span><textarea data-g="prompt" rows="3" placeholder="Марафон 6 декабря на 3:20. 5 км 18:59, полумарафон 1:38. Сейчас ~40 км в неделю, 6 тренировок, четверг отдых, среда стадион, воскресенье длительная.">${esc(gen.prompt)}</textarea></label>
-          <div class="w-go"><button class="w-btn primary" data-act="gen" ${gen.busy ? 'disabled' : ''}>${gen.busy ? 'Генерирую…' : 'Сгенерировать план'}</button><span class="w-muted" id="w-gen-status">${gen.busy ? 'Модель думает…' : `${gen.weeks} ${plural(gen.weeks, 'неделя', 'недели', 'недель')} до старта. Генерация занимает до минуты.`}</span></div>
+          <div class="w-go"><button class="w-btn primary" data-act="gen" ${gen.busy ? 'disabled' : ''}>${gen.busy ? 'Генерирую…' : 'Сгенерировать план'}</button><span class="w-muted" id="w-gen-status">${gen.busy ? 'Модель думает…' : `${gen.weeks} ${plural(gen.weeks, 'неделя', 'недели', 'недель')}${race ? ' до старта' : ''}. Генерация занимает до минуты.`}</span></div>
           ${gen.err ? `<p class="w-err" role="alert">${esc(gen.err)}</p>` : ''}
         </div>`}
     </div>`;
@@ -951,11 +962,13 @@
       gen.distance = o.dist; gen.weeks = weeksTo(raceMon);
     }
     if (o.race && !withRace) { noRace = true; store.set(`noRace.${id}`, true); gen.weeks = 2; }
+    if (!gen.touched) gen.prompt = promptDefault();
     if (P) { PACE_OWN = P; paceSrc = 'own'; store.set(`paceOwn.${id}`, P); store.set(`paceSrc.${id}`, 'own'); reprice(); }
     onb = null;
     flash = o.race && withRace ? `${LIVE ? 'Главный старт сохранён' : 'Демо: главный старт сохранён только на этой странице'}: ${dayLbl(race.d)}${raceName ? `, ${raceName}` : ''}. Теперь выберите или сделайте план.` : o.race ? 'План будет без даты старта: со следующей беговой недели вперёд.' : 'Темпа сохранены.';
     if (o.race) tab = 'plan';
     render();
+    if (tab === 'plan' && chooser && chooserTab === 'new') focusAsk();
   }
   function render() {
     syncRace();
@@ -1194,6 +1207,9 @@
   .w-f{display:grid;gap:6px;min-width:0}
   .w-f>span{color:var(--muted);font-size:13px}
   .w-f-wide{grid-column:1/-1}
+  .w-ask>span{color:var(--text);font-size:16px;font-weight:500}
+  .w-app .w-ask textarea{border:2px solid var(--accent);min-height:96px}
+  .w-ask>small{color:var(--accent);font-size:14px;line-height:1.45}
   .w-gen .w-go{grid-column:1/-1}
   .w-pmeta{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
   .w-pset{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
@@ -1298,7 +1314,7 @@
       if (act === 'colors') { colorsOpen = !colorsOpen; return render(); }
       if (act === 'pal') { palId = a.dataset.id; store.set('palette', palId); applyPalette(); return render(); }
       if (act === 'pchoose') { chooser = !chooser; return render(); }
-      if (act === 'ptab') { chooserTab = a.dataset.k; return render(); }
+      if (act === 'ptab') { chooserTab = a.dataset.k; render(); if (chooserTab === 'new') focusAsk(); return; }
       if (act === 'psel') { sel = { src: a.dataset.src, id: a.dataset.id }; persistSel(); chooser = false; volume = null; if (sel.src === 'version') applyVersion(plan()); if (paceSrc === 'plan') paceSrc = null; reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } flash = `Выбран план «${plan().name}». Задания и темпа на странице пересчитаны.`; tab = 'plan'; return render(); }
       if (act === 'gen') return runGenerate();
       if (act === 'wopen') { const w = +a.dataset.w; openWeek = openWeek === w ? NaN : w; return render(); }
@@ -1359,7 +1375,7 @@
   root.addEventListener('input', (e) => {
     const t = e.target, f = t.dataset.f;
     if (t.tagName === 'TEXTAREA') fit(t);
-    if (t.dataset.g === 'prompt') { gen.prompt = t.value; return; }
+    if (t.dataset.g === 'prompt') { gen.prompt = t.value; gen.touched = true; return; }
     if (t.dataset.o && onb) { // the start window keeps what is typed without redrawing (focus stays)
       const k = t.dataset.o;
       if (/^t\d+$/.test(k) || k === 'easy') { onb.P[k === 'easy' ? 'easy' : k.slice(1)] = t.value; onb.touched = true; return; }
