@@ -24,6 +24,7 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 | `deploy/week.html` | The page shell for s10.run (copied from the `/calc3` template: `/t5` Roboto fonts, icons, cookie consent). |
 | `deploy/ЗАДАНИЕ.md` | The one-page brief for the S10 developer. |
 | `tests/check.cjs` | Browser checks against the demo (see Testing). |
+| `.github/workflows/check.yml` | Runs `tests/check.cjs` on every push and pull request. |
 | `README.md` | Feature and API overview (English). |
 
 ## How the page works
@@ -92,9 +93,11 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 ## Testing
 
 ```
-python3 -m http.server 8766 --bind 127.0.0.1    # repo root, second terminal
-node tests/check.cjs                             # Playwright + Chromium; 35 checks, exit 1 on failure
+npm ci && npx playwright install chromium    # once
+npm test                                     # serves the repo itself on 127.0.0.1; 35 checks, exit 1 on failure
 ```
+
+GitHub Actions (`.github/workflows/check.yml`) runs the same checks on every push and pull request.
 
 Live check on s10.run (read-only): in a browser where the owner is logged in to s10.run, open any s10.run page, block
 POSTs and inject the committed file:
