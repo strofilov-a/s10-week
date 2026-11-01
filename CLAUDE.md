@@ -76,6 +76,15 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   afterType, afterKm, afterTextHash]]}` (also mirrored in localStorage). A day changed after the fill is skipped; an
   empty-before day is cleared with `{typtrain:0, task:'', prekm:0}`.
 - Without premium the write buttons are disabled with a note (calc3's rule).
+- Start window (new athletes only, own page only, never for a coach with `?id=`): shown when the site has no main race
+  and the athlete has not chosen «Отсутствует», and/or when there are no complete paces. «Сохранить старт» writes the
+  main race through `writeTasks` (`typtrain 6`, `main6: 1`, like calc3), asking once if that day already has a task;
+  the goal reads as h:mm for a half/marathon and mm:ss for 10 km and shorter. «Отсутствует» (`noRace`, in localStorage
+  and as `student.noRace` on the stored version): `race` stays null and `raceMon/raceEnd` anchor the plan to its own
+  end, week −n in the week of the next S10 running week; the race slot is not laid, «До старта» reads «Весь план».
+- Paces: easy runs are T42 + 55…75 s. Without any paces the window offers easy 6:30 → T5 4:48, T10 4:59, T21 5:14,
+  T42 5:25 (calc5's default proportions), saved as the athlete's own. «Заполнить календарь» needs all four paces, so the
+  diary never gets «T5+5» instead of minutes per km.
 
 ## Design decisions (from the owner; keep them)
 
@@ -94,7 +103,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # serves the repo itself on 127.0.0.1; 39 checks, exit 1 on failure
+npm test                                     # serves the repo itself on 127.0.0.1; 54 checks, exit 1 on failure
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same checks on every push and pull request.
@@ -112,6 +121,9 @@ s.src = URL.createObjectURL(new Blob([t], { type: 'text/javascript' })); documen
 Never write to the owner's real diary or profile without his explicit yes in the chat.
 
 ## Open items
+
+- Live check still to do (with the owner's yes): «Сохранить старт» sets the site's main race with a `main6: 1` task
+  (checked only in the demo). The owner already has a race, so the test must put another one and restore Valencia.
 
 - Live checks done on the owner's account (each restored afterwards, profile byte for byte):
   - 31.10.2026, profile write with the new fields: the server stores the `studentPlans<ID>` string unchanged (`active`,

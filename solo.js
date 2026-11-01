@@ -108,6 +108,7 @@
     return 'S10 «Моя неделя»: нужен вход';
   }
   const id = new URLSearchParams(location.search).get('id') || me.id;
+  const isSelf = String(id) === String(me.id); // a coach opening an athlete (?id=) gets no start window
   const [main, startParam, results, spRes, libRes, calcBase] = await Promise.all([
     get(`/apiweb/task.php?action=main&id=${id}`).catch(() => ({})),
     get(`/apiweb/userparam.php?action=get&id=${id}&param[]=studentMainStart`).catch(() => ({})),
@@ -119,9 +120,16 @@
   const parseList = (v) => { try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
   let versions = parseList(spRes.param?.[`studentPlans${id}`]).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
   const library = parseList(libRes.param?.planTemplates).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
-  const race = main.main || null;
-  const raceName = (() => { const l = race?.location || ''; return l && l === l.toUpperCase() ? l.charAt(0) + l.slice(1).toLowerCase() : l; })(); // VALENCIA → Valencia, for display only
-  const raceMon = race ? monday(race.d) : null;
+  const nameOf = (r) => { const l = r?.location || ''; return l && l === l.toUpperCase() ? l.charAt(0) + l.slice(1).toLowerCase() : l; }; // VALENCIA → Valencia, for display only
+  // «Отсутствует» in the start window: no race date, the plan runs from the next S10 running week (syncRace); kept in the
+  // browser and, once a plan is stored, with the active version, so other devices know it too
+  let noRace = !main.main && (store.get(`noRace.${id}`, false) || !!versions.find((v) => v.active)?.student?.noRace);
+  // race = the main race set on the site, or null; raceMon/raceEnd anchor the plan to dates: the race week, or without a
+  // race the plan's own last week
+  let race = null, raceName = '', raceMon = null, raceEnd = null;
+  const setEnd = (mon) => { raceMon = mon; raceEnd = mon ? add(mon, 6) : null; };
+  const setRace = (r) => { race = r; raceName = nameOf(r); setEnd(r ? monday(r.d) : null); };
+  setRace(main.main || null);
   const startId = +(startParam.param?.studentMainStart || 0);
   const paceRow = results.find((r) => r.i === startId) || results.find((r) => r.prehms) || results[0] || null;
   const PACE_S10 = paceRow?.t ? Object.fromEntries(Object.entries(paceRow.t).map(([k, v]) => [k, hms(v)])) : null;
@@ -148,7 +156,6 @@
     mons.forEach((m) => loadedWeeks.add(m));
   }
   let wk = monday(today);
-  const raceEnd = raceMon ? add(raceMon, 6) : null;
   const horizon = () => { const a = add(wk, 13); return raceEnd && raceEnd > a ? raceEnd : a; };
   { const h = horizon(), c = add(monday(today), 41); await loadRange(add(monday(today), -7), h > c ? h : c); } // last week, this week, every day to the race (or 6 weeks)
 
@@ -185,7 +192,17 @@
   /* ================= workout text ================= */
   const PRE = /[ТT]\s*(42|21|10|5)(?:\s*([+\-−])\s*(\d+))?/g;
   const toSec = (s) => { const [m, x] = String(s).split(':').map(Number); return m * 60 + x; };
-  const fmtSec = (s) => Math.floor(s / 60) + ':' + String(Math.round(s) % 60).padStart(2, '0'); // taste-skill-ignore: a pace, not a counter
+  const fmtSec = (s) => { const r = Math.round(s); return Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); }; // taste-skill-ignore: a pace, not a counter
+  // «4:48», «4.48», «448» → seconds, or null
+  const paceSec = (v) => { const m = String(v || '').trim().replace(/[.,]/g, ':').match(/^(\d{1,2}):?(\d{2})$/); return m && +m[2] < 60 ? +m[1] * 60 + +m[2] : null; };
+  // paces from the easy pace: the page shows easy runs as T42 + 55…75 s, so an easy 6:30 is T42 5:25; T5/T10/T21 keep the
+  // proportions of S10's own default (calc5 saved 4:48 / 4:59 / 5:14 / 5:25 for a new athlete)
+  const pacesFromEasy = (easy) => { const t42 = easy - 65; return { 5: fmtSec(t42 * 288 / 325), 10: fmtSec(t42 * 299 / 325), 21: fmtSec(t42 * 314 / 325), 42: fmtSec(t42) }; };
+  const EASY_DEFAULT = '6:30';
+  const pacesOk = (P) => !!P && [5, 10, 21, 42].every((k) => paceSec(P[k]));
+  // the start window, for a new athlete only: asks for what is missing (a main race, paces) and nothing else
+  const newOnb = (needRace, needPace, manual = false) => ({ race: needRace, pace: needPace, manual, d: '', dist: DISTANCES[0], name: '', goal: '', easy: EASY_DEFAULT, P: pacesFromEasy(paceSec(EASY_DEFAULT)), busy: false, err: '', focused: false });
+  let onb = isSelf && ((!race && !noRace) || !pacesOk(PACE)) ? newOnb(!race && !noRace, !pacesOk(PACE)) : null;
   const plain = (t) => (PACE ? String(t).replace(PRE, (m, d, sg, n) => { let s = toSec(PACE[d]); if (sg) s += (sg === '+' ? 1 : -1) * +n; return fmtSec(s); }) : String(t))
     .replace(/(\d)\s*[xх×]\s*(\d)/g, '$1×$2').replace(/(\d)(км|м)(?=[\s,;.]|$)/g, '$1 $2').replace(/\s{2,}/g, ' ').trim();
   const isPaceOnly = (t) => /^\s*\d{1,2}:\d{2}(\s*[-–]\s*\d{1,2}:\d{2})?\s*$/.test(t || '');
@@ -242,7 +259,7 @@
   function layWeek(w, p) {
     const mon = weekMon(w.week), k = scaleK(p);
     const target = Math.round(w.km * k);
-    const slots = w.slots.map((s) => ({ t: TYPE_BY_NAME[s.type] || 0, desc: s.desc, km: +s.km }));
+    const slots = w.slots.map((s) => ({ t: TYPE_BY_NAME[s.type] || 0, desc: s.desc, km: +s.km })).filter((s) => race || s.t !== 6); // no race: the race slot is not laid
     const raceSlot = slots.find((s) => s.t === 6);
     const roles = layout.slice();
     let raceDow = -1;
@@ -276,9 +293,9 @@
   let keepExisting = true;
   let fillSpan = store.get('fillSpan', '2w'); // '2w': tomorrow + 14 days, so the athlete can adjust before the next fill; 'race': to the race
   function fillPreview(span = fillSpan) {
-    const p = plan(); if (!p || !race) return null;
+    const p = plan(); if (!p || !raceMon) return null;
     const weeks = p.plan.weeks.slice().sort((a, b) => a.week - b.week).map((w) => layWeek(w, p));
-    const base = weeks.flatMap((w) => w.days).filter((t) => t.d > today && t.d !== race.d); // the main race day stays as set on «Настройка плана»
+    const base = weeks.flatMap((w) => w.days).filter((t) => t.d > today && (!race || t.d !== race.d)); // the main race day stays as set on «Настройка плана»
     const same = (t) => { const x = days.get(t.d); return x && +x.type === +t.typtrain && +x.target === +t.prekm && String(x.comment || '').trim() === String(t.task).trim(); };
     const pick = (from, until) => {
       const all = base.filter((t) => t.d >= from && t.d <= until);
@@ -333,7 +350,8 @@
   let mode = 'view', PL = null, flash = '', shownFlash = '';
   let tab = store.get('tab', 'week');
   let chooser = !plan(), chooserTab = versions.length ? 'version' : library.length ? 'library' : 'new';
-  let gen = { distance: plan()?.distance || DISTANCES[0], weeks: raceMon ? Math.max(1, Math.round((d8(raceMon) - d8(monday(add(today, 1)))) / 6048e5) + 1) : 8, prompt: '', busy: false, lines: 0, err: '' };
+  const weeksTo = (mon) => Math.max(1, Math.min(30, Math.round((d8(mon) - d8(monday(add(today, 1)))) / 6048e5) + 1));
+  let gen = { distance: plan()?.distance || DISTANCES[0], weeks: race ? weeksTo(raceMon) : 8, prompt: '', busy: false, lines: 0, err: '' };
   let fill = { confirm: false, busy: false, err: '', progress: '' };
   let undo = { confirm: false, where: 'card', busy: false, err: '', progress: '' }, flashUndo = '';
   // «Вернуть как было»: before a fill the page keeps what stood in those days; the record lives with the active plan in
@@ -477,7 +495,7 @@
       ...(old || {}), id: keepId || Math.random().toString(36).slice(2, 16),
       name: old?.name || `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${p.plan.weeks.length} нед.`, savedAt: new Date().toISOString(),
       templateId: old?.templateId || (sel.src === 'library' ? p.id : p.templateId || null), distance: p.distance || null, plan: { weeks: p.plan.weeks },
-      student: { ...(old?.student || {}), raceDate: race?.d || null, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], volume: String(volume || firstKm(p)), layout: layout.slice() },
+      student: { ...(old?.student || {}), raceDate: race?.d || null, noRace: !race && noRace ? true : undefined, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], volume: String(volume || firstKm(p)), layout: layout.slice() },
       active: true, filled: f, undo: undoRec === undefined ? old?.undo || null : undoRec,
     };
     const next = [v, ...list.filter((x) => x.id !== v.id).map((x) => { const { active, ...rest } = x; return rest; })];
@@ -578,11 +596,12 @@
   // the fill block's mode-dependent text: both modes drawn in one grid cell, the inactive one hidden, so the block is as
   // tall as the taller mode with any font and width and the buttons below never move when the mode is switched
   const SPANS = { '2w': '2 беговые недели', race: 'До старта' };
+  const spanLabel = (k) => (k === 'race' && !race ? 'Весь план' : SPANS[k]);
   function fillModes(f) {
     const other = fillSpan === '2w' ? 'race' : '2w', F = { [fillSpan]: f, [other]: fillPreview(other) };
     const off = (k) => (k === fillSpan ? '' : ' aria-hidden="true"');
     const body = (k) => {
-      const g = F[k], hint = k === '2w' ? [`Беговая неделя в S10 начинается ${DNIN[dow(g.span ? g.span[0] : runStart)]}.`, 'Поправьте задачи, а следующие две недели допишите этой же кнопкой.'] : ['Все оставшиеся недели плана сразу, до старта.', 'Поправить отдельные задачи можно потом в календаре S10.'];
+      const g = F[k], hint = k === '2w' ? [`Беговая неделя в S10 начинается ${DNIN[dow(g.span ? g.span[0] : runStart)]}.`, 'Поправьте задачи, а следующие две недели допишите этой же кнопкой.'] : [!race ? 'Все оставшиеся недели плана сразу.' : 'Все оставшиеся недели плана сразу, до старта.', 'Поправить отдельные задачи можно потом в календаре S10.'];
       return `<div class="w-modev"${off(k)}><span class="w-lb">Запишется в дневник</span><b class="num">${g.write.length} ${plural(g.write.length, 'день', 'дня', 'дней')}</b><span class="w-muted num">${g.write.length ? `${range(g.write[0].d, last(g.write).d)}, всего ${n1(g.write.reduce((a, t) => a + t.prekm, 0))} км` : 'все дни плана уже прошли или заняты'}</span><span class="w-muted w-hint">${hint.map((x) => `<span>${x}</span>`).join('')}</span></div>`;
     };
     const count = (k) => `<span${off(k)}>${F[k].keep.length ? `(${F[k].keep.length})` : ''}</span>`;
@@ -592,8 +611,8 @@
   }
   function planCard() {
     const p = plan();
-    const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
-    if (!race) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. Выберите его на странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
+    const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${!race && raceEnd ? `<span class="w-muted num">без старта, по ${dayLbl(raceEnd)}</span>` : race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
+    if (!race && !noRace) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. ${isSelf ? '<button class="w-link" data-act="onbopen">Укажите его здесь</button> или на' : 'Выберите его на'} странице <a href="${LIVE ? '' : 'https://s10.run'}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
     if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите версию, которую сохранил тренер, или сделайте новый по описанию: это займёт около минуты.</p>${chooserHTML()}</section>`;
     const f = fillPreview(), src = sel.src === 'version' ? (p.active ? `в вашем профиле${p.filled?.to ? `, в календаре по ${dayLbl(p.filled.to)}` : ''}` : 'ваша версия') : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
     const ws = f.weeks, first = ws[0], lastW = last(ws);
@@ -617,17 +636,18 @@
             <span class="w-wworks">${works.map((d) => `<span>${glyph(LEVEL[d.typtrain], d.typtrain === 6)}${SHORT[d.typtrain]} ${n1(d.prekm)}</span>`).join('')}</span>
             <span class="num w-wkm">${n1(w.total)} км</span>${past ? '<span class="w-pill neutral">Прошла</span>' : now ? '<span class="w-pill now">Сейчас</span>' : '<span class="w-pill-sp"></span>'}
           </button>
-          ${isOpen ? `<ol class="w-wdays">${w.days.map((d) => { const ex = days.get(d.d); const isMain = d.d === race.d; const keep = !isMain && keepExisting && d.d > today && isRun(ex);
+          ${isOpen ? `<ol class="w-wdays">${w.days.map((d) => { const ex = days.get(d.d); const isMain = !!race && d.d === race.d; const keep = !isMain && keepExisting && d.d > today && isRun(ex);
             return `<li class="${d.d <= today ? 'gone' : ''}"><span class="w-wdd"><b>${DN[dow(d.d)]}</b><small class="num">${dayLbl(d.d)}</small></span>
               <div class="w-wdb"><span class="w-name ${d.typtrain ? '' : 'w-muted'}">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}${keep ? `<span class="w-muted">В дневнике уже стоит: ${esc(TYPES[ex.type] || 'тренировка').toLowerCase()} ${n1(+ex.target || 0)} км, её не трогаем</span>` : ''}${isMain ? '<span class="w-muted">Главный старт: он уже в дневнике, страница его не меняет</span>' : ''}</div>
               <span class="num w-wdk">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`; }).join('')}</ol>` : ''}
         </li>`;
       }).join('')}</ol>
       <div class="w-sum">
-        <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${Object.entries(SPANS).map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
+        <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${Object.keys(SPANS).map((k) => [k, spanLabel(k)]).map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
           ${fillModes(f)}
           ${(() => { const u = lastUndo(); if (!u?.days?.length) return ''; const ds = u.days.map((r) => r[0]).sort(); return `<span class="w-undo">Последнее заполнение: ${range(ds[0], last(ds))} · <button class="w-link" data-act="undoask" data-where="card">Вернуть как было</button></span>`; })()}</div>
-        <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium ? '' : 'disabled'}>Заполнить календарь</button></div>
+        <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button></div>
+        ${pacesOk(PACE) ? '' : '<p class="w-note w-prem">Задайте темпа на вкладке «Мои темпа»: без них в задания встанут T5…T42 вместо минут на километр.</p>'}
         ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи в календарь можно с премиум-подпиской S10, как на странице «Настройка плана».</p>'}
       </div>
       ${fill.confirm && (fill.snap || f.write.length) ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${(fill.snap || f.write).length} ${plural((fill.snap || f.write).length, 'день', 'дня', 'дней')} в дневник?</b> ${range((fill.snap || f.write)[0].d, last(fill.snap || f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'} План и настройки сохранятся в вашем профиле.</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}
@@ -829,17 +849,87 @@
     const w = q.get('week'); wk = /^\d{4}-\d{2}-\d{2}$/.test(w || '') ? monday(w) : monday(today);
     await loadRange(wk, add(wk, 6)).catch(() => {});
   }
+  // without a race the plan's week −n starts in the week of the next S10 running week, so week −1 is n−1 weeks later
+  function syncRace() {
+    if (race || !noRace) return;
+    const n = plan()?.plan?.weeks?.length || 0;
+    setEnd(n ? add(monday(runStart), (n - 1) * 7) : null);
+  }
+  function onbHTML() {
+    const o = onb, f = (k, label, extra = '') => `<label class="w-f"><span>${label}</span><input data-o="${k}" value="${esc(o[k])}" ${extra}></label>`;
+    return `<div class="w-modal"><section class="w-dlg" role="dialog" aria-modal="true" aria-labelledby="w-onb-h">
+      <h2 id="w-onb-h">${o.race ? 'Главный старт' : 'Ваши темпа'}</h2>
+      ${o.race ? `<p class="w-muted">К какому старту готовимся? План ляжет на даты до него. Если старта пока нет, нажмите «Отсутствует»: план пойдёт со следующей беговой недели без даты старта.</p>
+      <div class="w-onb-g">
+        <label class="w-f"><span>Дата</span><input type="date" data-o="d" min="${add(today, 1)}" value="${o.d}"></label>
+        <label class="w-f"><span>Дистанция</span><select data-o="dist">${DISTANCES.map((d) => `<option ${d === o.dist ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
+        ${f('name', 'Название', 'placeholder="Например, Valencia"')}
+        ${f('goal', 'Цель, необязательно', 'class="num" inputmode="numeric" placeholder="3:20 или 22:30"')}
+      </div>` : ''}
+      ${o.pace ? `${o.race ? '<h3>Темпа</h3>' : ''}<p class="w-muted">По ним в задания встанут минуты на километр вместо T5…T42. Не знаете свои — оставьте как есть: это лёгкий бег 6:30 на километр, остальные посчитаны от него. Поменять можно потом на вкладке «Мои темпа».</p>
+      ${f('easy', 'Лёгкий бег, мин/км', 'class="num" inputmode="numeric"')}
+      <div class="w-onb-p">${[5, 10, 21, 42].map((k) => `<label class="w-f"><span>T${k}</span><input data-o="t${k}" class="num" inputmode="numeric" value="${esc(o.P[k])}"></label>`).join('')}</div>` : ''}
+      ${o.err ? `<p class="w-err" role="alert">${esc(o.err)}</p>` : ''}
+      <div class="w-acts">${o.manual ? `<button class="w-btn" data-act="onbcancel">Отмена</button>` : ''}${o.race ? `<button class="w-btn" data-act="onbnone" ${o.busy ? 'disabled' : ''}>Отсутствует</button>` : ''}<button class="w-btn primary" data-act="onbok" ${o.busy ? 'disabled' : ''}>${o.busy ? 'Сохраняю…' : o.race ? 'Сохранить старт' : 'Готово'}</button></div>
+    </section></div>`;
+  }
+  // a goal time as hh:mm:ss: «3:20» is hours for a half or a marathon, «22:30» is minutes for 10 km and shorter
+  const goalOf = (g, km) => {
+    const t = g.split(':').map(Number);
+    if (t.length < 2 || t.length > 3 || t.some((x) => !Number.isInteger(x) || x < 0) || t.slice(1).some((x) => x >= 60)) return null;
+    const hms3 = t.length === 3 ? t : km <= 10 ? [0, ...t] : [...t, 0];
+    return hms3.map((x) => String(x).padStart(2, '0')).join(':');
+  };
+  // «Сохранить старт» writes the main race the way calc3 does (a task with main6 = 1); «Отсутствует» keeps the plan
+  // without a race date; the paces go to «Мои темпа» as the athlete's own
+  async function finishOnb(withRace) {
+    const o = onb; o.err = '';
+    let P = null;
+    if (o.pace) {
+      P = {};
+      for (const k of [5, 10, 21, 42]) { const v = paceSec(o.P[k]); if (!v) { o.err = `T${k}: напишите минуты и секунды, например 4:48.`; return render(); } P[k] = fmtSec(v); }
+    }
+    if (o.race && withRace) {
+      if (!o.d || o.d <= today) { o.err = 'Выберите дату старта позже сегодняшнего дня.'; return render(); }
+      const km = parseFloat(o.dist.match(/([\d.]+) км/)[1]), g = o.goal.trim().replace(/[.,]/g, ':');
+      const goal = g ? goalOf(g, km) : '';
+      if (goal == null) { o.err = km <= 10 ? 'Цель: минуты и секунды, например 22:30, или 1:05:00.' : 'Цель: часы и минуты, например 3:20, или 3:20:00.'; return render(); }
+      o.busy = true; render();
+      await loadRange(o.d, o.d).catch(() => {});
+      const ex = days.get(o.d);
+      if (ex && (+ex.type || +ex.target || String(ex.comment || '').trim()) && o.replace !== o.d) { // a task already there: ask once
+        o.busy = false; o.replace = o.d;
+        o.err = `На ${dayLbl(o.d)} в дневнике уже стоит: ${String(ex.comment || TYPES[+ex.type] || 'задача').slice(0, 60)}${+ex.target ? `, ${n1(+ex.target)} км` : ''}. Нажмите «Сохранить старт» ещё раз, и вместо неё встанет старт.`;
+        return render();
+      }
+      const r = { d: o.d, task: 'ГОНКА', prekm: String(km), typtrain: 6, location: o.name.trim(), prediction: goal }, prev = race;
+      setRace(r); // writeTasks sends main6 = 1 for the race day, as calc3 does
+      try { await writeTasks([r]); } catch (e) { setRace(prev); o.busy = false; o.err = `Старт не сохранился (${e.message}). Попробуйте ещё раз, выберите его на странице «Настройка плана» или нажмите «Отсутствует».`; return render(); }
+      noRace = false; store.set(`noRace.${id}`, false);
+      days.set(r.d, { date: r.d, type: 6, target: km, comment: r.task, main6: 1, location: r.location, prediction: r.prediction, tracks: [] });
+      gen.distance = o.dist; gen.weeks = weeksTo(raceMon);
+    }
+    if (o.race && !withRace) { noRace = true; store.set(`noRace.${id}`, true); }
+    if (P) { PACE_OWN = P; paceSrc = 'own'; store.set(`paceOwn.${id}`, P); store.set(`paceSrc.${id}`, 'own'); reprice(); }
+    onb = null;
+    flash = o.race && withRace ? `${LIVE ? 'Главный старт сохранён' : 'Демо: главный старт сохранён только на этой странице'}: ${dayLbl(race.d)}${raceName ? `, ${raceName}` : ''}. Теперь выберите или сделайте план.` : o.race ? 'План будет без даты старта: со следующей беговой недели вперёд.' : 'Темпа сохранены.';
+    if (o.race) tab = 'plan';
+    render();
+  }
   function render() {
+    syncRace();
+    // the diary to the plan's end, for «Не трогать…» and the counts (the first load covered 6 weeks or the race)
+    if (raceEnd && raceEnd > today && !loadedWeeks.has(monday(raceEnd))) loadRange(add(today, 1), raceEnd).then(render, () => {});
     const W = week(wk), cur = wk === monday(today);
     const daysToRace = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
     const pct = W.plan ? Math.min(100, (W.done / W.plan) * 100) : 0;
     root.innerHTML = `
     ${LIVE ? '' : '<div class="w-demo" role="note">Демо на данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</div>'}
-    <header class="w-top"><div class="w-topin">
+    <header class="w-top" ${onb ? 'inert' : ''}><div class="w-topin">
       <a class="w-wm" href="${LIVE ? '/' : 'https://s10.run/'}" aria-label="S10.run, главная">${LOGO}</a>
       <span class="w-who">${esc(me.firstName)} ${esc(me.lastName)}</span>${SHOW_COLORS ? `<button class="w-btn sm" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}
     </div></header>
-    <main class="w-main">
+    <main class="w-main" ${onb ? 'inert' : ''}>
       ${colorsOpen ? colorsPanel() : ''}
       <div class="w-head">
         <h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
@@ -850,7 +940,7 @@
         <div class="w-stats">
           <div class="w-stat w-stat-wide"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span>
             ${W.plan ? `<div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${pct}%"></i></div><div class="w-track-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)} км</span></div>` : '<span class="s">на этой неделе ничего не запланировано</span>'}</div>
-          <div class="w-stat w-stat-full"><span class="w-lb">${race ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${race ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : 'не выбран'}</span></div>
+          <div class="w-stat w-stat-full"><span class="w-lb">${daysToRace != null ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${daysToRace != null ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : noRace ? 'нет, план без даты старта' : 'не выбран'}${daysToRace == null && isSelf ? ` · <button class="w-link" data-act="onbopen">указать</button>` : ''}</span></div>
         </div>
       </section>
       ${calHTML()}
@@ -862,7 +952,8 @@
       </div>
       <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? planCard() : pacesCard()}</div>
       <p class="w-foot">${LIVE ? `Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.` : 'Демо-версия страницы «Моя неделя» для S10.run.'}</p>
-    </main>`;
+    </main>${onb ? onbHTML() : ''}`;
+    if (onb && !onb.focused) { onb.focused = true; root.querySelector('.w-dlg input, .w-dlg select')?.focus(); }
     root.querySelectorAll('textarea').forEach(fit);
     syncURL(false);
     if (flash && flash !== shownFlash) { shownFlash = flash; root.querySelector('.w-flash')?.focus({ preventScroll: false }); }
@@ -967,6 +1058,13 @@
   .w-ig[data-l="1"] i:nth-child(-n+1),.w-ig[data-l="2"] i:nth-child(-n+2),.w-ig[data-l="3"] i:nth-child(-n+3){background:var(--key,var(--accent))}
   .w-ig[data-race] i{background:var(--text)!important}
   .w-note{padding:8px 20px 18px;color:var(--faint);font-size:13px;line-height:1.45}
+  .w-modal{position:fixed;inset:0;z-index:50;display:flex;padding:16px;overflow:auto;background:rgba(20,22,26,.45)}
+  .w-dlg{margin:auto;width:min(560px,100%);display:grid;gap:14px;padding:22px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+  .w-dlg h2{margin:0;font-size:20px;font-weight:500}.w-dlg h3{margin:4px 0 0;font-size:16px;font-weight:500}.w-dlg p{margin:0;font-size:14px;line-height:1.5}
+  .w-onb-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .w-onb-p{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .w-dlg .w-acts{justify-content:flex-end}
+  @media (max-width:480px){.w-onb-g{grid-template-columns:1fr}.w-onb-p{grid-template-columns:repeat(2,minmax(0,1fr))}.w-dlg .w-btn{flex:1}}
   .w-err{color:var(--bad)!important;font-size:14px}
   .w-sum .w-prem{flex-basis:100%;padding:0;text-align:right}
   .w-foot{color:var(--faint);font-size:12px}
@@ -1142,6 +1240,9 @@
       if (act === 'plan') { tab = 'week'; return openPlanner(); }
       if (act === 'close') { mode = 'view'; PL = null; return render(); }
       if (act === 'flash') { flash = ''; return render(); }
+      if (act === 'onbok' || act === 'onbnone') return finishOnb(act === 'onbok');
+      if (act === 'onbopen') { onb = newOnb(true, false, true); return render(); }
+      if (act === 'onbcancel') { onb = null; return render(); }
       if (act === 'wgen') return generateWeek();
       if (act === 'wsave') return saveWeek();
       if (act === 'dsel') { PL.dsel = a.dataset.k; PL.rows = null; pickWorks(); return render(); }
@@ -1175,6 +1276,7 @@
     syncURL(true); render();
   });
   root.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && onb?.manual) { onb = null; return render(); }
     const c = e.target.closest('.w-cd');
     if (c && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
       const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
@@ -1194,10 +1296,11 @@
     if (pk === 'keep') { keepExisting = t.checked; fill.confirm = false; return render(); }
     if (pk === 'pacesrc') { paceSrc = t.value; if (paceSrc === 'own' && !PACE_OWN) PACE_OWN = { ...PACE }; store.set(`paceSrc.${id}`, paceSrc); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render(); }
     if (pk === 'pace') {
-      const v = t.value.trim().replace(/[.,]/g, ':'), m = v.match(/^(\d{1,2}):?(\d{2})$/);
-      if (!m) { t.setCustomValidity('Например 4:30'); t.reportValidity(); return; }
+      const v = paceSec(t.value);
+      if (!v) { t.setCustomValidity('Например 4:30'); t.reportValidity(); return; }
       t.setCustomValidity('');
-      PACE_OWN = { ...PACE, [t.dataset.k]: `${+m[1]}:${m[2]}` }; paceSrc = 'own'; store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render();
+      // never a partial set: the other three come from the current paces, or from the default easy 6:30
+      PACE_OWN = { ...(pacesOk(PACE) ? PACE : pacesFromEasy(paceSec(EASY_DEFAULT))), [t.dataset.k]: fmtSec(v) }; paceSrc = 'own'; store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render();
     }
     if (pk === 'volume') { const v = +t.value.replace(',', '.'); volume = v > 0 ? v : null; return render(); }
     if (t.dataset.g) { const k = t.dataset.g; gen[k] = k === 'weeks' ? Math.max(1, Math.min(30, +t.value || gen.weeks)) : t.value; if (k !== 'prompt') render(); return; }
@@ -1216,6 +1319,12 @@
     const t = e.target, f = t.dataset.f;
     if (t.tagName === 'TEXTAREA') fit(t);
     if (t.dataset.g === 'prompt') { gen.prompt = t.value; return; }
+    if (t.dataset.o && onb) { // the start window keeps what is typed without redrawing (focus stays)
+      const k = t.dataset.o;
+      if (/^t\d+$/.test(k)) onb.P[k.slice(1)] = t.value; else onb[k] = t.value;
+      if (k === 'easy') { const v = paceSec(t.value); if (v && v > 65 + 120) { onb.P = pacesFromEasy(v); for (const n of [5, 10, 21, 42]) { const x = root.querySelector(`[data-o="t${n}"]`); if (x) x.value = onb.P[n]; } } }
+      return;
+    }
     if (!f || f === 'pick' || f === 'move' || f === 'typtrain' || f === 't') return;
     if (t.dataset.w != null) { const w = PL.works[+t.dataset.w]; if (f === 'km') w.km = +t.value.replace(',', '.') || 0; else w.txt = t.value; if (PL.rows && !PL.stale) { PL.stale = true; const s = root.querySelector('[data-act=wsave]'); if (s) s.disabled = true; } return; }
     if (t.dataset.r != null) {
