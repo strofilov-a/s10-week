@@ -25,7 +25,7 @@ Colours: palette №3 «Лист, синяя и красная ручка» is t
 |---|---|
 | `solo.js` | The whole page (no build step, no dependencies). Live data on s10.run, demo mode anywhere else. |
 | `index.html` | GitHub Pages root: redirects to the demo outside s10.run. |
-| `landing/` | Promo page for S10 Solo: https://strofilov-a.github.io/s10-week/landing/ (`?p=1..4` picks one of four palettes). |
+| `landing/` | Promo page for S10 Solo: https://strofilov-a.github.io/s10-week/landing/ (`?p=1`, `3` or `4` picks a palette). |
 | `deploy/solo.html`, `deploy/ЗАДАНИЕ.md` | The page shell for s10.run and the one-page brief for the S10 developer. |
 | `deploy/build.cjs`, `release/` | `npm run build` makes `release/`, the folder for the S10 developer: production `solo.js` without the demo, `solo.html`, the brief. |
 | `tests/check.cjs` | Browser checks against the demo (`tests/README.md`). |
