@@ -29,28 +29,28 @@
   --bg: #191970; --surface: #22227e; --deep: #10104f;
   --ink: #ffffff; --muted: rgba(255,255,255,.78);
   --accent: #58A6FF; --on-accent: #0c0c45;
-  --hi: #58A6FF; --on-hi: #0c0c45; --tint: #191970; --scrim: rgba(8,8,40,.42);
+  --hi: #58A6FF; --on-hi: #0c0c45; --work: #58A6FF; --long: #ffffff; --tint: #191970; --scrim: rgba(8,8,40,.42);
 }
 [data-p="1"] {
   /* pacific blue · tomato · mustard */
   --bg: #06323a; --surface: #0b4650; --deep: #032329;
   --ink: #fbf6e4; --muted: rgba(251,246,228,.8);
   --accent: #FE4A49; --on-accent: #2a0606;
-  --hi: #FED766; --on-hi: #2a2206; --tint: #009FB7; --scrim: rgba(2,22,26,.45);
+  --hi: #FED766; --on-hi: #2a2206; --work: #FED766; --long: #4fd6ea; --tint: #009FB7; --scrim: rgba(2,22,26,.45);
 }
 [data-p="3"] {
   /* maroon · medium violet red · light cyan */
   --bg: #4a0008; --surface: #800000; --deep: #2e0005;
   --ink: #E0FFFF; --muted: rgba(224,255,255,.8);
   --accent: #C71585; --on-accent: #ffffff;
-  --hi: #E0FFFF; --on-hi: #4a0008; --tint: #800000; --scrim: rgba(30,0,4,.45);
+  --hi: #E0FFFF; --on-hi: #4a0008; --work: #E0FFFF; --long: #ff5fb4; --tint: #800000; --scrim: rgba(30,0,4,.45);
 }
 [data-p="4"] {
   /* espresso · burnt peach · soft apricot */
   --bg: #2e1a14; --surface: #4E2C23; --deep: #1f110d;
   --ink: #FFDAB9; --muted: rgba(255,218,185,.8);
   --accent: #E2725B; --on-accent: #23120d;
-  --hi: #E2725B; --on-hi: #23120d; --tint: #4E2C23; --scrim: rgba(20,10,7,.45);
+  --hi: #E2725B; --on-hi: #23120d; --work: #FFDAB9; --long: #f2b35e; --tint: #4E2C23; --scrim: rgba(20,10,7,.45);
 }
 
 :root {
@@ -155,9 +155,13 @@ h2 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-sp
 .cal-grid .mo { color: var(--muted); align-self: center; padding-bottom: 8px; font-size: var(--step-small); }
 .cal-grid .d { position: relative; text-align: center; padding: 3px 0 13px; font-variant-numeric: tabular-nums; color: var(--muted); transition: color .3s var(--ease); }
 .cal-grid .d::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--ink); opacity: 0; transform: scale(.3); transition: opacity .3s var(--ease), transform .3s var(--ease); }
-.cal-grid .d.key::after { background: var(--hi); width: 8px; height: 8px; margin-left: -4px; }
+.cal-grid .d.work::after { background: var(--work); width: 9px; height: 9px; margin-left: -4.5px; }
+.cal-grid .d.long::after { background: var(--long); width: 18px; height: 6px; margin-left: -9px; border-radius: 3px; }
 .cal-grid .d.on { color: var(--ink); }
-.cal-grid .d.on::after { opacity: .9; transform: scale(1); }
+.cal-grid .d.on::after { opacity: 1; transform: scale(1); }
+.cal-grid .d.run.on::after { opacity: .45; }
+.cal-grid .d.work.on, .cal-sec:not(.is-live) .d.work { color: var(--work); font-weight: 500; }
+.cal-grid .d.long.on, .cal-sec:not(.is-live) .d.long { color: var(--long); font-weight: 500; }
 .cal-grid .d.race { font-weight: 500; }
 .cal-grid .d.race.on, .cal-sec:not(.is-live) .d.race { color: var(--on-accent); }
 .cal-grid .d.race::before { content: ''; position: absolute; left: 50%; top: 50%; width: 2.2em; height: 2.2em; margin: -1.45em 0 0 -1.1em; border-radius: 50%; background: var(--accent); z-index: -1; opacity: 0; transform: scale(.3); transition: transform .5s var(--ease), opacity .5s var(--ease); }
@@ -166,11 +170,14 @@ h2 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-sp
 .cal-grid .d { z-index: 0; }
 .cal-key { display: flex; gap: 24px; margin-top: 16px; font-size: var(--step-small); color: var(--muted); }
 .cal-key span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); margin-right: 8px; vertical-align: middle; }
-.cal-key span.k::before { background: var(--hi); }
+.cal-key span.e::before { opacity: .45; width: 6px; height: 6px; }
+.cal-key span.k::before { background: var(--work); width: 9px; height: 9px; }
+.cal-key span.l::before { background: var(--long); width: 18px; height: 6px; border-radius: 3px; }
 .cal-key span.r::before { background: var(--accent); width: 12px; height: 12px; }
 /* without the scene running, the finished calendar */
 .cal-sec:not(.is-live) .d { color: var(--ink); }
-.cal-sec:not(.is-live) .d::after { opacity: .9; transform: scale(1); }
+.cal-sec:not(.is-live) .d::after { opacity: 1; transform: scale(1); }
+.cal-sec:not(.is-live) .d.run::after { opacity: .45; }
 .cal-sec:not(.is-live) .d.race::before { opacity: 1; transform: scale(1); }
 .cal-sec:not(.is-live) .cal-says p + p { margin-top: .6em; }
 
@@ -495,7 +502,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
       </div>
       <div class="cal" data-ui>
         <div class="cal-grid" id="cal-grid" aria-label="Календарь с 14 сентября по 6 декабря"></div>
-        <div class="cal-key"><span>в плане</span><span class="k">ключевая</span><span class="r">старт</span></div>
+        <div class="cal-key"><span class="e">лёгкая</span><span class="k">работа</span><span class="l">длительная</span><span class="r">старт</span></div>
       </div>
     </div>
   </section>
@@ -737,11 +744,11 @@ html.js [data-rise].in { opacity: 1; transform: none; }
     for (let i = 0; i < 7; i++) {
       const d = new Date(2026, 8, 14 + w * 7 + i);
       const race = w === 11 && i === 6;
-      // Mon rest; Wed, Fri and Sun key workouts; race week: Tue easy, Wed short tempo, Thu–Sat rest
+      // Mon rest; Wed interval and Fri development (work), Sun long; race week: Tue easy, Wed short work, Thu–Sat rest
       const run = race || (w < 11 ? i !== 0 : i === 1 || i === 2);
-      const key = !race && run && (w < 11 ? i === 2 || i === 4 || i === 6 : i === 2);
+      const work = run && (w < 11 ? i === 2 || i === 4 : i === 2), long = w < 11 && i === 6;
       const el = document.createElement('span');
-      el.className = 'd' + (run && !race ? (key ? ' key' : ' run') : '') + (race ? ' race' : '');
+      el.className = 'd' + (race ? ' race' : long ? ' long' : work ? ' work' : run ? ' run' : '');
       el.textContent = d.getDate();
       if (race) el.setAttribute('aria-label', '6 декабря, старт');
       grid.appendChild(el);
