@@ -36,7 +36,7 @@
   --bg: #4a0008; --surface: #800000; --deep: #2e0005;
   --ink: #E0FFFF; --muted: rgba(224,255,255,.8);
   --accent: #C71585; --on-accent: #ffffff;
-  --hi: #E0FFFF; --on-hi: #4a0008; --work: #E0FFFF; --long: #ff5fb4; --tint: #800000; --scrim: rgba(30,0,4,.45);
+  --hi: #E0FFFF; --on-hi: #4a0008; --work: #E0FFFF; --long: #ff5fb4; --race: #FED766; --on-race: #4a0008; --tint: #800000; --scrim: rgba(30,0,4,.45);
 }
 [data-p="4"] {
   /* espresso · burnt peach · soft apricot */
@@ -157,8 +157,8 @@ h2 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-sp
 .cal-grid .d.work.on, .cal-sec:not(.is-live) .d.work { color: var(--work); font-weight: 500; }
 .cal-grid .d.long.on, .cal-sec:not(.is-live) .d.long { color: var(--long); font-weight: 500; }
 .cal-grid .d.race { font-weight: 500; }
-.cal-grid .d.race.on, .cal-sec:not(.is-live) .d.race { color: var(--on-accent); }
-.cal-grid .d.race::before { content: ''; position: absolute; left: 50%; top: 50%; width: 2.2em; height: 2.2em; margin: -1.45em 0 0 -1.1em; border-radius: 50%; background: var(--accent); z-index: -1; opacity: 0; transform: scale(.3); transition: transform .5s var(--ease), opacity .5s var(--ease); }
+.cal-grid .d.race.on, .cal-sec:not(.is-live) .d.race { color: var(--on-race, var(--on-accent)); }
+.cal-grid .d.race::before { content: ''; position: absolute; left: 50%; top: 50%; width: 2.2em; height: 2.2em; margin: -1.45em 0 0 -1.1em; border-radius: 50%; background: var(--race, var(--accent)); z-index: -1; opacity: 0; transform: scale(.3); transition: transform .5s var(--ease), opacity .5s var(--ease); }
 .cal-grid .d.race.on::before { opacity: 1; transform: scale(1); }
 .cal-grid .d.race::after { display: none; }
 .cal-grid .d { z-index: 0; }
@@ -167,7 +167,7 @@ h2 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-sp
 .cal-key span.e::before { opacity: .45; width: 6px; height: 6px; }
 .cal-key span.k::before { background: var(--work); width: 9px; height: 9px; }
 .cal-key span.l::before { background: var(--long); width: 18px; height: 6px; border-radius: 3px; }
-.cal-key span.r::before { background: var(--accent); width: 12px; height: 12px; }
+.cal-key span.r::before { background: var(--race, var(--accent)); width: 12px; height: 12px; }
 /* without the scene running, the finished calendar */
 .cal-sec:not(.is-live) .d { color: var(--ink); }
 .cal-sec:not(.is-live) .d::after { opacity: 1; transform: scale(1); }
