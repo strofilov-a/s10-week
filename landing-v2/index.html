@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru" data-p="1">
+<html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -7,58 +7,18 @@
 <meta name="description" content="Назовите старт и цель: S10 Solo разложит план по датам, посчитает темпа и заполнит календарь за три минуты.">
 <meta property="og:title" content="S10 Solo — план до старта">
 <meta property="og:description" content="Назовите старт и цель: план до него за три минуты.">
-<meta name="theme-color" content="#06323a">
+<meta name="theme-color" content="#EEF1EF">
 <script>
   document.documentElement.classList.add('js');
-  // palette: ?p=1, 3, 4 (the owner's) or 1t, 3t, 4t (taste's corrections) wins, then the last choice on this device; 1 by default
-  (function () {
-    var q = new URLSearchParams(location.search).get('p'), s = null;
-    try { s = localStorage.getItem('solo-p'); } catch (e) {}
-    var ok = /^[134]t?$/;
-    document.documentElement.dataset.p = ok.test(q) ? q : ok.test(s) ? s : '1';
-  })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="scenes/stage.css">
 <style>
-/* ---------- palettes: the owner's three-colour sets; the race-day circle is the page's one motif ---------- */
-:root, [data-p="1"] {
-  /* pacific blue · tomato · mustard */
-  --bg: #06323a; --surface: #0b4650; --deep: #032329;
-  --ink: #f2f7f6; --muted: rgba(242,247,246,.8);
-  --accent: #FE4A49; --on-accent: #2a0606;
-  --light: #FED766; --on-light: #2a2206;
-  --mid: #009FB7; --on-mid: #04262b;
-  --race: #FE4A49; --on-race: #2a0606;
-  --hi: #FED766; --on-hi: #2a2206; --work: #FED766; --long: #4fd6ea;
-}
-[data-p="3"] {
-  /* maroon · medium violet red · light cyan (the race in mustard, owner 03.11.2026) */
-  --bg: #4a0008; --surface: #800000; --deep: #2e0005;
-  --ink: #E0FFFF; --muted: rgba(224,255,255,.8);
-  --accent: #C71585; --on-accent: #ffffff;
-  --light: #E0FFFF; --on-light: #4a0008;
-  --mid: #800000; --on-mid: #E0FFFF;
-  --race: #FED766; --on-race: #4a0008;
-  --hi: #E0FFFF; --on-hi: #4a0008; --work: #E0FFFF; --long: #ff5fb4;
-}
-[data-p="4"] {
-  /* espresso · burnt peach · soft apricot */
-  --bg: #2e1a14; --surface: #4E2C23; --deep: #1f110d;
-  --ink: #FFDAB9; --muted: rgba(255,218,185,.8);
-  --accent: #E2725B; --on-accent: #23120d;
-  --light: #FFDAB9; --on-light: #2e1a14;
-  --mid: #4E2C23; --on-mid: #FFDAB9;
-  --race: #E2725B; --on-race: #23120d;
-  --hi: #E2725B; --on-hi: #23120d; --work: #FFDAB9; --long: #f2b35e;
-}
-
-/* taste's corrections of the same three sets (colour.md): one accent on the action and the race only, fields with their own inks,
-   no violet (the violet red moves to raspberry), no cream with terracotta (a neutral bone ink on espresso instead of apricot) */
-[data-p="1t"] {
-  /* pacific · tomato · mustard on a cool stone ground */
+/* ---------- colour: taste's correction of the owner's pacific blue · tomato · mustard (his choice, 03.11.2026);
+   the race-day circle is the page's one motif ---------- */
+:root {
   color-scheme: light;
   --bg: #EEF1EF; --surface: #E1E8E6; --deep: #FFFFFF;
   --ink: #0B3A42; --muted: rgba(11,58,66,.78);
@@ -67,26 +27,6 @@
   --mid: #0B8FA3; --on-mid: #03191c;
   --race: #EF4B3F; --on-race: #2a0605;
   --hi: #0B8FA3; --on-hi: #ffffff; --work: #B07A00; --long: #0B8FA3;
-}
-[data-p="3t"] {
-  /* maroon · raspberry · light cyan, the race in mustard */
-  --bg: #35070d; --surface: #5a0d16; --deep: #22040a;
-  --ink: #E6F7F7; --muted: rgba(230,247,247,.78);
-  --accent: #E0386B; --on-accent: #22040a;
-  --light: #D9F2F2; --on-light: #35070d;
-  --mid: #7a0f1c; --on-mid: #E6F7F7;
-  --race: #F4CC55; --on-race: #35070d;
-  --hi: #D9F2F2; --on-hi: #35070d; --work: #D9F2F2; --long: #FF7FA6;
-}
-[data-p="4t"] {
-  /* espresso ground, a neutral bone ink; the burnt peach reads as terracotta (banned), so the action and the race take mustard and the peach stays on the long runs */
-  --bg: #2a1712; --surface: #432820; --deep: #1c0f0b;
-  --ink: #ECECEA; --muted: rgba(236,236,234,.78);
-  --accent: #EDB43E; --on-accent: #1c0f0b;
-  --light: #E5E4E1; --on-light: #2a1712;
-  --mid: #5b3428; --on-mid: #ECECEA;
-  --race: #EDB43E; --on-race: #1c0f0b;
-  --hi: #EDB43E; --on-hi: #1c0f0b; --work: #E5E4E1; --long: #F0A27E;
 }
 
 :root {
@@ -422,14 +362,6 @@ h2 { font-size: var(--step-head); }
 .foot-last { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 0 var(--m) 28px; font-size: 15px; color: var(--muted); }
 .foot-last .btn { min-height: 40px; font-size: 15px; padding: 0 18px; }
 
-/* palette picker, for choosing among the sets */
-.pal { position: fixed; z-index: 50; right: 16px; bottom: 16px; display: flex; gap: 6px; padding: 8px; background: var(--deep); border-radius: 999px; box-shadow: 0 6px 24px rgba(0,0,0,.35); } /* taste-skill-ignore: a floating picker, not a surface at rest */
-.pal { align-items: center; }
-.pal-l { font-size: 13px; color: var(--muted); padding: 0 4px 0 8px; }
-.pal button { all: unset; cursor: pointer; display: grid; grid-template-columns: repeat(3, 10px); width: 30px; height: 30px; border-radius: 50%; overflow: hidden; outline-offset: 2px; }
-.pal button i { display: block; }
-.pal button[aria-pressed="true"] { outline: 2px solid var(--ink); }
-.pal button:focus-visible { outline: 3px solid var(--light); }
 
 /* entrances: parts of a section rise in turn, never hidden without a script */
 html.js [data-rise] { opacity: 0; transform: translateY(24px); transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: calc(var(--i, 0) * 80ms); }
@@ -542,7 +474,6 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   .foot-links { grid-template-columns: 1fr; padding: 32px 20px 20px; }
   .foot-links nav, .foot-links .contact { grid-column: 1; }
   .foot-last { padding: 0 20px 24px; }
-  .pal { position: static; width: max-content; margin: 0 20px 24px; box-shadow: none; } /* taste-skill-ignore: removes the picker shadow */
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -835,16 +766,6 @@ html.js [data-rise].in { opacity: 1; transform: none; }
     <p class="contact">S10 Solo · подготовка к старту без тренера</p>
   </div>
   <div class="foot-last"><span>© 2026 · <a class="link" href="https://s10.run/post/3578/">Персональные данные</a></span><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan">Начать</a></div>
-  <div class="pal" role="group" aria-label="Палитра">
-    <span class="pal-l">ваши</span>
-    <button type="button" data-set="1" aria-label="Палитра 1: pacific blue, tomato, mustard"><i style="background:#009FB7"></i><i style="background:#FE4A49"></i><i style="background:#FED766"></i></button>
-    <button type="button" data-set="3" aria-label="Палитра 3: maroon, medium violet red, light cyan"><i style="background:#800000"></i><i style="background:#C71585"></i><i style="background:#E0FFFF"></i></button>
-    <button type="button" data-set="4" aria-label="Палитра 4: espresso, burnt peach, soft apricot"><i style="background:#4E2C23"></i><i style="background:#E2725B"></i><i style="background:#FFDAB9"></i></button>
-    <span class="pal-l">taste</span>
-    <button type="button" data-set="1t" aria-label="Палитра 1 от taste: светлый камень, глубокий бирюзовый, томат, горчица"><i style="background:#EEF1EF"></i><i style="background:#0B3A42"></i><i style="background:#EF4B3F"></i></button>
-    <button type="button" data-set="3t" aria-label="Палитра 3 от taste: глубокий maroon, малиновый, светлый циан"><i style="background:#35070d"></i><i style="background:#E0386B"></i><i style="background:#D9F2F2"></i></button>
-    <button type="button" data-set="4t" aria-label="Палитра 4 от taste: эспрессо, кость, горчица"><i style="background:#2a1712"></i><i style="background:#ECECEA"></i><i style="background:#EDB43E"></i></button>
-  </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
@@ -858,15 +779,6 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   const fmt = (s) => { const r = Math.round(s); return Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); };
   const hms = (s) => { const r = Math.round(s), h = Math.floor(r / 3600), m = Math.floor(r % 3600 / 60), x = r % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
 
-  /* palette picker */
-  const html = document.documentElement, meta = $('meta[name="theme-color"]');
-  const setP = (p) => {
-    html.dataset.p = p;
-    try { localStorage.setItem('solo-p', p); } catch (e) {}
-    $$('.pal button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.set === p)));
-    meta.content = getComputedStyle(html).getPropertyValue('--bg').trim();
-    showItem(item, true);
-  };
 
   /* the plan: 12 weeks, 14 Sep – 6 Dec 2026; a steady build, an easier week every fourth, the taper */
   const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -963,7 +875,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
     'Каждая тренировка написана в минутах на километр из ваших T5, T10, T21 и T42. Никаких «T21+8» в дневнике.',
     'Все недели до старта с объёмом: ровный рост, лёгкая неделя каждую четвёртую и подводка к гонке.',
   ];
-  const DISC = ['--accent', '--light', '--mid', '--long'];
+  const DISC = ['--accent', '--light', '--mid', '--ink'];
   const disc = $('#show-disc'), frags = $$('.show-frag .ui'), picks = $$('.show-list button'), fact = $('#show-fact');
   let item = 0;
   function showItem(k, force) {
@@ -972,15 +884,14 @@ html.js [data-rise].in { opacity: 1; transform: none; }
     frags.forEach((f, i) => { f.hidden = i !== k; });
     picks.forEach((b, i) => b.setAttribute('aria-pressed', String(i === k)));
     fact.textContent = FACTS[k];
-    disc.style.backgroundColor = getComputedStyle(html).getPropertyValue(DISC[k]).trim();
+    disc.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue(DISC[k]).trim();
   }
   picks.forEach((b) => {
     b.addEventListener('click', () => showItem(+b.dataset.to));
     b.addEventListener('mouseenter', () => matchMedia('(hover: hover)').matches && showItem(+b.dataset.to));
     b.addEventListener('focus', () => showItem(+b.dataset.to));
   });
-  $$('.pal button').forEach((b) => b.addEventListener('click', () => setP(b.dataset.set)));
-  setP(html.dataset.p);
+  showItem(0, true);
 
   /* how it works: the scroll moves the stages; the names jump to theirs */
   const CLAUSES = ['Сначала вы пишете цель', 'Потом Solo собирает план', 'Дальше вы ставите дни', 'И календарь заполнен'];
