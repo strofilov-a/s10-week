@@ -23,12 +23,13 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 | `demo/index.html`, `demo/fixtures.js` | Demo on an anonymised snapshot (31.10.2026). Published on GitHub Pages: https://strofilov-a.github.io/s10-week/demo/ (`?newbie`: as a just-signed-up athlete, afresh each visit; `&free`: no premium) |
 | `index.html` | GitHub Pages root: redirects to `demo/` outside s10.run. |
 | `landing/` | Promo page for S10 Solo (traffic from Instagram/Threads): one `index.html` + `scenes/` (taste-skill scroll stage, GSAP/Lenis from jsdelivr). No photos (owner, 03.11.2026). Every button goes to `/login?back=…/solo/plan`. Three palettes (`?p=1`, `3`, `4`; the blue №2 removed by the owner 03.11.2026; picker until he chooses). https://strofilov-a.github.io/s10-week/landing/ |
-| `landing-v2/` | Second take on the same page after a taste review (direction «one motif»: the race-day circle flies from the hero into 6 December; colour fields, «Что умеет Solo» as a held scene of six features, the paces slider, two plan fields). Jost + Golos Text. Palettes: the owner's 1, 3, 4 and taste's corrections 1t, 3t, 4t (`?p=1t`…; 4t moved the accent from burnt peach to mustard: taste bans terracotta). https://strofilov-a.github.io/s10-week/landing-v2/ |
+| `landing-v2/` | Second take on the same page after a taste review (direction «one motif»: the race-day circle flies from the hero into 6 December; colour fields, «Что умеет Solo» as a held scene of six features, the paces slider, two plan fields). Jost + Golos Text. One palette: 1t, taste's correction of the owner's pacific · tomato · mustard (stone ground, deep teal ink; owner's choice 03.11.2026). Built into `release/solo-start.html` for `/solo/start`. https://strofilov-a.github.io/s10-week/landing-v2/ |
 | `deploy/solo.html` | The page shell for s10.run (copied from the `/calc3` template: `/t5` Roboto fonts, icons, cookie consent). |
 | `deploy/ЗАДАНИЕ.md` | The one-page brief for the S10 developer (copied into `release/` as `README.md`). |
-| `deploy/build.cjs` | `npm run build`: cuts every demo-marked block (`/*<demo>*/…/*</demo>*/`) out of `solo.js` into `release/`, stamps `?v=` with a hash of the code, checks no demo is left and that it parses. Mark any new demo-only code so. |
+| `deploy/build.cjs` | `npm run build`: cuts every demo-marked block (`/*<demo>*/…/*</demo>*/`) out of `solo.js` into `release/`, stamps `?v=` with a hash of the code, checks no demo is left and that it parses. Mark any new demo-only code so. Also builds `release/solo-start.html` from `landing-v2/` with its stage, GSAP and Lenis inlined from node_modules (no CDN: jsDelivr is unreliable from Russia). |
 | `release/` | What goes to the S10 developer, committed; CI fails if it differs from a fresh build. |
 | `tests/release.cjs` | Runs the release build at `/solo/plan` against a stand-in of the site's API (the demo snapshot), writes recorded. |
+| `tests/landing.cjs` | Runs `release/solo-start.html` at `/solo/start` with every outside request blocked: scenes live, the circle lands, actions go to the login, paces follow the goal. |
 | `tests/check.cjs` | Browser checks against the demo (see Testing). |
 | `.github/workflows/check.yml` | Runs `tests/check.cjs` on every push and pull request. |
 | `README.md` | Feature and API overview (English). |
@@ -121,7 +122,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # demo checks (67), then the release build and its checks (12)
+npm test                                     # demo checks (67), the release build and its checks (12), the promo page (18)
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same on every push and pull request, and fails if the committed

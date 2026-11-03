@@ -4,10 +4,12 @@
   "description": "S10 «Моя неделя» page; package.json only for the browser checks",
   "scripts": {
     "serve": "python3 -m http.server 8766 --bind 127.0.0.1",
-    "test": "node --check solo.js && node tests/check.cjs && node deploy/build.cjs && node tests/release.cjs",
+    "test": "node --check solo.js && node tests/check.cjs && node deploy/build.cjs && node tests/release.cjs && node tests/landing.cjs",
     "build": "node deploy/build.cjs"
   },
   "devDependencies": {
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.26",
     "playwright": "^1.64.1"
   }
 }
