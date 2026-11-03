@@ -222,6 +222,12 @@ h2 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-sp
 .how-frag { width: min(520px, 100%); position: relative; }
 .how-frag .ui { font-size: 17px; padding: 28px; }
 .how-frag .wk, .how-frag .lay { font-size: 15px; }
+.dc-title { font-weight: 300; font-size: var(--step-lead); line-height: 1.1; letter-spacing: -0.02em; }
+.dc-dates { margin-top: 10px; color: var(--muted); font-weight: 300; font-size: var(--step-lead); line-height: 1.1; letter-spacing: -0.02em; }
+.dc-figs { display: flex; gap: clamp(28px, 4vw, 64px); margin-top: 44px; }
+.dc-figs div { color: var(--muted); font-size: var(--step-body); }
+.dc-figs b { display: block; font-weight: 300; font-size: clamp(4.5rem, 2rem + 6vw, 8rem); line-height: .9; letter-spacing: -0.045em; color: var(--ink); margin-bottom: 10px; }
+.dc-figs div + div b { color: var(--hi); }
 .how-frag .ui { transition: opacity .25s var(--ease), transform .25s var(--ease); }
 .how-frag .ui[hidden] { display: block; position: absolute; inset: 0 0 auto 0; opacity: 0; transform: translateY(16px); pointer-events: none; visibility: hidden; }
 .how-bar { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 28px 28px; z-index: 2; }
@@ -567,8 +573,9 @@ html.js [data-rise].in { opacity: 1; transform: none; }
             <div class="lay"><span>Вс</span><span>Длительная</span><span>11 км</span></div>
           </div>
           <div class="ui" data-ui data-stage="3" hidden>
-            <div class="ui-lbl">Календарь заполнен</div>
-            <p class="ui-mut" style="margin-top:6px">14–27 сентября · 12 тренировок · 104 км</p>
+            <div class="dc-title">Календарь заполнен</div>
+            <div class="dc-dates">14–27 сентября</div>
+            <div class="dc-figs num"><div><b>12</b>тренировок</div><div><b>104</b>км</div></div>
           </div>
         </div>
       </div>
