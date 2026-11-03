@@ -2,3 +2,4 @@ node_modules/
 *.zip
 landing/.taste-skill/
 .claude/launch.json
+landing-v2/.taste-skill/
