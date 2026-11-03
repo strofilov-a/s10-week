@@ -158,7 +158,7 @@ h2 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-sp
 .cal-grid .d.long.on, .cal-sec:not(.is-live) .d.long { color: var(--long); font-weight: 500; }
 .cal-grid .d.race { font-weight: 500; }
 .cal-grid .d.race.on, .cal-sec:not(.is-live) .d.race { color: var(--on-race, var(--on-accent)); }
-.cal-grid .d.race::before { content: ''; position: absolute; left: 50%; top: 50%; width: 2.2em; height: 2.2em; margin: -1.45em 0 0 -1.1em; border-radius: 50%; background: var(--race, var(--accent)); z-index: -1; opacity: 0; transform: scale(.3); transition: transform .5s var(--ease), opacity .5s var(--ease); }
+.cal-grid .d.race::before { content: ''; position: absolute; left: 50%; top: calc(clamp(1px, .4svh, 4px) + .625em); width: 1.65em; height: 1.65em; margin: -.825em 0 0 -.825em; border-radius: 50%; background: var(--race, var(--accent)); z-index: -1; opacity: 0; transform: scale(.3); transition: transform .5s var(--ease), opacity .5s var(--ease); }
 .cal-grid .d.race.on::before { opacity: 1; transform: scale(1); }
 .cal-grid .d.race::after { display: none; }
 .cal-grid .d { z-index: 0; }
@@ -378,6 +378,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   .cal-grid .d { padding: 0 0 8px; }
   .cal-grid .d::after { bottom: 2px; }
   .cal-key { font-size: 13px; }
+  .cal-grid .d.race::before { width: 1.55em; height: 1.55em; margin: -.775em 0 0 -.775em; }
   .cal-key { margin-top: 12px; gap: 16px; }
 
   .chapter { height: auto; min-height: 100svh; display: flex; flex-direction: column; justify-content: center; gap: 24px; padding: 88px 20px 40px; }
