@@ -57,7 +57,7 @@ const srv = http.createServer((q, r) => {
     const p1 = await page.textContent('#pc-main');
     check(`${name}: paces follow the goal`, p0 === '4:44' && p1 === '4:16', `${p0}, then ${p1}`);
 
-    const over = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     check(`${name}: nothing runs off the side`, over <= 0, `${over}px`);
     check(`${name}: no script errors`, !errors.length, errors.join('; '));
     await page.close();
