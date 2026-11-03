@@ -483,7 +483,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
           <p>Старт отмечен. Осталось бегать.</p>
         </div>
         <div class="cal-figs">
-          <div><b class="num" id="cal-km">60 км</b><span id="cal-wk">объём недели, 30 ноя – 6 дек</span></div>
+          <div><b class="num" id="cal-km">40 км</b><span id="cal-wk">объём недели, 30 ноя – 6 дек</span></div>
           <div><b class="num" id="cal-n">72</b>тренировки</div>
         </div>
       </div>
@@ -542,7 +542,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
             <div class="ui-row" style="margin-top:14px"><span class="ui-mut">Марафон · 12 недель</span><span class="ui-btn">Сгенерировать</span></div>
           </div>
           <div class="ui" data-ui data-stage="1" hidden>
-            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">План до старта</span><span class="ui-mut">734 км</span></div>
+            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">План до старта</span><span class="ui-mut">714 км</span></div>
             <div class="wk"><span>14–20 сен</span><i style="width:62%"></i><span>50 км</span></div>
             <div class="wk"><span>21–27 сен</span><i style="width:68%"></i><span>54 км</span></div>
             <div class="wk"><span>28 сен – 4 окт</span><i style="width:72%"></i><span>58 км</span></div>
@@ -554,7 +554,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
             <div class="wk"><span>9–15 ноя</span><i style="width:88%"></i><span>70 км</span></div>
             <div class="wk"><span>16–22 ноя</span><i style="width:90%"></i><span>72 км</span></div>
             <div class="wk"><span>23–29 ноя</span><i style="width:78%"></i><span>62 км</span></div>
-            <div class="wk race"><span>30 ноя – 6 дек</span><i style="width:75%"></i><span>60 км</span></div>
+            <div class="wk race"><span>30 ноя – 6 дек</span><i style="width:50%"></i><span>40 км</span></div>
           </div>
           <div class="ui" data-ui data-stage="2" hidden>
             <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">Первая неделя</span><span class="ui-mut">50 км</span></div>
@@ -717,7 +717,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
 
   /* the calendar: 12 weeks, 14 Sep – 6 Dec 2026, the race on Sunday */
   const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-  const VOL = [50, 54, 58, 54, 60, 64, 68, 62, 70, 72, 62, 60];
+  const VOL = [50, 54, 58, 54, 60, 64, 68, 62, 70, 72, 62, 40];
   const grid = $('#cal-grid'), days = [];
   grid.insertAdjacentHTML('beforeend', '<span></span>' + ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((d) => `<span class="wd">${d}</span>`).join('') + '<span class="wd">км</span>');
   let shownMonth = -1;
