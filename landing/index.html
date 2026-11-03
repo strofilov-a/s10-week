@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="ru" data-p="2">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>S10 Solo — план до старта</title>
+<meta name="description" content="Назовите старт и цель: S10 Solo разложит план по датам, посчитает темпа и заполнит календарь за три минуты.">
+<meta property="og:title" content="S10 Solo — план до старта">
+<meta property="og:description" content="Назовите старт и цель: план до него за три минуты.">
+<meta name="theme-color" content="#191970">
+<script>
+  document.documentElement.classList.add('js');
+  // palette: ?p=1..4 wins, then the last choice on this device; 2 by default
+  (function () {
+    var q = new URLSearchParams(location.search).get('p'), s = null;
+    try { s = localStorage.getItem('solo-p'); } catch (e) {}
+    var p = /^[1-4]$/.test(q) ? q : /^[1-4]$/.test(s) ? s : '2';
+    document.documentElement.dataset.p = p;
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="scenes/stage.css">
+<style>
+/* ---------- palettes: the owner's four three-colour sets, each mapped onto one dark room ---------- */
+:root, [data-p="2"] {
+  /* midnight blue · cool horizon · white */
+  --bg: #191970; --surface: #22227e; --deep: #10104f;
+  --ink: #ffffff; --muted: rgba(255,255,255,.78);
+  --accent: #58A6FF; --on-accent: #0c0c45;
+  --hi: #58A6FF; --tint: #191970; --scrim: rgba(8,8,40,.42);
+}
+[data-p="1"] {
+  /* pacific blue · tomato · mustard */
+  --bg: #06323a; --surface: #0b4650; --deep: #032329;
+  --ink: #fbf6e4; --muted: rgba(251,246,228,.8);
+  --accent: #FE4A49; --on-accent: #2a0606;
+  --hi: #FED766; --tint: #009FB7; --scrim: rgba(2,22,26,.45);
+}
+[data-p="3"] {
+  /* maroon · medium violet red · light cyan */
+  --bg: #4a0008; --surface: #800000; --deep: #2e0005;
+  --ink: #E0FFFF; --muted: rgba(224,255,255,.8);
+  --accent: #C71585; --on-accent: #ffffff;
+  --hi: #E0FFFF; --tint: #800000; --scrim: rgba(30,0,4,.45);
+}
+[data-p="4"] {
+  /* espresso · burnt peach · soft apricot */
+  --bg: #2e1a14; --surface: #4E2C23; --deep: #1f110d;
+  --ink: #FFDAB9; --muted: rgba(255,218,185,.8);
+  --accent: #E2725B; --on-accent: #23120d;
+  --hi: #E2725B; --tint: #4E2C23; --scrim: rgba(20,10,7,.45);
+}
+
+:root {
+  --font: 'Onest', system-ui, sans-serif;
+  --m: clamp(20px, 2.2vw, 32px);
+  --gap: clamp(16px, 2vw, 28px);
+  --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  --step-lead: clamp(1.375rem, 1.1rem + 1vw, 2.25rem);
+  --step-head: clamp(2.25rem, 1.2rem + 4vw, 4.75rem);
+  --step-giant: clamp(7.5rem, 16vw, 15rem);
+  --ease: cubic-bezier(.22,.61,.36,1);
+  --section: clamp(120px, 14vw, 200px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font); font-weight: 400; font-size: var(--step-body); line-height: 1.55;
+  -webkit-font-smoothing: antialiased; transition: background-color .6s var(--ease), color .6s var(--ease);
+}
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: .2em; }
+a:hover { text-decoration-thickness: 2px; }
+h1, h2, h3, p { margin: 0; }
+[id] { scroll-margin-top: 80px; }
+h2 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-spacing: -0.035em; }
+::selection { background: var(--accent); color: var(--on-accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wrap { padding-inline: var(--m); }
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); }
+.num { font-variant-numeric: tabular-nums lining-nums; }
+
+/* one button shape on the whole page: square corners, one fill */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5em;
+  min-height: 44px; padding: 0 20px; border: 0; border-radius: 0;
+  background: var(--accent); color: var(--on-accent);
+  font: 500 var(--step-body)/1 var(--font); text-decoration: none; cursor: pointer;
+  transition: transform .18s var(--ease), background-color .18s var(--ease);
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0) scale(.98); }
+.link { text-decoration: underline 2px transparent; text-underline-offset: .28em; transition: text-decoration-color .25s var(--ease); }
+.link:hover, .link:focus-visible { text-decoration-color: currentColor; }
+
+/* header: wordmark, two links, one action */
+.rail {
+  position: sticky; top: 0; z-index: 20; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding: 0 var(--m); background: var(--bg); transition: background-color .6s var(--ease);
+}
+.mark { font-weight: 500; font-size: var(--step-body); letter-spacing: -0.02em; text-decoration: none; }
+.rail-act { display: flex; align-items: center; gap: 24px; font-size: var(--step-small); }
+.rail-act .btn { font-size: var(--step-small); min-height: 40px; padding: 0 16px; }
+
+/* hero: the title, and Solo's own summary card as the one lit thing */
+.hero { min-height: calc(100svh - 64px); display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding-block: 48px; }
+.hero-text { grid-column: 1 / 7; }
+.hero h1 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-spacing: -0.035em; max-width: 12ch; }
+.hero-sent { margin-top: 32px; max-width: 40ch; }
+.hero .row { display: flex; align-items: center; gap: 24px; margin-top: 40px; flex-wrap: wrap; }
+.hero .btn { min-height: 52px; padding: 0 24px; }
+.hero-card { grid-column: 8 / 13; padding: clamp(24px, 2.6vw, 40px); background: var(--surface); will-change: transform; }
+.hc-block + .hc-block { margin-top: 28px; }
+.hc-lbl { color: var(--muted); font-size: var(--step-small); }
+.hc-big { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-top: 6px; }
+.hc-big b { font-weight: 300; font-size: var(--step-lead); letter-spacing: -0.02em; line-height: 1.1; }
+.hc-big span { font-size: var(--step-lead); font-weight: 300; letter-spacing: -0.02em; }
+.hc-scale { position: relative; height: 10px; margin-top: 12px; background: var(--deep); }
+.hc-scale i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--hi); transition: width 1.4s var(--ease) .4s; }
+.hc-scale.in i { width: var(--w); }
+.hc-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 14px; text-align: center; font-size: var(--step-small); }
+.hc-week span { display: block; padding: 8px 0; background: var(--deep); color: var(--muted); }
+.hc-week b { display: block; font-weight: 500; color: var(--ink); font-size: var(--step-body); }
+.hc-week .done { background: var(--hi); color: var(--on-accent); }
+.hc-week .done b { color: var(--on-accent); }
+.hc-week .today { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+/* ---------- scene: the calendar to the race fills as the page scrolls ---------- */
+.cal-sec { margin-top: var(--section); }
+.cal-stage { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding: clamp(48px, 8vh, 96px) var(--m); min-height: 100svh; }
+.cal-text { grid-column: 1 / 6; }
+.cal-text h2 { max-width: 12ch; }
+.cal-says { position: relative; margin-top: 40px; min-height: 5.2em; font-size: var(--step-lead); font-weight: 300; line-height: 1.2; letter-spacing: -0.015em; }
+.cal-says p { max-width: 22ch; }
+.is-live .cal-says p { position: absolute; inset: 0 auto auto 0; opacity: 0; visibility: hidden; transform: translateY(14px); transition: opacity .45s var(--ease), transform .45s var(--ease), visibility 0s .45s; }
+.is-live[data-beat="0"] .cal-says p:nth-child(1), .is-live[data-beat="1"] .cal-says p:nth-child(2),
+.is-live[data-beat="2"] .cal-says p:nth-child(3), .is-live[data-beat="3"] .cal-says p:nth-child(4) { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.cal-rest-only { display: none; }
+.cal-figs { display: flex; gap: clamp(28px, 4vw, 64px); margin-top: 40px; }
+.cal-figs div { font-size: var(--step-small); color: var(--muted); }
+.cal-figs b { display: block; font-weight: 300; font-size: var(--step-lead); color: var(--ink); letter-spacing: -0.02em; }
+.cal { grid-column: 6 / 13; background: var(--surface); padding: clamp(24px, 3vw, 44px); }
+.cal-grid { display: grid; grid-template-columns: 2.6em repeat(7, 1fr) 4.2em; row-gap: clamp(0px, .4vh, 6px); font-size: var(--step-body); }
+.cal-grid .wk-km { text-align: right; align-self: center; padding-bottom: 8px; color: var(--muted); font-variant-numeric: tabular-nums; opacity: .25; transition: opacity .3s var(--ease), color .3s var(--ease); }
+.cal-grid .wk-km.on { opacity: 1; color: var(--ink); }
+.cal-sec:not(.is-live) .wk-km { opacity: 1; color: var(--ink); }
+.cal-grid .wd { color: var(--muted); text-align: center; padding-bottom: 8px; font-size: var(--step-small); }
+.cal-grid .wd:last-child { text-align: right; }
+.cal-grid .mo { color: var(--muted); align-self: center; padding-bottom: 8px; font-size: var(--step-small); }
+.cal-grid .d { position: relative; text-align: center; padding: 3px 0 13px; font-variant-numeric: tabular-nums; color: var(--muted); transition: color .3s var(--ease); }
+.cal-grid .d::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--ink); opacity: 0; transform: scale(.3); transition: opacity .3s var(--ease), transform .3s var(--ease); }
+.cal-grid .d.key::after { background: var(--hi); width: 8px; height: 8px; margin-left: -4px; }
+.cal-grid .d.on { color: var(--ink); }
+.cal-grid .d.on::after { opacity: .9; transform: scale(1); }
+.cal-grid .d.race { font-weight: 500; }
+.cal-grid .d.race.on, .cal-sec:not(.is-live) .d.race { color: var(--on-accent); }
+.cal-grid .d.race::before { content: ''; position: absolute; left: 50%; top: 50%; width: 2.2em; height: 2.2em; margin: -1.45em 0 0 -1.1em; border-radius: 50%; background: var(--accent); z-index: -1; opacity: 0; transform: scale(.3); transition: transform .5s var(--ease), opacity .5s var(--ease); }
+.cal-grid .d.race.on::before { opacity: 1; transform: scale(1); }
+.cal-grid .d.race::after { display: none; }
+.cal-grid .d { z-index: 0; }
+.cal-key { display: flex; gap: 24px; margin-top: 16px; font-size: var(--step-small); color: var(--muted); }
+.cal-key span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); margin-right: 8px; vertical-align: middle; }
+.cal-key span.k::before { background: var(--hi); }
+.cal-key span.r::before { background: var(--accent); width: 12px; height: 12px; }
+/* without the scene running, the finished calendar */
+.cal-sec:not(.is-live) .d { color: var(--ink); }
+.cal-sec:not(.is-live) .d::after { opacity: .9; transform: scale(1); }
+.cal-sec:not(.is-live) .d.race::before { opacity: 1; transform: scale(1); }
+.cal-sec:not(.is-live) .cal-says p + p { margin-top: .6em; }
+
+/* ---------- showcase: one chapter per screen, the field grows to the edges ---------- */
+.chapters { margin-top: var(--section); }
+.chapter { position: relative; height: 100svh; min-height: 640px; }
+.chapter .field { position: absolute; inset: 0; background: var(--surface); }
+.chapter .portrait { position: absolute; left: 50%; top: 50%; width: min(506px, 36vw); aspect-ratio: 3 / 4; translate: -50% -50%; }
+.chapter h2, .chapter h3 { position: absolute; left: var(--m); top: var(--m); max-width: 14ch; font-weight: 300; font-size: var(--step-lead); line-height: 1.1; letter-spacing: -0.02em; }
+.chapter .say { position: absolute; left: var(--m); bottom: var(--m); max-width: 32ch; }
+.chapter .go { position: absolute; right: var(--m); bottom: var(--m); }
+.chapter:nth-child(2) .field { background: var(--deep); }
+
+/* interface fragments: the product's own panels, drawn in the page's colours */
+.ui { background: var(--deep); color: var(--ink); font-size: 16px; line-height: 1.4; padding: 20px; }
+.ui-lbl { font-weight: 500; }
+.ui-mut { color: var(--muted); font-size: 14px; }
+.ui-box { margin-top: 10px; padding: 14px 16px; background: var(--bg); outline: 2px solid var(--hi); outline-offset: -2px; }
+.ui-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ui-btn { display: inline-block; padding: 10px 14px; background: var(--accent); color: var(--on-accent); font-weight: 500; font-size: 14px; }
+.ui-btn.ghost { background: var(--surface); color: var(--ink); }
+.ui-day { display: grid; grid-template-columns: 4.2em 1fr auto; gap: 4px 12px; padding: 12px 0; }
+.ui-day + .ui-day { margin-top: 4px; background: none; }
+.ui-day .dt { color: var(--muted); font-size: 14px; }
+.ui-day .km { font-weight: 500; text-align: right; }
+.ui-day .ty { font-weight: 500; }
+.ui-day .fact { grid-column: 2 / 4; font-size: 14px; }
+.ui-day .fact b { font-weight: 500; color: var(--hi); }
+.ui-day.today { background: var(--surface); margin-inline: -12px; padding-inline: 12px; }
+.chapter .portrait.ui { padding: 28px; overflow: hidden; aspect-ratio: auto; font-size: 17px; }
+.ui-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 12px; }
+.ui-head b { font-weight: 500; }
+.pz { display: grid; grid-template-columns: 4.5em 1fr auto; align-items: baseline; gap: 12px; padding: 10px 0; }
+.pz b { font-weight: 300; font-size: 1.75rem; letter-spacing: -0.02em; }
+.pz.easy b { color: var(--hi); font-size: 1.375rem; }
+.pv { display: grid; gap: 2px; padding: 14px 16px; margin-top: 8px; background: var(--bg); }
+.pv b { font-weight: 500; }
+.pv.on { outline: 2px solid var(--hi); outline-offset: -2px; }
+
+/* ---------- how it works: drag through the stages ---------- */
+.how { margin-top: var(--section); }
+.how-stage { position: relative; }
+.how-fields { display: grid; grid-template-columns: 1fr 1fr; min-height: 88svh; }
+.how.is-live .how-fields { height: 100svh; min-height: 0; }
+.how-left { background: var(--surface); padding: clamp(32px, 5vw, 72px) var(--m); }
+.how.is-live .how-left { padding-top: calc(64px + clamp(32px, 5vw, 72px)); }
+.how-right { background: var(--deep); display: grid; place-items: center; padding: 96px var(--m) 140px; }
+.how-left h2 { max-width: 12ch; transition: opacity .2s var(--ease); }
+.how-frag { width: min(520px, 100%); position: relative; }
+.how-frag .ui { font-size: 17px; padding: 28px; }
+.how-frag .wk, .how-frag .lay { font-size: 15px; }
+.how-frag .ui { transition: opacity .25s var(--ease), transform .25s var(--ease); }
+.how-frag .ui[hidden] { display: block; position: absolute; inset: 0 0 auto 0; opacity: 0; transform: translateY(16px); pointer-events: none; visibility: hidden; }
+.how-bar { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 28px 28px; z-index: 2; }
+.how-track { position: relative; height: 8px; }
+.how-track::before { content: ''; position: absolute; inset: 0; background: currentColor; opacity: .25; }
+.how-track i { position: absolute; left: 0; top: 0; height: 8px; width: var(--pos, 12.5%); background: var(--accent); transition: width .2s var(--ease); }
+.how.is-live .how-track i { transition: none; }
+.how-names { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 14px; }
+.how-names button { all: unset; cursor: pointer; color: var(--muted); transition: color .2s var(--ease); }
+.how-names button[aria-pressed="true"] { color: var(--ink); }
+.how-names button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.wk { display: grid; grid-template-columns: 7.5em 1fr 3.4em; align-items: center; gap: 10px; padding: 5px 0; font-size: 14px; }
+.wk i { display: block; height: 8px; background: var(--ink); opacity: .85; }
+.wk.race i { background: var(--accent); opacity: 1; }
+.wk span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.lay { display: grid; grid-template-columns: 2.4em 1fr 3.4em; gap: 8px; padding: 7px 0; font-size: 14px; align-items: center; }
+.lay span:nth-child(2) { padding: 4px 10px; background: var(--surface); }
+.lay span:last-child { text-align: right; }
+
+/* ---------- features: the product's commands, set as the section ---------- */
+.cmds { margin-top: var(--section); }
+.cmd-search { display: block; width: 100%; grid-column: 1 / 11; height: 1.9em; padding: 0 .5em; border: 0; border-radius: 0; background: var(--surface); color: var(--ink); font: 300 clamp(1.75rem, 3vw, 2.75rem)/1 var(--font); letter-spacing: -0.02em; }
+.cmd-search::placeholder { color: var(--muted); opacity: 1; }
+.cmd-list { list-style: none; margin: 40px 0 0; padding: 0; }
+.cmd-list button { all: unset; box-sizing: border-box; display: block; width: 100%; cursor: pointer; padding: .06em .16em; font-weight: 300; font-size: var(--step-head); line-height: 1.1; letter-spacing: -0.035em; transition: background-color .2s var(--ease), color .2s var(--ease); }
+.cmd-list li[hidden] { display: none; }
+.cmd-list .say { display: none; font-size: var(--step-body); line-height: 1.5; letter-spacing: 0; font-weight: 400; max-width: 52ch; padding: 4px 0 14px; }
+.cmd-list li.sel button { background: var(--accent); color: var(--on-accent); }
+.cmd-list li.sel .say { display: block; color: var(--on-accent); }
+.cmd-list button:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }
+.cmd-none { margin-top: 24px; color: var(--muted); }
+
+/* ---------- the live thing: paces from a goal ---------- */
+.paces { margin-top: var(--section); }
+.paces-l { grid-column: 1 / 6; }
+.paces-l p { margin-top: 24px; max-width: 40ch; }
+.paces-form { margin-top: 40px; }
+.seg { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
+.seg legend { font-size: var(--step-small); color: var(--muted); margin-bottom: 10px; padding: 0; }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; padding: 10px 16px; background: var(--surface); transition: background-color .18s var(--ease), color .18s var(--ease); }
+.seg input:checked + span { background: var(--ink); color: var(--bg); }
+.seg input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 3px; }
+.goal { margin-top: 24px; }
+.goal label { display: block; font-size: var(--step-small); color: var(--muted); margin-bottom: 10px; }
+.goal input:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.goal input { width: 8.5em; height: 56px; padding: 0 16px; border: 0; border-radius: 0; background: var(--surface); color: var(--ink); font: 400 var(--step-lead)/1 var(--font); font-variant-numeric: tabular-nums; outline: 2px solid var(--hi); outline-offset: -2px; }
+.goal small { display: block; margin-top: 8px; font-size: var(--step-small); color: var(--muted); }
+.paces-r { grid-column: 7 / 13; align-self: center; }
+#pc-out { display: grid; grid-template-columns: 1fr 1fr; gap: 28px var(--gap); margin: 0; }
+.pace-row { display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: baseline; gap: .6em; }
+.pace-row.easy { grid-column: 1 / -1; }
+.pace-row dt { font-size: var(--step-body); color: var(--muted); white-space: nowrap; }
+.pace-row dd { margin: 0; font-weight: 300; font-size: var(--step-head); line-height: 1; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; }
+.pace-row.easy dd { color: var(--hi); font-size: var(--step-lead); letter-spacing: -0.02em; }
+.pace-row.easy { margin-top: 8px; }
+.pace-note { margin-top: 24px; font-size: var(--step-small); color: var(--muted); max-width: 52ch; }
+
+/* ---------- figures inside a sentence ---------- */
+.stats { margin-top: var(--section); min-height: 80svh; display: grid; align-items: center; }
+.stats-text { grid-column: 2 / 11; }
+.stats-text > p { font-weight: 300; font-size: var(--step-lead); line-height: 1.25; letter-spacing: -0.015em; color: var(--muted); max-width: 30ch; }
+.stats b { font-weight: 400; color: var(--ink); white-space: nowrap; }
+.stats .quote { margin: 48px 0 0; max-width: 46ch; font-size: var(--step-body); color: var(--ink); }
+.stats .quote cite { display: block; margin-top: 8px; font-style: normal; color: var(--muted); font-size: var(--step-small); }
+
+/* ---------- the price, very large ---------- */
+.price { margin-top: var(--section); min-height: 80svh; align-items: center; }
+.price-l { grid-column: 1 / 5; align-self: start; }
+.price-l p { margin-top: 20px; max-width: 34ch; }
+.price-r { grid-column: 6 / 13; position: relative; }
+.price-fig { position: relative; display: inline-flex; align-items: flex-start; font-weight: 300; font-size: var(--step-giant); line-height: .85; letter-spacing: -0.05em; font-variant-numeric: lining-nums; }
+.price-fig sup { font-size: .5em; line-height: 1; margin-left: .06em; top: 0; letter-spacing: 0; }
+.price-fig small { align-self: flex-end; font-size: var(--step-body); letter-spacing: 0; margin-left: .6em; line-height: 1.4; }
+.price-inc { list-style: none; padding: 0; margin: 40px 0 0; }
+.price-inc li + li { margin-top: 8px; }
+.price-r .btn { margin-top: 32px; }
+.price-eur { margin-top: 12px; font-size: var(--step-small); color: var(--muted); }
+
+/* ---------- questions, answers beside ---------- */
+.faq { margin-top: var(--section); }
+.faq-row { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: baseline; }
+.faq-row + .faq-row { margin-top: 80px; }
+.faq-row h2, .faq-row h3 { grid-column: 1 / 7; font-weight: 500; font-size: var(--step-lead); line-height: 1.1; letter-spacing: -0.025em; }
+.faq-row h2 { color: var(--muted); font-weight: 400; }
+.faq-row p { grid-column: 8 / 13; max-width: 40ch; }
+
+/* ---------- close ---------- */
+.cta { padding-top: 30svh; padding-bottom: 20svh; }
+.cta p { font-size: var(--step-lead); font-weight: 300; line-height: 1.2; letter-spacing: -0.015em; max-width: 26ch; }
+.cta .row { display: flex; align-items: center; gap: 24px; margin-top: 24px; }
+.cta .btn { min-height: 40px; padding: 0 18px; }
+.foot { display: grid; grid-template-columns: 1fr auto 1fr; gap: 24px; align-items: baseline; padding: 0 var(--m) 30px; font-size: var(--step-small); color: var(--muted); }
+.foot nav { display: flex; gap: 24px; }
+.foot nav a, .foot .r a { color: var(--ink); }
+.foot .r { text-align: right; }
+
+/* palette picker, for choosing among the four sets */
+.pal { position: fixed; z-index: 50; right: 16px; bottom: 16px; display: flex; gap: 6px; padding: 8px; background: var(--deep); box-shadow: 0 6px 24px rgba(0,0,0,.35); } /* taste-skill-ignore: a floating picker, not a surface at rest */
+.pal button { all: unset; cursor: pointer; display: grid; grid-template-columns: repeat(3, 10px); width: 30px; height: 30px; outline-offset: 2px; }
+.pal button i { display: block; }
+.pal button[aria-pressed="true"] { outline: 2px solid var(--ink); }
+.pal button:focus-visible { outline: 3px solid var(--accent); }
+
+/* entrances: parts of a section rise in turn, never hidden without a script */
+html.js [data-rise] { opacity: 0; transform: translateY(24px); transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: calc(var(--i, 0) * 80ms); }
+html.js [data-rise].in { opacity: 1; transform: none; }
+
+/* ---------- tablet ---------- */
+@media (max-width: 1100px) {
+  .hero-text { grid-column: 1 / 13; }
+  .hero-card { grid-column: 1 / 10; margin-top: 48px; }
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  .paces-l { grid-column: 1 / 7; }
+  .paces-r { grid-column: 7 / 13; }
+  #pc-out { grid-template-columns: 1fr; gap: 18px; }
+  .cal-text { grid-column: 1 / 13; }
+  .cal { grid-column: 1 / 13; margin-top: 32px; }
+}
+
+/* ---------- phone ---------- */
+@media (max-width: 767px) {
+  .rail { padding: 0 20px; }
+  .rail-act .link { display: none; }
+  .hero { padding-block: 32px 48px; align-content: center; }
+  .hero h1 { font-size: 2.75rem; }
+  .hero-sent { margin-top: 20px; }
+  .hero .row { margin-top: 28px; }
+  .hero .btn { width: 100%; }
+  .hero-card { grid-column: 1 / 13; margin-top: 40px; padding: 20px; }
+  .hc-week { gap: 4px; }
+
+  .cal-stage { grid-template-columns: 1fr; padding: 72px 20px 16px; align-content: center; row-gap: 16px; }
+  .cal-text, .cal { grid-column: 1; }
+  .cal-text h2 { font-size: 2rem; }
+  .cal-says { margin-top: 12px; min-height: 2.5em; font-size: 1.125rem; }
+  .cal-figs b { font-size: 1.25rem; }
+  .cal-figs { margin-top: 8px; }
+  .cal { padding: 16px 12px; }
+  .cal-grid { grid-template-columns: 2.2em repeat(7, 1fr) 3.4em; row-gap: 0; font-size: 14px; }
+  .cal-grid .wd, .cal-grid .mo, .cal-grid .wk-km { font-size: 13px; }
+  .cal-grid .d { padding: 0 0 8px; }
+  .cal-grid .d::after { bottom: 2px; }
+  .cal-key { font-size: 13px; }
+  .cal-key { margin-top: 12px; gap: 16px; }
+
+  .chapter { min-height: 600px; }
+  .chapter .portrait { width: 80vw; top: 45%; }
+  .chapter h2, .chapter h3 { top: 24px; left: 20px; font-size: 1.5rem; }
+  .chapter .say { left: 20px; right: 20px; bottom: 56px; }
+  .chapter .go { left: 20px; right: auto; bottom: 20px; }
+  .chapter .portrait.ui { padding: 16px; }
+
+  .how-fields { display: flex; flex-direction: column; min-height: 0; }
+  .how-right { order: -1; flex: 1 1 auto; padding: 28px 20px; place-items: center; }
+  .how.is-live .how-right { padding-top: 80px; }
+  .how-left { padding: 24px 20px 112px; }
+  .how.is-live .how-left { padding-top: 24px; }
+  .how-left h2 { font-size: 2.25rem; }
+  .how-bar { padding: 0 20px 20px; }
+  .how-names { grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+  .wk { padding: 3px 0; }
+
+  .cmd-search { height: 56px; font-size: 20px; }
+  .cmd-list button { font-size: 8.5vw; }
+  
+
+  .paces .grid, .price, .stats .grid { grid-template-columns: 1fr; }
+  .paces-l, .paces-r, .price-l, .price-r, .stats-text, .stats-film { grid-column: 1; }
+  .paces .grid { display: flex; flex-direction: column; }
+  .paces-l { display: contents; }
+  .paces-l h2 { order: 1; } .paces-l > p { order: 2; } .paces-r { order: 3; margin-top: 40px; } .paces-form { order: 4; margin-top: 48px; }
+  #pc-out { grid-template-columns: 1fr; gap: 16px; }
+  .stats { min-height: 70svh; }
+  .stats-film { margin-top: 40px; }
+  .price-r { margin-top: 48px; }
+  .price-fig { font-size: 34vw; }
+  
+  .price-r .btn { display: flex; width: 100%; }
+
+  .faq-row { grid-template-columns: 1fr; }
+  .faq-row h2, .faq-row h3, .faq-row p { grid-column: 1; }
+  
+  .faq-row p { margin-top: 12px; }
+  .faq-row + .faq-row { margin-top: 56px; }
+
+  .cta { padding-top: 20svh; padding-bottom: 14svh; }
+  
+  .cta .btn { min-height: 44px; }
+  .foot { grid-template-columns: 1fr; gap: 8px; padding: 20svh 20px 24px; }
+  .foot nav { flex-wrap: wrap; gap: 8px 20px; }
+  .foot .r { text-align: left; }
+  .pal { position: static; width: max-content; margin: 0 20px 24px; box-shadow: none; }
+  .how-frag .ui { font-size: 15px; padding: 20px; }
+  .how-frag .wk, .how-frag .lay { font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  html.js [data-rise] { opacity: 1; transform: none; transition: none; }
+  .hc-scale i { transition: none; }
+  .btn, .link, .cmd-list button { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="rail" id="top">
+    <a class="mark" href="#top">S10 Solo</a>
+    <div class="rail-act">
+      <a class="link" href="#how">Как это работает</a>
+      <a class="link" href="#price">Цена</a>
+      <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan" data-go>Начать</a>
+    </div>
+  </header>
+
+  <section class="hero wrap" aria-labelledby="h1">
+    <div class="hero-text">
+      <h1 id="h1">S10 Solo — план до старта</h1>
+      <p class="hero-sent" data-rise>Назовите старт и цель. Solo разложит тренировки по датам, посчитает темпа и заполнит ваш календарь S10 за три минуты.</p>
+      <div class="row" data-rise style="--i:1">
+        <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan" data-go>Попробовать Solo</a>
+        <a class="link" href="#plan">Посмотреть, как выглядит</a>
+      </div>
+    </div>
+    <div class="hero-card ui" data-ui data-rise style="--i:2" aria-label="Карточка Solo: сегодня, объём недели, до старта">
+      <div class="hc-block">
+        <div class="hc-lbl">Сегодня, суббота 31 октября</div>
+        <div class="hc-big"><b>Восстановительная</b><span class="num">8 км</span></div>
+        <div class="hc-lbl" style="margin-top:4px">Темп 5:40–6:00 мин/км</div>
+      </div>
+      <div class="hc-block">
+        <div class="hc-lbl">Объём недели</div>
+        <div class="hc-big"><b class="num">16 из 81 км</b></div>
+        <div class="hc-scale" style="--w:20%"><i></i></div>
+        <div class="hc-week num">
+          <span>Пн<b>8</b></span><span class="done">Вт<b>16</b></span><span>Ср<b>13</b></span><span>Чт<b>8</b></span><span>Пт<b>11</b></span><span class="today">Сб<b>8</b></span><span>Вс<b>21</b></span>
+        </div>
+      </div>
+      <div class="hc-block">
+        <div class="hc-lbl">До старта</div>
+        <div class="hc-big"><b class="num">36 дней</b></div>
+        <div class="hc-lbl" style="margin-top:4px">Valencia, 6 дек, 42 км, прогноз 3:19:59</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene cal-sec" id="plan" data-scene="calendar" data-options='{"hold": 3}' aria-labelledby="cal-h">
+    <div class="scene-stage cal-stage">
+      <div class="cal-text">
+        <h2 id="cal-h">До Валенсии 12&nbsp;недель</h2>
+        <div class="cal-says">
+          <p>Цель: марафон 6 декабря, 3:20.</p>
+          <p>Solo раскладывает план по датам, неделя за неделей.</p>
+          <p>Каждая тренировка в ваших темпах и километрах.</p>
+          <p>Старт отмечен. Осталось бегать.</p>
+        </div>
+        <div class="cal-figs">
+          <div><b class="num" id="cal-km">60 км</b><span id="cal-wk">объём недели, 30 ноя – 6 дек</span></div>
+          <div><b class="num" id="cal-n">72</b>тренировки</div>
+        </div>
+      </div>
+      <div class="cal" data-ui>
+        <div class="cal-grid" id="cal-grid" aria-label="Календарь с 14 сентября по 6 декабря"></div>
+        <div class="cal-key"><span>в плане</span><span class="k">ключевая</span><span class="r">старт</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="chapters">
+    <section class="chapter" aria-labelledby="ch1">
+      <div class="field" data-grow></div>
+      <div class="portrait ui" data-zoom data-ui>
+        <div class="ui-head"><b>Мои темпа</b><span class="ui-mut">цель 3:20:00</span></div>
+        <div class="pz"><span>T5</span><b class="num">4:10</b><span class="ui-mut num">400 м за 1:40</span></div>
+        <div class="pz"><span>T10</span><b class="num">4:21</b><span class="ui-mut num">400 м за 1:44</span></div>
+        <div class="pz"><span>T21</span><b class="num">4:33</b><span class="ui-mut num">400 м за 1:49</span></div>
+        <div class="pz"><span>T42</span><b class="num">4:44</b><span class="ui-mut num">400 м за 1:54</span></div>
+        <div class="pz easy"><span>Лёгкий</span><b class="num">5:40–6:00</b><span></span></div>
+        <div class="ui-box" style="margin-top:20px"><span class="ui-mut">В дневнике:</span><br>Развивающая · 2×3000 м по 4:21–4:25, отдых 400 м</div>
+      </div>
+      <h2 id="ch1">Темп вместо догадок</h2>
+      <p class="say">Каждая тренировка написана в минутах на километр из ваших T5, T10, T21 и T42. Никаких «T21+8» в дневнике.</p>
+      <a class="go link" href="#paces">Посчитать темпа</a>
+    </section>
+    <section class="chapter" aria-labelledby="ch2">
+      <div class="field" data-grow></div>
+      <div class="portrait ui" data-zoom data-ui>
+        <div class="ui-head"><b>Моя неделя</b><span class="ui-mut">26 окт – 1 ноя</span></div>
+        <div class="ui-day"><span class="dt">Вт 27</span><span class="ty">Восстановительная</span><span class="km">12 км</span><span class="fact ui-mut">Темп 5:40–6:00 · факт <b>16 км, 5:31</b>, быстрее задания</span></div>
+        <div class="ui-day"><span class="dt">Ср 28</span><span class="ty">Интервальная</span><span class="km">13 км</span><span class="fact ui-mut">Разминка 4 км · 3×2000 м по 4:00–4:05, отдых 400 м · заминка 2200 м</span></div>
+        <div class="ui-day"><span class="dt">Пт 30</span><span class="ty">Развивающая</span><span class="km">11 км</span><span class="fact ui-mut">Разминка 2 км · 2×3000 м, отдых 400 м · заминка 2 км</span></div>
+        <div class="ui-day today"><span class="dt">Сб 31</span><span class="ty">Восстановительная</span><span class="km">8 км</span><span class="fact ui-mut">Сегодня · темп 5:40–6:00</span></div>
+        <div class="ui-day"><span class="dt">Вс 1</span><span class="ty">Длительная</span><span class="km">21 км</span><span class="fact ui-mut">Темп 5:40</span></div>
+      </div>
+      <h2 id="ch2">Неделя как на ладони</h2>
+      <p class="say">Рядом с заданием — факт: сколько пробежали, в каком темпе, быстрее или медленнее, чем нужно.</p>
+      <a class="go link" href="#how">Как это работает</a>
+    </section>
+    <section class="chapter" aria-labelledby="ch3">
+      <div class="field" data-grow></div>
+      <div class="portrait ui" data-zoom data-ui>
+        <div class="ui-head"><b>План до старта</b><span class="ui-mut">в профиле S10</span></div>
+        <div class="pv on"><b>Марафон Valencia · 12 недель</b><span class="ui-mut">Активный · в календаре 14–27 сен</span></div>
+        <div class="pv"><b>Версия тренера</b><span class="ui-mut">Сохранена 10 сентября</span></div>
+        <div class="pv"><b>Из текста о себе и цели</b><span class="ui-mut">Сгенерирован 9 сентября</span></div>
+        <div class="ui-row" style="margin-top:20px;justify-content:flex-start;gap:8px"><span class="ui-btn">Заполнить календарь</span><span class="ui-btn ghost">Вернуть как было</span></div>
+      </div>
+      <h2 id="ch3">Один план везде</h2>
+      <p class="say">План хранится в профиле S10: телефон, ноутбук и ваш тренер открывают одну и ту же неделю.</p>
+      <a class="go link" href="#faq">Вопросы</a>
+    </section>
+  </div>
+
+  <section class="scene how" id="how" data-scene="how" data-options='{"hold": 3}' aria-labelledby="how-h">
+   <div class="scene-stage how-stage">
+    <div class="how-fields">
+      <div class="how-left">
+        <div class="how-clause" aria-live="polite">
+          <h2 id="how-h">Сначала вы пишете цель</h2>
+        </div>
+      </div>
+      <div class="how-right">
+        <div class="how-frag">
+          <div class="ui" data-ui data-stage="0">
+            <div class="ui-lbl">Расскажите о себе и цели</div>
+            <div class="ui-box">Марафон 6 дек, Valencia, цель 3:20:00. Бегаю 5 раз в неделю, 50–60 км.</div>
+            <div class="ui-row" style="margin-top:14px"><span class="ui-mut">Марафон · 12 недель</span><span class="ui-btn">Сгенерировать</span></div>
+          </div>
+          <div class="ui" data-ui data-stage="1" hidden>
+            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">План до старта</span><span class="ui-mut">790 км</span></div>
+            <div class="wk"><span>14–20 сен</span><i style="width:52%"></i><span>52 км</span></div>
+            <div class="wk"><span>21–27 сен</span><i style="width:58%"></i><span>58 км</span></div>
+            <div class="wk"><span>28 сен – 4 окт</span><i style="width:63%"></i><span>63 км</span></div>
+            <div class="wk"><span>5–11 окт</span><i style="width:58%"></i><span>58 км</span></div>
+            <div class="wk"><span>12–18 окт</span><i style="width:68%"></i><span>68 км</span></div>
+            <div class="wk"><span>19–25 окт</span><i style="width:74%"></i><span>74 км</span></div>
+            <div class="wk"><span>26 окт – 1 ноя</span><i style="width:66%"></i><span>66 км</span></div>
+            <div class="wk"><span>2–8 ноя</span><i style="width:78%"></i><span>78 км</span></div>
+            <div class="wk"><span>9–15 ноя</span><i style="width:81%"></i><span>81 км</span></div>
+            <div class="wk"><span>16–22 ноя</span><i style="width:72%"></i><span>72 км</span></div>
+            <div class="wk"><span>23–29 ноя</span><i style="width:60%"></i><span>60 км</span></div>
+            <div class="wk race"><span>30 ноя – 6 дек</span><i style="width:60%"></i><span>60 км</span></div>
+          </div>
+          <div class="ui" data-ui data-stage="2" hidden>
+            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">Первая неделя</span><span class="ui-mut">52 км</span></div>
+            <div class="lay"><span>Пн</span><span>Отдых</span><span></span></div>
+            <div class="lay"><span>Вт</span><span>Восстановительная</span><span>8 км</span></div>
+            <div class="lay"><span>Ср</span><span>Интервальная</span><span>10 км</span></div>
+            <div class="lay"><span>Чт</span><span>Восстановительная</span><span>6 км</span></div>
+            <div class="lay"><span>Пт</span><span>Развивающая</span><span>9 км</span></div>
+            <div class="lay"><span>Сб</span><span>Восстановительная</span><span>6 км</span></div>
+            <div class="lay"><span>Вс</span><span>Длительная</span><span>13 км</span></div>
+          </div>
+          <div class="ui" data-ui data-stage="3" hidden>
+            <div class="ui-lbl">Календарь заполнен</div>
+            <p class="ui-mut" style="margin-top:6px">14–27 сентября · 12 тренировок · 110 км. Дни, где уже стояла задача, остались как были.</p>
+            <div class="ui-row" style="margin-top:16px;justify-content:flex-start"><span class="ui-btn">Следующие 2 недели</span><span class="ui-btn ghost">Вернуть как было</span></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    <div class="how-bar">
+      <div class="how-track"><i></i></div>
+      <div class="how-names" role="group" aria-label="Этапы">
+        <button type="button" data-to="0" aria-pressed="true">Цель</button>
+        <button type="button" data-to="1" aria-pressed="false">План</button>
+        <button type="button" data-to="2" aria-pressed="false">Ваша неделя</button>
+        <button type="button" data-to="3" aria-pressed="false">Календарь</button>
+      </div>
+    </div>
+   </div>
+  </section>
+
+  <section class="cmds wrap" aria-labelledby="cmd-h" data-ui>
+    <h2 class="vh" id="cmd-h">Что умеет Solo</h2>
+    <div class="grid"><input class="cmd-search" id="cmd-q" type="search" placeholder="Что умеет Solo" aria-label="Найти, что умеет Solo" autocomplete="off"></div>
+    <ul class="cmd-list" id="cmd-list">
+      <li class="sel"><button type="button">Заполнить календарь</button><p class="say">Две беговые недели или всё до старта. Прошедшие дни не трогаются, дни с задачей остаются.</p></li>
+      <li><button type="button">Сгенерировать план</button><p class="say">Расскажите о себе и цели обычными словами — план по неделям соберётся из текста.</p></li>
+      <li><button type="button">Мои темпа</button><p class="say">T5, T10, T21 и T42 из цели, из прогноза S10 по вашим тренировкам или ваши собственные.</p></li>
+      <li><button type="button">План и факт</button><p class="say">Рядом с каждым заданием — что вы пробежали на самом деле, по трекам из дневника.</p></li>
+      <li><button type="button">Запланировать неделю</button><p class="say">Выберите две ключевые тренировки, остальные дни рассчитает сервер S10.</p></li>
+      <li><button type="button">Вернуть как было</button><p class="say">Отменяет последнее заполнение. Дни, которые вы поправили после, не трогаются.</p></li>
+      <li><button type="button">Сохранить старт</button><p class="say">Главный старт и цель на него: от них считается весь план и все темпа.</p></li>
+    </ul>
+    <p class="cmd-none" id="cmd-none" hidden>Такого Solo пока не умеет. Напишите нам в Telegram, что нужно.</p>
+  </section>
+
+  <section class="paces wrap" id="paces" aria-labelledby="pc-h">
+    <div class="grid">
+      <div class="paces-l">
+        <h2 id="pc-h">Ваши темпа за секунду</h2>
+        <p data-rise style="--i:1">Введите цель на старт. Solo посчитает темп на 5, 10, 21 и 42 км и лёгкий бег — по ним пишется каждая тренировка.</p>
+        <form class="paces-form" id="pc-form" data-rise style="--i:2" onsubmit="return false">
+          <fieldset class="seg">
+            <legend>Дистанция</legend>
+            <label><input type="radio" name="d" value="42.195" checked><span>Марафон</span></label>
+            <label><input type="radio" name="d" value="21.0975"><span>Полумарафон</span></label>
+            <label><input type="radio" name="d" value="10"><span>10 км</span></label>
+            <label><input type="radio" name="d" value="5"><span>5 км</span></label>
+          </fieldset>
+          <div class="goal">
+            <label for="pc-t">Цель</label>
+            <input id="pc-t" inputmode="numeric" value="3:20:00" aria-describedby="pc-hint" autocomplete="off">
+            <small id="pc-hint">Часы:минуты:секунды или минуты:секунды</small>
+          </div>
+        </form>
+      </div>
+      <div class="paces-r" aria-live="polite">
+        <dl id="pc-out">
+          <div class="pace-row"><dt>5 км</dt><dd class="num">4:10</dd></div>
+          <div class="pace-row"><dt>10 км</dt><dd class="num">4:21</dd></div>
+          <div class="pace-row"><dt>Полумарафон</dt><dd class="num">4:33</dd></div>
+          <div class="pace-row"><dt>Марафон</dt><dd class="num">4:44</dd></div>
+          <div class="pace-row easy"><dt>Лёгкий бег</dt><dd class="num">5:40–6:00</dd></div>
+        </dl>
+        <p class="pace-note">Минуты на километр. Считается по формуле Ригеля, как прогноз S10: для цели 3:20 он даёт 4:11, 4:20, 4:33 и 4:44.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats wrap" aria-labelledby="st-h">
+    <h2 class="vh" id="st-h">S10 в цифрах</h2>
+    <div class="grid">
+      <div class="stats-text">
+        <p data-rise>На S10 уже <b>33&nbsp;000 атлетов</b> и <b>410 тренеров</b>, а челленджи выходят <b>каждую неделю</b>.</p>
+        <blockquote class="quote" data-rise style="--i:1">Когда вы регулярно тратите на что-то час-полтора в день, имеет смысл делать это осознанно. Именно так добиваются результатов.<cite>Юрий Строфилов, основатель S10.run</cite></blockquote>
+      </div>
+    </div>
+  </section>
+
+  <section class="price wrap grid" id="price" aria-labelledby="pr-h">
+    <div class="price-l">
+      <h2 id="pr-h" style="font-size:var(--step-lead);font-weight:400;letter-spacing:-0.02em">Solo входит в Premium</h2>
+      <p data-rise style="--i:1">Регистрация на S10 бесплатна. Чтобы Solo заполнял ваш календарь, нужен Premium — он открывает и всю платформу.</p>
+    </div>
+    <div class="price-r">
+      <div class="price-fig num" data-rise style="--i:1">
+        750<sup>₽</sup><small>в месяц</small>
+      </div>
+      <p class="price-eur">или 9 € в месяц</p>
+      <ul class="price-inc">
+        <li data-rise style="--i:2">S10 Solo: план до старта и разбор недели</li>
+        <li data-rise style="--i:3">Анализ тренировок: графики, 20:80, каденс, интервалы</li>
+        <li data-rise style="--i:4">Telegram-бот и приложения для iOS и Android</li>
+        <li data-rise style="--i:5">Челленджи каждую неделю и больше 100 подкастов</li>
+      </ul>
+      <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan" data-go>Попробовать Solo</a>
+    </div>
+  </section>
+
+  <section class="faq wrap" id="faq" aria-labelledby="fq-h">
+    <div class="faq-row"><h2 id="fq-h">Частые вопросы</h2></div>
+    <div class="faq-row" data-rise><h3>Мне нужен тренер?</h3><p>Нет. Solo сделан для тех, кто готовится сам. Если тренер у вас есть на S10, он увидит тот же план и сможет его поправить.</p></div>
+    <div class="faq-row" data-rise><h3>А если старта пока нет?</h3><p>Выберите «Отсутствует». План начнётся с ближайшей беговой недели, а его длину вы зададите сами.</p></div>
+    <div class="faq-row" data-rise><h3>Откуда берутся темпа?</h3><p>Из цели на старт, из прогноза S10 по вашим тренировкам или ваши собственные. Лёгкий бег считается от марафонского темпа.</p></div>
+    <div class="faq-row" data-rise><h3>Solo не испортит мой календарь?</h3><p>Прошедшие дни и сегодня он не трогает, дни с задачей оставляет. «Вернуть как было» отменяет последнее заполнение.</p></div>
+    <div class="faq-row" data-rise><h3>Сколько это стоит?</h3><p>Регистрация бесплатна. Заполнение календаря — в Premium: 750 ₽ или 9 € в месяц.</p></div>
+    <div class="faq-row" data-rise><h3>Работает с телефона?</h3><p>Да, в браузере. План хранится в профиле, поэтому на любом устройстве открывается одна и та же неделя.</p></div>
+  </section>
+
+  <section class="cta wrap" aria-labelledby="cta-h">
+    <h2 class="vh" id="cta-h">Начать</h2>
+    <p data-rise>Назовите свой старт, и через три минуты ваша неделя будет расписана.</p>
+    <div class="row" data-rise style="--i:1">
+      <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan" data-go>Начать с Solo</a>
+      <a class="link" href="https://t.me/+wP4aOZ4910I2MTk6">Спросить в Telegram</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="foot">
+      <span>S10 Solo · подготовка к старту без тренера</span>
+      <nav aria-label="Ссылки"><a class="link" href="https://s10.run/premium">Premium</a><a class="link" href="https://t.me/+wP4aOZ4910I2MTk6">Telegram</a><a class="link" href="https://s10.run/">S10.run</a></nav>
+      <span class="r">© 2026 · <a class="link" href="https://s10.run/post/3578/">Персональные данные</a></span>
+    </div>
+  </footer>
+</div>
+
+<div class="pal" role="group" aria-label="Палитра">
+  <button type="button" data-set="1" aria-label="Палитра 1: pacific blue, tomato, mustard"><i style="background:#009FB7"></i><i style="background:#FE4A49"></i><i style="background:#FED766"></i></button>
+  <button type="button" data-set="2" aria-label="Палитра 2: midnight blue, cool horizon, white"><i style="background:#191970"></i><i style="background:#58A6FF"></i><i style="background:#FFFFFF"></i></button>
+  <button type="button" data-set="3" aria-label="Палитра 3: maroon, medium violet red, light cyan"><i style="background:#800000"></i><i style="background:#C71585"></i><i style="background:#E0FFFF"></i></button>
+  <button type="button" data-set="4" aria-label="Палитра 4: espresso, burnt peach, soft apricot"><i style="background:#4E2C23"></i><i style="background:#E2725B"></i><i style="background:#FFDAB9"></i></button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+<script src="scenes/stage.js"></script>
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fmt = (s) => { const r = Math.round(s); return Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); };
+
+  /* palette picker */
+  const html = document.documentElement, meta = $('meta[name="theme-color"]');
+  const setP = (p) => {
+    html.dataset.p = p;
+    try { localStorage.setItem('solo-p', p); } catch (e) {}
+    $$('.pal button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.set === p)));
+    meta.content = getComputedStyle(html).getPropertyValue('--bg').trim();
+  };
+  $$('.pal button').forEach((b) => b.addEventListener('click', () => setP(b.dataset.set)));
+  setP(html.dataset.p);
+
+  /* the calendar: 12 weeks, 14 Sep – 6 Dec 2026, the race on Sunday */
+  const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  const VOL = [52, 58, 63, 58, 68, 74, 66, 78, 81, 72, 60, 60];
+  const grid = $('#cal-grid'), days = [];
+  grid.insertAdjacentHTML('beforeend', '<span></span>' + ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((d) => `<span class="wd">${d}</span>`).join('') + '<span class="wd">км</span>');
+  let shownMonth = -1;
+  for (let w = 0; w < 12; w++) {
+    const mon = new Date(2026, 8, 14 + w * 7);
+    const m = mon.getMonth(), endM = new Date(2026, 8, 20 + w * 7).getMonth();
+    const label = m !== shownMonth ? MONTHS[m] : endM !== shownMonth && endM !== m ? MONTHS[endM] : '';
+    if (label) shownMonth = label === MONTHS[m] ? m : endM;
+    grid.insertAdjacentHTML('beforeend', `<span class="mo">${label}</span>`);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(2026, 8, 14 + w * 7 + i);
+      const race = w === 11 && i === 6;
+      // Mon rest; Wed, Fri and Sun key workouts; race week: Tue easy, Wed short tempo, Thu–Sat rest
+      const run = race || (w < 11 ? i !== 0 : i === 1 || i === 2);
+      const key = !race && run && (w < 11 ? i === 2 || i === 4 || i === 6 : i === 2);
+      const el = document.createElement('span');
+      el.className = 'd' + (run && !race ? (key ? ' key' : ' run') : '') + (race ? ' race' : '');
+      el.textContent = d.getDate();
+      if (race) el.setAttribute('aria-label', '6 декабря, старт');
+      grid.appendChild(el);
+      days.push({ el, run: run || race, w });
+    }
+    grid.insertAdjacentHTML('beforeend', `<span class="wk-km" data-w="${w}">${VOL[w]}</span>`);
+  }
+  const wkKm = $$('.wk-km', grid);
+  const runs = days.filter((d) => d.run);
+  const kmEl = $('#cal-km'), wkEl = $('#cal-wk'), nEl = $('#cal-n');
+  // «14–20 сен», «28 сен – 4 окт»
+  const span = (w) => {
+    const a = new Date(2026, 8, 14 + w * 7), b = new Date(2026, 8, 20 + w * 7);
+    return a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${MONTHS[b.getMonth()]}` : `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]}`;
+  };
+  nEl.textContent = runs.length - 1;
+  const showUpTo = (n) => {
+    days.forEach((d, i) => { const on = i < n && d.run; d.el.classList.toggle('on', on); });
+    wkKm.forEach((el, w) => el.classList.toggle('on', n >= w * 7 + 7));
+    const w = Math.min(11, Math.max(0, Math.ceil(n / 7) - 1));
+    kmEl.textContent = VOL[w] + ' км';
+    wkEl.textContent = 'объём недели, ' + span(w);
+    const cnt = runs.filter((d) => d.el.classList.contains('on')).length;
+    nEl.textContent = Math.max(0, cnt - (n >= days.length ? 1 : 0));
+  };
+
+  window.Scenes = window.Scenes || {};
+  Scenes.calendar = (root, o) => Stage.scene(root, {
+    hold: o.hold ?? 3, beats: 4, scrub: Stage.lenis ? true : 0.5,
+    build(tl) {
+      const st = { n: 0 };
+      root.dataset.beat = '0';
+      showUpTo(0);
+      tl.to(st, { n: days.length, duration: 0.82, ease: 'none', onUpdate: () => showUpTo(Math.floor(st.n)) }, 0.1);
+    },
+    rest() { showUpTo(days.length); },
+  });
+
+  /* hero: the week scale fills once the card is in */
+  setTimeout(() => $('.hc-scale').classList.add('in'), reduced ? 0 : 200);
+
+  /* entrances */
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -12% 0px' }) : null;
+  $$('[data-rise]').forEach((el) => (io && !reduced ? io.observe(el) : el.classList.add('in')));
+
+  /* chapters: the field grows from an inset panel to the edges, the portrait settles */
+  if (window.gsap && window.ScrollTrigger && !reduced) {
+    gsap.registerPlugin(ScrollTrigger);
+    $$('.chapter').forEach((ch) => {
+      gsap.fromTo($('[data-grow]', ch), { clipPath: 'inset(20px 20px 20px 20px)' }, { clipPath: 'inset(0px 0px 0px 0px)', ease: 'none', scrollTrigger: { trigger: ch, start: 'top 85%', end: 'top top', scrub: 0.4 } });
+      gsap.fromTo($('[data-zoom]', ch), { scale: 0.92, autoAlpha: 0.4 }, { scale: 1, autoAlpha: 1, ease: 'none', scrollTrigger: { trigger: ch, start: 'top 80%', end: 'top 10%', scrub: 0.4 } });
+    });
+    gsap.to('.hero-card', { yPercent: -18, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+    gsap.to('.hero-text', { yPercent: 10, autoAlpha: 0.2, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+  }
+
+  /* how it works: the scroll moves the stages; the names jump to theirs */
+  const CLAUSES = ['Сначала вы пишете цель', 'Потом Solo собирает план', 'Дальше вы ставите дни', 'И календарь заполнен'];
+  const howRoot = $('#how'), hH = $('#how-h'), frs = $$('.how-frag .ui'), names = $$('.how-names button'), track = $('.how-track');
+  let stage = 0;
+  const setStage = (i, force) => {
+    if (i === stage && !force) return;
+    stage = i;
+    hH.style.opacity = 0;
+    setTimeout(() => { hH.textContent = CLAUSES[i]; hH.style.opacity = 1; }, reduced ? 0 : 200);
+    frs.forEach((f, k) => { f.hidden = k !== i; });
+    names.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
+    if (!howRoot.classList.contains('is-live')) track.style.setProperty('--pos', ((i + 0.5) / 4 * 100) + '%');
+  };
+  names.forEach((b) => b.addEventListener('click', () => {
+    const k = +b.dataset.to;
+    if (!howRoot.classList.contains('is-live')) return setStage(k);
+    const top = howRoot.getBoundingClientRect().top + scrollY, run = howRoot.offsetHeight - innerHeight;
+    const y = top + run * (k + 0.5) / 4;
+    Stage.lenis ? Stage.lenis.scrollTo(y) : scrollTo({ top: y, behavior: 'smooth' });
+  }));
+  Scenes.how = (root, o) => Stage.scene(root, {
+    hold: o.hold ?? 3, scrub: Stage.lenis ? true : 0.4,
+    build(tl) {
+      const st = { p: 0 };
+      tl.to(st, { p: 1, duration: 1, ease: 'none', onUpdate: () => {
+        track.style.setProperty('--pos', (st.p * 100) + '%');
+        setStage(Math.min(3, Math.floor(st.p * 4)));
+      } }, 0);
+    },
+    rest() { setStage(stage, true); },
+  });
+
+  /* the command list: type to filter, arrows or hover to select */
+  const q = $('#cmd-q'), items = $$('#cmd-list li'), none = $('#cmd-none');
+  const select = (li) => { items.forEach((x) => x.classList.toggle('sel', x === li)); };
+  items.forEach((li) => { const b = $('button', li); b.addEventListener('click', () => select(li)); b.addEventListener('mouseenter', () => matchMedia('(hover: hover)').matches && select(li)); b.addEventListener('focus', () => select(li)); });
+  q.addEventListener('input', () => {
+    const s = q.value.trim().toLowerCase();
+    items.forEach((li) => { li.hidden = !!s && !li.textContent.toLowerCase().includes(s); });
+    const vis = items.filter((li) => !li.hidden);
+    none.hidden = vis.length > 0;
+    if (vis.length && !vis.some((li) => li.classList.contains('sel'))) select(vis[0]);
+  });
+  q.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const vis = items.filter((li) => !li.hidden); if (!vis.length) return;
+    const at = vis.findIndex((li) => li.classList.contains('sel'));
+    select(vis[(at + (e.key === 'ArrowDown' ? 1 : vis.length - 1)) % vis.length]);
+  });
+
+  /* paces from a goal: Riegel k = 1.06, easy runs from marathon pace (the same formulas as Solo itself) */
+  const form = $('#pc-form'), tIn = $('#pc-t'), out = $('#pc-out');
+  const parseT = (v, D) => {
+    const p = String(v).trim().replace(/[.,]/g, ':').split(':').map((x) => x.trim());
+    if (!p.every((x) => /^\d+$/.test(x)) || p.length < 2 || p.length > 3) return null;
+    const n = p.map(Number);
+    const s = n.length === 3 ? n[0] * 3600 + n[1] * 60 + n[2] : D > 21 && n[0] < 10 ? n[0] * 3600 + n[1] * 60 : n[0] * 60 + n[1];
+    return s > 0 && s / D > 150 && s / D < 720 ? s : null;
+  };
+  const calc = () => {
+    const D = +form.d.value, sec = parseT(tIn.value, D);
+    tIn.setAttribute('aria-invalid', String(!sec));
+    if (!sec) return;
+    const at = (d) => sec * (d / D) ** 1.06 / d, t42 = at(42.195);
+    const L = Math.min(1, Math.max(0, (t42 - 285) / (410 - 285))), lo = t42 + 55 - 45 * L, hi = lo + 20 + 10 * L, r5 = (x) => Math.round(x / 5) * 5;
+    const vals = [fmt(at(5)), fmt(at(10)), fmt(at(21.0975)), fmt(t42), fmt(r5(lo)) + '–' + fmt(r5(hi))];
+    $$('dd', out).forEach((dd, i) => { dd.textContent = vals[i]; });
+  };
+  const DEF = { '42.195': '3:20:00', '21.0975': '1:35:00', '10': '43:00', '5': '21:00' };
+  form.addEventListener('change', (e) => { if (e.target.name === 'd') { tIn.value = DEF[e.target.value]; } calc(); });
+  tIn.addEventListener('input', calc);
+  calc();
+
+  if (window.Stage) { Stage.smooth(); Stage.init(); }
+})();
+</script>
+</body>
+</html>
