@@ -10,11 +10,12 @@
 <meta name="theme-color" content="#06323a">
 <script>
   document.documentElement.classList.add('js');
-  // palette: ?p=1, 3 or 4 wins, then the last choice on this device; 1 by default
+  // palette: ?p=1, 3, 4 (the owner's) or 1t, 3t, 4t (taste's corrections) wins, then the last choice on this device; 1 by default
   (function () {
     var q = new URLSearchParams(location.search).get('p'), s = null;
     try { s = localStorage.getItem('solo-p'); } catch (e) {}
-    document.documentElement.dataset.p = /^[134]$/.test(q) ? q : /^[134]$/.test(s) ? s : '1';
+    var ok = /^[134]t?$/;
+    document.documentElement.dataset.p = ok.test(q) ? q : ok.test(s) ? s : '1';
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,6 +53,40 @@
   --mid: #4E2C23; --on-mid: #FFDAB9;
   --race: #E2725B; --on-race: #23120d;
   --hi: #E2725B; --on-hi: #23120d; --work: #FFDAB9; --long: #f2b35e;
+}
+
+/* taste's corrections of the same three sets (colour.md): one accent on the action and the race only, fields with their own inks,
+   no violet (the violet red moves to raspberry), no cream with terracotta (a neutral bone ink on espresso instead of apricot) */
+[data-p="1t"] {
+  /* pacific · tomato · mustard on a cool stone ground */
+  color-scheme: light;
+  --bg: #EEF1EF; --surface: #E1E8E6; --deep: #FFFFFF;
+  --ink: #0B3A42; --muted: rgba(11,58,66,.78);
+  --accent: #EF4B3F; --on-accent: #2a0605;
+  --light: #F6CD4C; --on-light: #231b02;
+  --mid: #0B8FA3; --on-mid: #03191c;
+  --race: #EF4B3F; --on-race: #2a0605;
+  --hi: #0B8FA3; --on-hi: #ffffff; --work: #B07A00; --long: #0B8FA3;
+}
+[data-p="3t"] {
+  /* maroon · raspberry · light cyan, the race in mustard */
+  --bg: #35070d; --surface: #5a0d16; --deep: #22040a;
+  --ink: #E6F7F7; --muted: rgba(230,247,247,.78);
+  --accent: #E0386B; --on-accent: #22040a;
+  --light: #D9F2F2; --on-light: #35070d;
+  --mid: #7a0f1c; --on-mid: #E6F7F7;
+  --race: #F4CC55; --on-race: #35070d;
+  --hi: #D9F2F2; --on-hi: #35070d; --work: #D9F2F2; --long: #FF7FA6;
+}
+[data-p="4t"] {
+  /* espresso ground, a neutral bone ink; the burnt peach reads as terracotta (banned), so the action and the race take mustard and the peach stays on the long runs */
+  --bg: #2a1712; --surface: #432820; --deep: #1c0f0b;
+  --ink: #ECECEA; --muted: rgba(236,236,234,.78);
+  --accent: #EDB43E; --on-accent: #1c0f0b;
+  --light: #E5E4E1; --on-light: #2a1712;
+  --mid: #5b3428; --on-mid: #ECECEA;
+  --race: #EDB43E; --on-race: #1c0f0b;
+  --hi: #EDB43E; --on-hi: #1c0f0b; --work: #E5E4E1; --long: #F0A27E;
 }
 
 :root {
@@ -256,43 +291,55 @@ h2 { font-size: var(--step-head); }
 .dc-figs b { display: block; font: 700 clamp(4.5rem, 2rem + 6vw, 8rem)/.85 var(--display); letter-spacing: -0.045em; color: var(--ink); margin-bottom: 10px; }
 .dc-figs div + div b { color: var(--hi); }
 
-/* ---------- features: close-ups on a board ---------- */
-.board { margin-top: var(--section); padding-inline: 10px; }
-.board-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 104px; gap: 8px; }
-.tile { position: relative; overflow: hidden; border-radius: 22px; padding: 20px; display: flex; flex-direction: column; justify-content: flex-end; }
-.tile .el { position: absolute; pointer-events: none; }
-.tile .cap { position: relative; z-index: 1; }
-.tile .cap b { display: block; font-weight: 600; font-size: 1.125rem; }
-.tile .cap span { display: block; font-size: 0.9375rem; max-width: 34ch; }
-.t-accent { background: var(--accent); color: var(--on-accent); }
-.t-light { background: var(--light); color: var(--on-light); }
-.t-mid { background: var(--mid); color: var(--on-mid); }
-.t-surface { background: var(--surface); color: var(--ink); }
-.t-deep { background: var(--deep); color: var(--ink); }
-.tile.head { justify-content: flex-start; }
-.tile.head h2 { font-size: clamp(2.25rem, 4vw, 3.75rem); max-width: 9ch; }
-.s62 { grid-column: span 6; grid-row: span 2; } .s64 { grid-column: span 6; grid-row: span 4; }
-.s34 { grid-column: span 3; grid-row: span 4; } .s32 { grid-column: span 3; grid-row: span 2; }
-/* the enlarged elements, built in em and grown through font-size */
-.tile { container-type: size; }
-.el-fill { font-size: 6.4cqw; left: 7%; top: 12%; white-space: nowrap; }
-.el-fill span { display: inline-block; padding: .45em 1em; border-radius: 999px; background: var(--deep); color: var(--ink); font-weight: 600; }
-.el-pace { font: 700 34cqw/1 var(--display); letter-spacing: -0.05em; left: 7%; top: 8%; }
-.el-week { font-size: 5.6cqw; left: 7%; top: 12%; display: flex; gap: .22em; white-space: nowrap; }
-.el-week span { display: block; width: 3.2em; padding: .25em 0; border-radius: 999px; text-align: center; background: var(--deep); color: var(--ink); font-weight: 600; }
-.el-week span.k { background: var(--on-mid); color: var(--mid); }
-.el-race { font: 500 min(42cqw, 70cqh)/1 var(--font); right: -10%; top: -22%; width: 1.65em; height: 1.65em; border-radius: 50%; background: var(--race); color: var(--on-race); display: grid; place-items: center; }
-.el-fact { font-size: 7cqw; left: 7%; top: 12%; white-space: nowrap; font-weight: 600; }
-.el-fact em { font-style: normal; display: inline-block; padding: .1em .45em; border-radius: 999px; background: var(--on-mid); color: var(--mid); }
-.el-gen { font-size: 4.2cqw; left: 6%; top: 14%; white-space: nowrap; padding: .5em .8em; border-radius: .5em; background: var(--deep); color: var(--ink); outline: 4px solid var(--hi); outline-offset: -4px; line-height: 1.3; }
-.el-cal { font-size: 5.8cqw; left: 7%; top: 9%; display: grid; grid-template-columns: repeat(7, 1.9em); row-gap: .2em; text-align: center; font-weight: 500; }
-.el-cal .w { color: var(--work); } .el-cal .l { color: var(--long); }
-.el-vol { font-size: 9cqw; left: 7%; top: 14%; width: 9em; }
-.el-vol b { font: 700 1em/1 var(--display); }
-.el-vol i { display: block; height: .3em; margin-top: .35em; border-radius: .15em; background: var(--deep); overflow: hidden; }
-.el-vol i::after { content: ''; display: block; width: 65%; height: 100%; background: var(--on-accent); }
+/* ---------- features: a held scene, one feature per beat ---------- */
+.feats { margin-top: var(--section); }
+.feat-stage { position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding: calc(64px + 3svh) var(--m) 96px; min-height: 100svh; }
+.feat-head { grid-column: 1 / 13; align-self: start; font-size: clamp(1.5rem, 2.2vw, 2.25rem); color: var(--muted); margin-bottom: 24px; }
+.feat-list { grid-column: 1 / 13; display: grid; gap: 64px; list-style: none; margin: 0; padding: 0; }
+.feat { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; }
+.feat-text { grid-column: 1 / 6; }
+.feat-name { font: 700 clamp(2.75rem, 1.3rem + 4.4vw, 5.5rem)/.92 var(--display); letter-spacing: -0.04em; max-width: 10ch; }
+.feat-say { margin-top: 24px; font-size: var(--step-lead); line-height: 1.35; max-width: 26ch; }
+.feat-field { grid-column: 7 / 13; display: grid; place-items: center; min-height: min(62svh, 560px); padding: 40px; border-radius: 32px; }
+.feat-field .ui { width: min(500px, 100%); font-size: 18px; padding: 28px; }
+.feat:nth-child(6n+1) .feat-field { background: var(--accent); }
+.feat:nth-child(6n+2) .feat-field { background: var(--light); }
+.feat:nth-child(6n+3) .feat-field { background: var(--mid); }
+.feat:nth-child(6n+4) .feat-field { background: var(--surface); }
+.feat:nth-child(6n+5) .feat-field { background: var(--light); }
+.feat:nth-child(6n+6) .feat-field { background: var(--race); }
+.feat-dots { display: none; }
+/* live: the features stack in one place and the scroll steps through them */
+.feats.is-live .feat-stage { height: 100svh; align-content: center; }
+.feats.is-live .feat-list { position: relative; display: block; height: min(62svh, 560px); }
+.feats.is-live .feat { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .35s var(--ease), visibility 0s .35s; }
+.feats.is-live .feat .feat-field { transform: translateY(24px) scale(.97); transition: transform .45s var(--ease); height: 100%; }
+.feats.is-live .feat .feat-text { transform: translateY(16px); transition: transform .45s var(--ease); }
+.feats.is-live .feat.on { opacity: 1; visibility: visible; transition-delay: 0s; }
+.feats.is-live .feat.on .feat-field, .feats.is-live .feat.on .feat-text { transform: none; }
+.feats.is-live .feat-dots { display: flex; gap: 14px; position: absolute; left: var(--m); bottom: 40px; }
+.feat-dots button { all: unset; cursor: pointer; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--ink); opacity: .6; transition: background-color .2s var(--ease), opacity .2s var(--ease); }
+.feat-dots button[aria-pressed="true"] { background: var(--race); border-color: var(--race); opacity: 1; }
+.feat-dots button:focus-visible { outline: 3px solid var(--light); outline-offset: 3px; }
+.feat-count { position: absolute; right: var(--m); bottom: 36px; color: var(--muted); font-size: var(--step-small); display: none; }
+.feats.is-live .feat-count { display: block; }
+/* the pieces inside the fields */
+.opt { display: flex; gap: 8px; margin: 14px 0 18px; }
+.opt span { padding: 8px 14px; border-radius: 999px; background: var(--surface); font-size: 14px; }
+.opt span.on { background: var(--ink); color: var(--bg); font-weight: 600; }
+.ks { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; text-align: center; font-size: 13px; }
+.ks span { padding: 10px 0; border-radius: 999px; background: var(--surface); color: var(--muted); }
+.ks span b { display: block; color: var(--ink); font-size: 14px; font-weight: 600; }
+.ks span.k { background: var(--work); color: var(--on-hi); }
+.ks span.k b { color: var(--on-hi); }
+.ks span.l { background: var(--long); color: var(--on-hi); }
+.ks span.l b { color: var(--on-hi); }
+.frm { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 18px; }
+.frm div { padding: 10px 14px; border-radius: 14px; background: var(--surface); }
+.frm div span { display: block; color: var(--muted); font-size: 13px; }
+.frm div b { font-weight: 600; }
 
-/* ---------- the live thing: paces from a goal, set by a slider ---------- */
+
 .paces { margin-top: var(--section); background: var(--light); color: var(--on-light); min-height: 88svh; display: flex; flex-direction: column; padding: clamp(40px, 6vw, 88px) var(--m) clamp(32px, 4vw, 56px); border-radius: 40px 40px 0 0; }
 .paces h2 { font-size: clamp(2.25rem, 3.6vw, 3.5rem); max-width: 14ch; }
 .pc-ctl { margin-top: 28px; width: min(560px, 100%); }
@@ -377,6 +424,8 @@ h2 { font-size: var(--step-head); }
 
 /* palette picker, for choosing among the sets */
 .pal { position: fixed; z-index: 50; right: 16px; bottom: 16px; display: flex; gap: 6px; padding: 8px; background: var(--deep); border-radius: 999px; box-shadow: 0 6px 24px rgba(0,0,0,.35); } /* taste-skill-ignore: a floating picker, not a surface at rest */
+.pal { align-items: center; }
+.pal-l { font-size: 13px; color: var(--muted); padding: 0 4px 0 8px; }
 .pal button { all: unset; cursor: pointer; display: grid; grid-template-columns: repeat(3, 10px); width: 30px; height: 30px; border-radius: 50%; overflow: hidden; outline-offset: 2px; }
 .pal button i { display: block; }
 .pal button[aria-pressed="true"] { outline: 2px solid var(--ink); }
@@ -395,7 +444,6 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   .cal { grid-column: 6 / 13; }
   .cal-grid { font-size: 1rem; grid-template-columns: 2.4em repeat(7, 1fr) 3.2em; }
   .show-fact { display: none; }
-  .board-grid { grid-auto-rows: 88px; }
 }
 @media (min-width: 768px) and (max-width: 1100px) {
   .hero { align-items: start; padding-top: 10svh; }
@@ -448,15 +496,20 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   .how-names { grid-template-columns: 1fr 1fr; gap: 6px 16px; }
   .how-names button:nth-child(n) { color: var(--on-light); }
 
-  .board { padding-inline: 10px; }
-  .board-grid { grid-template-columns: 1fr 1fr; grid-auto-rows: 28vw; gap: 6px; }
-  .tile { padding: 16px; border-radius: 18px; }
-  .tile.head { grid-column: 1 / -1; grid-row: span 2; }
-  .tile.head h2 { font-size: 9vw; }
-  .s64, .s62 { grid-column: 1 / -1; grid-row: span 3; }
-  .s34, .s32 { grid-column: span 1; grid-row: span 2; }
-  .tile .cap b { font-size: 1rem; }
-  .tile .cap span { font-size: 0.875rem; }
+  .feat-stage { grid-template-columns: 1fr; padding: 80px 20px 72px; }
+  .feat-head { grid-column: 1; margin-bottom: 16px; }
+  .feat-list { grid-column: 1; gap: 48px; }
+  .feat { grid-template-columns: 1fr; row-gap: 20px; }
+  .feat-text, .feat-field { grid-column: 1; }
+  .feat-field { order: -1; min-height: 0; padding: 20px; border-radius: 24px; }
+  .feat-field .ui { font-size: 15px; }
+  .feat-name { font-size: 2.25rem; max-width: none; }
+  .feat-say { margin-top: 10px; font-size: 1.0625rem; }
+  .feats.is-live .feat-list { height: calc(100svh - 80px - 72px - 3.5rem); }
+  .feats.is-live .feat { display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+  .feats.is-live .feat .feat-field { height: auto; }
+  .feats.is-live .feat-dots { left: 20px; bottom: 28px; }
+  .feats.is-live .feat-count { right: 20px; bottom: 24px; }
 
   .paces { border-radius: 28px 28px 0 0; min-height: 84svh; padding: 40px 20px 28px; }
   .paces h2 { font-size: 2rem; }
@@ -648,18 +701,65 @@ html.js [data-rise].in { opacity: 1; transform: none; }
    </div>
   </section>
 
-  <section class="board" aria-labelledby="board-h">
-    <div class="board-grid">
-      <div class="tile head t-surface s62"><h2 id="board-h">Что умеет Solo</h2></div>
-      <div class="tile t-light s32" data-ui><div class="el el-race num" aria-hidden="true">6</div><div class="cap"><b>Сохранить старт</b><span>Главный старт и цель: от них считается весь план.</span></div></div>
-      <div class="tile t-mid s32" data-ui><div class="el el-fact num" aria-hidden="true">факт <em>12 км · 5:31</em></div><div class="cap"><b>План и факт</b><span>Рядом с заданием — что пробежали на самом деле.</span></div></div>
-      <div class="tile t-accent s64" data-ui><div class="el el-fill" aria-hidden="true"><span>Заполнить календарь</span></div><div class="cap"><b>Заполнить календарь</b><span>Две беговые недели или сразу весь план до старта, одним нажатием.</span></div></div>
-      <div class="tile t-deep s34" data-ui><div class="el el-pace num" aria-hidden="true">4:44</div><div class="cap"><b>Мои темпа</b><span>T5, T10, T21 и T42 из цели, из прогноза S10 или ваши.</span></div></div>
-      <div class="tile t-mid s34" data-ui><div class="el el-week" aria-hidden="true"><span>Вт</span><span class="k">Ср</span><span>Чт</span><span class="k">Пт</span><span>Сб</span></div><div class="cap"><b>Запланировать неделю</b><span>Две ключевые тренировки, остальную неделю Solo рассчитает сам.</span></div></div>
-      <div class="tile t-surface s62" data-ui><div class="el el-gen" aria-hidden="true">Марафон 6 дек, Valencia, цель 3:20:00</div><div class="cap"><b>Сгенерировать план</b><span>Напишите, как бегаете сейчас и к чему готовитесь. Solo превратит это в план по неделям.</span></div></div>
-      <div class="tile t-deep s32" data-ui><div class="el el-cal num" aria-hidden="true"><span>14</span><span>15</span><span class="w">16</span><span>17</span><span class="w">18</span><span>19</span><span class="l">20</span><span>21</span><span>22</span><span class="w">23</span><span>24</span><span class="w">25</span><span>26</span><span class="l">27</span></div><div class="cap"><b>Календарь до старта</b><span>Все недели до гонки на одном экране.</span></div></div>
-      <div class="tile t-accent s32" data-ui><div class="el el-vol num" aria-hidden="true"><b>44 из 68 км</b><i></i></div><div class="cap"><b>Объём недели</b><span>Сколько уже пробежали и сколько осталось.</span></div></div>
+  <section class="scene feats" id="feats" data-scene="feats" data-options='{"hold": 5}' aria-labelledby="feat-h">
+   <div class="scene-stage feat-stage">
+    <h2 class="feat-head" id="feat-h">Что умеет Solo</h2>
+    <ol class="feat-list">
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Заполнить календарь</h3><p class="feat-say">Две беговые недели или сразу весь план до старта, одним нажатием.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-lbl">План в календарь</div>
+          <div class="opt"><span class="on">2 беговые недели</span><span>До старта</span></div>
+          <div class="ui-row"><span class="ui-mut">14–27 сен · 12 тренировок</span><span class="ui-btn">Заполнить календарь</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Сгенерировать план</h3><p class="feat-say">Напишите, как бегаете сейчас и к чему готовитесь. Solo превратит это в план по неделям.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-lbl">Расскажите о себе и цели</div>
+          <div class="ui-box">Марафон 6 дек, Valencia, цель 3:20:00. Бегаю 5 раз в неделю, 50–60 км.</div>
+          <div class="ui-row" style="margin-top:14px"><span class="ui-mut">Марафон · 12 недель</span><span class="ui-btn">Сгенерировать</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Мои темпа</h3><p class="feat-say">T5, T10, T21 и T42 из цели, из прогноза S10 по вашим тренировкам или ваши собственные.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-head"><b>Мои темпа</b><span class="ui-mut">цель 3:20:00</span></div>
+          <div class="pz"><span>T5</span><b class="num">4:10</b><span class="ui-mut num">400 м за 1:40</span></div>
+          <div class="pz"><span>T10</span><b class="num">4:21</b><span class="ui-mut num">400 м за 1:44</span></div>
+          <div class="pz"><span>T21</span><b class="num">4:33</b><span class="ui-mut num">400 м за 1:49</span></div>
+          <div class="pz"><span>T42</span><b class="num">4:44</b><span class="ui-mut num">400 м за 1:54</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">План и факт</h3><p class="feat-say">Рядом с каждым заданием — что вы пробежали на самом деле, по трекам из дневника.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-day"><span class="dt">Вт 27</span><span class="ty">Восстановительная</span><span class="km">10 км</span><span class="fact ui-mut">Темп 5:40–6:00 · факт <b>12 км, 5:31</b>, быстрее задания</span></div>
+          <div class="ui-day"><span class="dt">Ср 28</span><span class="ty">Интервальная</span><span class="km">13 км</span><span class="fact ui-mut">3×2000 м по 4:00–4:05 · факт <b>13 км</b>, в задании</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Запланировать неделю</h3><p class="feat-say">Выберите две ключевые тренировки, остальную неделю Solo рассчитает сам.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-row"><span class="ui-lbl">Неделя 2–8 ноября</span><span class="ui-mut">62 км</span></div>
+          <div class="ks num"><span>Пн<b>—</b></span><span>Вт<b>8</b></span><span class="k">Ср<b>12</b></span><span>Чт<b>8</b></span><span>Пт<b>10</b></span><span>Сб<b>6</b></span><span class="l">Вс<b>18</b></span></div>
+          <p class="ui-mut" style="margin-top:12px">Интервальная в среду и длительная в воскресенье, остальное посчитано.</p>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Сохранить старт</h3><p class="feat-say">Главный старт и цель на него: от них считается весь план и все темпа.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-lbl">Главный старт</div>
+          <div class="frm"><div><span>Старт</span><b>Valencia</b></div><div><span>Дата</span><b>6 декабря</b></div><div><span>Дистанция</span><b>Марафон</b></div><div><span>Цель</span><b class="num">3:20:00</b></div></div>
+          <span class="ui-btn">Сохранить старт</span>
+        </div></div>
+      </li>
+    </ol>
+    <div class="feat-dots" role="group" aria-label="Функции">
+      <button type="button" aria-pressed="true" aria-label="Заполнить календарь"></button><button type="button" aria-pressed="false" aria-label="Сгенерировать план"></button><button type="button" aria-pressed="false" aria-label="Мои темпа"></button><button type="button" aria-pressed="false" aria-label="План и факт"></button><button type="button" aria-pressed="false" aria-label="Запланировать неделю"></button><button type="button" aria-pressed="false" aria-label="Сохранить старт"></button>
     </div>
+    <p class="feat-count num" id="feat-count" aria-live="polite">1 из 6</p>
+   </div>
   </section>
 
   <section class="paces" id="paces" aria-labelledby="pc-h">
@@ -736,9 +836,14 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   </div>
   <div class="foot-last"><span>© 2026 · <a class="link" href="https://s10.run/post/3578/">Персональные данные</a></span><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan">Начать</a></div>
   <div class="pal" role="group" aria-label="Палитра">
+    <span class="pal-l">ваши</span>
     <button type="button" data-set="1" aria-label="Палитра 1: pacific blue, tomato, mustard"><i style="background:#009FB7"></i><i style="background:#FE4A49"></i><i style="background:#FED766"></i></button>
     <button type="button" data-set="3" aria-label="Палитра 3: maroon, medium violet red, light cyan"><i style="background:#800000"></i><i style="background:#C71585"></i><i style="background:#E0FFFF"></i></button>
     <button type="button" data-set="4" aria-label="Палитра 4: espresso, burnt peach, soft apricot"><i style="background:#4E2C23"></i><i style="background:#E2725B"></i><i style="background:#FFDAB9"></i></button>
+    <span class="pal-l">taste</span>
+    <button type="button" data-set="1t" aria-label="Палитра 1 от taste: светлый камень, глубокий бирюзовый, томат, горчица"><i style="background:#EEF1EF"></i><i style="background:#0B3A42"></i><i style="background:#EF4B3F"></i></button>
+    <button type="button" data-set="3t" aria-label="Палитра 3 от taste: глубокий maroon, малиновый, светлый циан"><i style="background:#35070d"></i><i style="background:#E0386B"></i><i style="background:#D9F2F2"></i></button>
+    <button type="button" data-set="4t" aria-label="Палитра 4 от taste: эспрессо, кость, горчица"><i style="background:#2a1712"></i><i style="background:#ECECEA"></i><i style="background:#EDB43E"></i></button>
   </div>
 </footer>
 
@@ -907,6 +1012,31 @@ html.js [data-rise].in { opacity: 1; transform: none; }
       } }, 0);
     },
     rest() { setStage(stage, true); },
+  });
+
+  /* features: the scroll steps through them; the dots jump to theirs */
+  const featRoot = $('#feats'), feats = $$('.feat', featRoot), fdots = $$('.feat-dots button'), fcount = $('#feat-count');
+  let feat = -1;
+  const setFeat = (k) => {
+    if (k === feat) return;
+    feat = k;
+    feats.forEach((f, i) => f.classList.toggle('on', i === k));
+    fdots.forEach((b, i) => b.setAttribute('aria-pressed', String(i === k)));
+    fcount.textContent = (k + 1) + ' из ' + feats.length;
+  };
+  fdots.forEach((b, k) => b.addEventListener('click', () => {
+    const top = featRoot.getBoundingClientRect().top + scrollY, run = featRoot.offsetHeight - innerHeight;
+    const y = top + run * (k + 0.5) / feats.length;
+    Stage.lenis ? Stage.lenis.scrollTo(y) : scrollTo({ top: y, behavior: 'smooth' });
+  }));
+  Scenes.feats = (root, o) => Stage.scene(root, {
+    hold: o.hold ?? 5, scrub: Stage.lenis ? true : 0.4,
+    build(tl) {
+      const st = { p: 0 };
+      setFeat(0);
+      tl.to(st, { p: 1, duration: 1, ease: 'none', onUpdate: () => setFeat(Math.min(feats.length - 1, Math.floor(st.p * feats.length))) }, 0);
+    },
+    rest() { feats.forEach((f) => f.classList.remove('on')); },
   });
 
   /* paces from a goal: Riegel k = 1.06, easy runs from marathon pace (the same formulas as Solo itself) */
