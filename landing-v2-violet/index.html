@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<!-- temporary copy of landing-v2 in the owner's violet · pink · raspberry on white, to compare (03.11.2026); the real page is landing-v2 in 1t -->
+<meta name="robots" content="noindex">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>S10 Solo — план до старта</title>
+<meta name="description" content="Назовите старт и цель: S10 Solo разложит план по датам, посчитает темпа и заполнит календарь за три минуты.">
+<meta property="og:title" content="S10 Solo — план до старта">
+<meta property="og:description" content="Назовите старт и цель: план до него за три минуты.">
+<meta name="theme-color" content="#FFFFFF">
+<script>
+  document.documentElement.classList.add('js');
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="scenes/stage.css">
+<style>
+/* ---------- colour: the owner's violet #C03EE0 · pink #E03EAF · raspberry #E03E5E on white (03.11.2026; a temporary
+   version to compare). The ink is a deep plum taken from the violet; every field carries that ink (4.5:1 or more).
+   taste bans violet; it is the owner's colour, kept on purpose ---------- */
+:root {
+  color-scheme: light;
+  --bg: #FFFFFF; --surface: #EFE3F3; --deep: #F8F2FA;
+  --ink: #2a0b33; --muted: rgba(42,11,51,.76);
+  --accent: #E03E5E; --on-accent: #1f0626;
+  --light: #C03EE0; --on-light: #1f0626;
+  --mid: #E03EAF; --on-mid: #1f0626;
+  --race: #E03E5E; --on-race: #1f0626;
+  --hi: #A82BC7; --on-hi: #ffffff; --work: #A82BC7; --long: #C42F92;
+}
+
+:root {
+  --display: 'Jost', system-ui, sans-serif;
+  --font: 'Golos Text', system-ui, sans-serif;
+  --m: clamp(20px, 2.2vw, 32px);
+  --gap: clamp(16px, 2vw, 28px);
+  --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --step-head: clamp(2.25rem, 1.3rem + 3.2vw, 4.25rem);
+  --step-display: clamp(3rem, 6vw, 6.5rem);
+  --step-giant: clamp(6rem, 21vw, 21rem);
+  --ease: cubic-bezier(.22,.61,.36,1);
+  --section: clamp(120px, 14vw, 200px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); overflow-x: clip;
+  font-family: var(--font); font-weight: 400; font-size: var(--step-body); line-height: 1.5;
+  -webkit-font-smoothing: antialiased; transition: background-color .6s var(--ease), color .6s var(--ease);
+}
+a { color: inherit; }
+h1, h2, h3, p { margin: 0; }
+h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: -0.04em; line-height: .92; }
+h2 { font-size: var(--step-head); }
+[id] { scroll-margin-top: 80px; }
+::selection { background: var(--accent); color: var(--on-accent); }
+:focus-visible { outline: 3px solid var(--light); outline-offset: 3px; }
+.vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wrap { padding-inline: var(--m); }
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); }
+.num { font-variant-numeric: tabular-nums lining-nums; }
+
+/* the motif's shape: buttons are fully round */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5em;
+  min-height: 48px; padding: 0 26px; border: 0; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent);
+  font: 600 var(--step-body)/1 var(--font); text-decoration: none; cursor: pointer;
+  transition: transform .18s var(--ease), background-color .18s var(--ease), color .18s var(--ease);
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0) scale(.98); }
+.btn.alt { background: var(--ink); color: var(--bg); }
+.link { text-decoration: underline 2px transparent; text-underline-offset: .28em; transition: text-decoration-color .25s var(--ease); }
+.link:hover, .link:focus-visible { text-decoration-color: currentColor; }
+/* the motif at text size: a round bullet */
+.dot::before { content: ''; display: inline-block; width: .55em; height: .55em; border-radius: 50%; background: var(--race); margin-right: .5em; vertical-align: .06em; }
+
+/* ---------- header ---------- */
+.rail { position: sticky; top: 0; z-index: 30; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 var(--m); background: var(--bg); }
+.mark { font: 700 1.375rem/1 var(--display); letter-spacing: -0.03em; text-decoration: none; }
+.rail-act { display: flex; align-items: center; gap: 24px; font-size: var(--step-small); }
+.rail-act .btn { font-size: var(--step-small); min-height: 40px; padding: 0 18px; }
+
+/* ---------- hero: the race-day circle at full scale ---------- */
+.hero { position: relative; min-height: calc(100svh - 64px); display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding-block: 48px; }
+.hero-text { grid-column: 1 / 8; position: relative; z-index: 2; }
+.hero h1 { font-size: var(--step-display); max-width: 11ch; }
+.hero-sent { margin-top: 32px; max-width: 38ch; font-size: var(--step-lead); line-height: 1.35; }
+.hero .row { display: flex; align-items: center; gap: 24px; margin-top: 40px; flex-wrap: wrap; }
+.hero .btn { min-height: 56px; padding: 0 30px; }
+.hero-note { margin-top: 28px; color: var(--muted); font-size: var(--step-small); }
+/* the orb: a circle min(120vh, 75vw) across entering from the right; with motion it flies into 6 December */
+.orb {
+  --D: min(120svh, 75vw);
+  position: absolute; z-index: 1; width: var(--D); height: var(--D); border-radius: 50%;
+  left: calc(100vw - .68 * var(--D)); top: calc(50% - .5 * var(--D));
+  background: var(--race); color: var(--on-race); display: grid; place-items: center;
+  font: 500 calc(var(--D) * .61) / 1 var(--font); letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+  pointer-events: none; transform-origin: 50% 50%; will-change: transform;
+}
+.orb span { display: block; transform: translateY(-.02em); }
+.orb.flying { position: fixed; }
+.orb.gone { visibility: hidden; }
+
+/* ---------- scene: the calendar, the race already marked, fills up to it ---------- */
+.cal-sec { margin-top: var(--section); }
+.cal-stage { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding: calc(64px + 2svh) var(--m) 3svh; min-height: 100svh; }
+.cal-text { grid-column: 1 / 6; }
+.cal-text h2 { max-width: 11ch; }
+.cal-says { position: relative; margin-top: 32px; min-height: 4.2em; font-size: var(--step-lead); line-height: 1.3; }
+.cal-says p { max-width: 24ch; }
+.is-live .cal-says p { position: absolute; inset: 0 auto auto 0; opacity: 0; visibility: hidden; transform: translateY(14px); transition: opacity .45s var(--ease), transform .45s var(--ease), visibility 0s .45s; }
+.is-live[data-beat="0"] .cal-says p:nth-child(1), .is-live[data-beat="1"] .cal-says p:nth-child(2),
+.is-live[data-beat="2"] .cal-says p:nth-child(3), .is-live[data-beat="3"] .cal-says p:nth-child(4) { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.cal-sec:not(.is-live) .cal-says p + p { margin-top: .5em; }
+.cal-figs { display: flex; gap: clamp(28px, 4vw, 64px); margin-top: 36px; }
+.cal-figs div { font-size: var(--step-small); color: var(--muted); }
+.cal-figs b { display: block; font: 700 var(--step-head)/1 var(--display); letter-spacing: -0.03em; color: var(--ink); margin-bottom: 6px; }
+.cal { grid-column: 6 / 13; background: var(--surface); padding: clamp(20px, 3svh, 40px) clamp(20px, 2.6vw, 40px); border-radius: 28px; }
+.cal-grid { display: grid; grid-template-columns: 2.6em repeat(7, 1fr) 4.2em; font-size: var(--step-body); line-height: 1.25; }
+.cal-grid .wd { color: var(--muted); text-align: center; padding-bottom: 8px; font-size: var(--step-small); }
+.cal-grid .wd:last-child { text-align: right; }
+.cal-grid .mo { color: var(--muted); align-self: center; padding-bottom: 8px; font-size: var(--step-small); }
+.cal-grid .wk-km { text-align: right; align-self: center; padding-bottom: 8px; color: var(--muted); font-variant-numeric: tabular-nums; opacity: .25; transition: opacity .3s var(--ease), color .3s var(--ease); }
+.cal-grid .wk-km.on, .cal-sec:not(.is-live) .wk-km { opacity: 1; color: var(--ink); }
+.cal-grid .d { position: relative; z-index: 0; text-align: center; padding: clamp(1px, .4svh, 4px) 0 clamp(9px, 1.9svh, 17px); font-variant-numeric: tabular-nums; color: var(--muted); transition: color .3s var(--ease); }
+.cal-grid .d::after { content: ''; position: absolute; left: 50%; bottom: clamp(1px, .5svh, 4px); width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--ink); opacity: 0; transform: scale(.3); transition: opacity .3s var(--ease), transform .3s var(--ease); }
+.cal-grid .d.work::after { background: var(--work); width: 9px; height: 9px; margin-left: -4.5px; }
+.cal-grid .d.long::after { background: var(--long); width: 18px; height: 6px; margin-left: -9px; border-radius: 3px; }
+.cal-grid .d.on, .cal-sec:not(.is-live) .d { color: var(--ink); }
+.cal-grid .d.on::after, .cal-sec:not(.is-live) .d::after { opacity: 1; transform: scale(1); }
+.cal-grid .d.run.on::after, .cal-sec:not(.is-live) .d.run::after { opacity: .45; }
+.cal-grid .d.work.on, .cal-sec:not(.is-live) .d.work { color: var(--work); font-weight: 600; }
+.cal-grid .d.long.on, .cal-sec:not(.is-live) .d.long { color: var(--long); font-weight: 600; }
+/* the race day: lit from the start; while the orb is in flight it waits hidden under it */
+.cal-grid .d.race { font-weight: 500; color: var(--on-race); }
+.cal-grid .d.race::after { display: none; }
+.cal-grid .d.race::before { content: ''; position: absolute; left: 50%; top: calc(clamp(1px, .4svh, 4px) + .625em); width: 1.65em; height: 1.65em; margin: -.825em 0 0 -.825em; border-radius: 50%; background: var(--race); z-index: -1; }
+.cal-sec.waiting .d.race { visibility: hidden; }
+.cal-key { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 16px; font-size: var(--step-small); color: var(--muted); }
+.cal-key span::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); margin-right: 8px; vertical-align: middle; }
+.cal-key span.e::before { opacity: .45; }
+.cal-key span.k::before { background: var(--work); width: 9px; height: 9px; }
+.cal-key span.l::before { background: var(--long); width: 18px; height: 6px; border-radius: 3px; }
+.cal-key span.r::before { background: var(--race); width: 12px; height: 12px; }
+
+/* interface fragments: the product's own panels */
+.ui { background: var(--deep); color: var(--ink); font-size: 16px; line-height: 1.4; padding: 24px; border-radius: 22px; }
+.ui-lbl { font-weight: 600; }
+.ui-mut { color: var(--muted); font-size: 14px; }
+.ui-box { margin-top: 10px; padding: 14px 16px; background: var(--bg); border-radius: 14px; outline: 2px solid var(--hi); outline-offset: -2px; }
+.ui-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ui-btn { display: inline-block; padding: 10px 16px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 14px; }
+.ui-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 10px; }
+.ui-head b { font-weight: 600; }
+.ui-day { display: grid; grid-template-columns: 4.2em 1fr auto; gap: 4px 12px; padding: 10px 0; }
+.ui-day .dt { color: var(--muted); font-size: 14px; }
+.ui-day .ty, .ui-day .km { font-weight: 600; }
+.ui-day .fact { grid-column: 2 / 4; font-size: 14px; }
+.ui-day .fact b { font-weight: 600; color: var(--hi); }
+.ui-day.today { background: var(--surface); margin-inline: -12px; padding-inline: 12px; border-radius: 12px; }
+.pz { display: grid; grid-template-columns: 4.5em 1fr auto; align-items: baseline; gap: 12px; padding: 7px 0; }
+.pz b { font: 700 1.75rem/1.1 var(--display); letter-spacing: -0.02em; }
+.pz.easy b { color: var(--hi); font-size: 1.375rem; }
+.wk { display: grid; grid-template-columns: 7.5em 1fr 3.4em; align-items: center; gap: 10px; padding: 4px 0; font-size: 14px; }
+.wk i { display: block; height: 8px; border-radius: 4px; background: var(--ink); opacity: .85; }
+.wk.race i { background: var(--race); opacity: 1; }
+.wk span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.lay { display: grid; grid-template-columns: 2.4em 1fr 3.4em; gap: 8px; padding: 6px 0; font-size: 14px; align-items: center; }
+.lay span:nth-child(2) { padding: 4px 12px; background: var(--surface); border-radius: 999px; }
+.lay span:last-child { text-align: right; }
+.hc-block + .hc-block { margin-top: 22px; }
+.hc-lbl { color: var(--muted); font-size: 14px; }
+.hc-big { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-top: 4px; font: 700 1.625rem/1.1 var(--display); letter-spacing: -0.02em; }
+.hc-scale { position: relative; height: 10px; margin-top: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; }
+.hc-scale i { position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--hi); border-radius: 5px; }
+.hc-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; text-align: center; font-size: 13px; }
+.hc-week span { display: block; padding: 7px 0; background: var(--bg); color: var(--muted); border-radius: 999px; }
+.hc-week b { display: block; font-weight: 600; color: var(--ink); font-size: 15px; }
+.hc-week .done { background: var(--hi); color: var(--on-hi); }
+.hc-week .done b { color: var(--on-hi); }
+.hc-week .today { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+/* ---------- showcase: one fragment in front of a disc, chosen from a list ---------- */
+.show { margin-top: var(--section); position: relative; min-height: 100svh; }
+.show-disc { position: absolute; left: 58%; top: 50%; width: min(64svh, 46vw); aspect-ratio: 1; border-radius: 50%; translate: -50% -50%; background: var(--accent); transition: background-color .3s var(--ease); }
+.show-frag { position: absolute; left: 58%; top: 50%; width: min(440px, 34vw); translate: -50% -50%; }
+.show-frag .ui { transition: opacity .24s var(--ease); }
+.show-frag .ui[hidden] { display: block; position: absolute; inset: 0 0 auto 0; opacity: 0; visibility: hidden; }
+.show-list { position: absolute; left: var(--m); bottom: clamp(32px, 8svh, 80px); }
+.show-list ul { list-style: none; margin: 0; padding: 0; }
+.show-list h2 { font-size: clamp(1.75rem, 2.9vw, 2.75rem); color: var(--muted); margin-bottom: .1em; }
+.show-list button { all: unset; cursor: pointer; display: block; font: 700 clamp(1.75rem, 2.9vw, 2.75rem)/1.15 var(--display); letter-spacing: -0.03em; color: var(--muted); transition: color .2s var(--ease); }
+.show-list button[aria-pressed="true"] { color: var(--ink); }
+.show-list button[aria-pressed="true"]::before { content: ''; display: inline-block; width: .42em; height: .42em; border-radius: 50%; background: var(--race); margin-right: .3em; vertical-align: .12em; }
+.show-list button:focus-visible { outline: 3px solid var(--light); outline-offset: 4px; }
+.show-fact { position: absolute; right: var(--m); top: 50%; translate: 0 -50%; width: 30ch; max-width: calc(42% - 4ch - var(--m)); font-size: 1.0625rem; }
+
+/* ---------- how it works: a held scene, scroll moves the stages ---------- */
+.how { margin-top: var(--section); }
+.how-stage { position: relative; }
+.how-fields { display: grid; grid-template-columns: 1fr 1fr; min-height: 88svh; }
+.how.is-live .how-fields { height: 100svh; min-height: 0; }
+.how-left { background: var(--light); color: var(--on-light); padding: clamp(32px, 5vw, 72px) var(--m); }
+.how.is-live .how-left { padding-top: calc(64px + clamp(32px, 5vw, 72px)); }
+.how-left h2 { max-width: 12ch; font-size: clamp(2.75rem, 1.3rem + 4.4vw, 5.5rem); transition: opacity .2s var(--ease); }
+.how-right { background: var(--deep); display: grid; place-items: center; padding: 96px var(--m) 140px; }
+.how-frag { width: min(500px, 100%); position: relative; }
+.how-frag .ui { font-size: 17px; padding: 28px; transition: opacity .25s var(--ease), transform .25s var(--ease); }
+.how-frag .ui[hidden] { display: block; position: absolute; inset: 0 0 auto 0; opacity: 0; transform: translateY(16px); pointer-events: none; visibility: hidden; }
+.how-frag .wk, .how-frag .lay { font-size: 15px; }
+.how-bar { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 28px 26px; z-index: 2; }
+.how-track { position: relative; height: 8px; border-radius: 4px; overflow: hidden; }
+.how-track::before { content: ''; position: absolute; inset: 0; background: currentColor; opacity: .25; }
+.how-track i { position: absolute; left: 0; top: 0; height: 8px; width: var(--pos, 12.5%); background: var(--accent); border-radius: 4px; }
+.how-names { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 14px; }
+.how-names button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; color: inherit; opacity: .7; transition: opacity .2s var(--ease); }
+.how-names button::before { content: ''; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box; border: 2px solid currentColor; }
+.how-names button[aria-pressed="true"] { opacity: 1; font-weight: 600; }
+.how-names button[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); }
+.how-names button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.how-names button:nth-child(-n+2) { color: var(--on-light); }
+.dc-title { font: 700 var(--step-lead)/1.1 var(--display); letter-spacing: -0.02em; }
+.dc-dates { margin-top: 8px; color: var(--muted); font-size: var(--step-lead); }
+.dc-figs { display: flex; gap: clamp(28px, 4vw, 64px); margin-top: 40px; }
+.dc-figs div { color: var(--muted); }
+.dc-figs b { display: block; font: 700 clamp(4.5rem, 2rem + 6vw, 8rem)/.85 var(--display); letter-spacing: -0.045em; color: var(--ink); margin-bottom: 10px; }
+.dc-figs div + div b { color: var(--hi); }
+
+/* ---------- features: a held scene, one feature per beat ---------- */
+.feats { margin-top: var(--section); }
+.feat-stage { position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding: calc(64px + 3svh) var(--m) 96px; min-height: 100svh; }
+.feat-head { grid-column: 1 / 13; align-self: start; font-size: clamp(1.5rem, 2.2vw, 2.25rem); color: var(--muted); margin-bottom: 24px; }
+.feat-list { grid-column: 1 / 13; display: grid; gap: 64px; list-style: none; margin: 0; padding: 0; }
+.feat { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; }
+.feat-text { grid-column: 1 / 6; }
+.feat-name { font: 700 clamp(2.75rem, 1.3rem + 4.4vw, 5.5rem)/.92 var(--display); letter-spacing: -0.04em; max-width: 10ch; }
+.feat-say { margin-top: 24px; font-size: var(--step-lead); line-height: 1.35; max-width: 26ch; }
+.feat-field { grid-column: 7 / 13; display: grid; place-items: center; min-height: min(62svh, 560px); padding: 40px; border-radius: 32px; }
+.feat-field .ui { width: min(500px, 100%); font-size: 18px; padding: 28px; }
+.feat:nth-child(6n+1) .feat-field { background: var(--accent); }
+.feat:nth-child(6n+2) .feat-field { background: var(--light); }
+.feat:nth-child(6n+3) .feat-field { background: var(--mid); }
+.feat:nth-child(6n+4) .feat-field { background: var(--surface); }
+.feat:nth-child(6n+5) .feat-field { background: var(--light); }
+.feat:nth-child(6n+6) .feat-field { background: var(--race); }
+.feat-dots { display: none; }
+/* live: the features stack in one place and the scroll steps through them */
+.feats.is-live .feat-stage { height: 100svh; align-content: center; }
+.feats.is-live .feat-list { position: relative; display: block; height: min(62svh, 560px); }
+.feats.is-live .feat { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .35s var(--ease), visibility 0s .35s; }
+.feats.is-live .feat .feat-field { transform: translateY(24px) scale(.97); transition: transform .45s var(--ease); height: 100%; }
+.feats.is-live .feat .feat-text { transform: translateY(16px); transition: transform .45s var(--ease); }
+.feats.is-live .feat.on { opacity: 1; visibility: visible; transition-delay: 0s; }
+.feats.is-live .feat.on .feat-field, .feats.is-live .feat.on .feat-text { transform: none; }
+.feats.is-live .feat-dots { display: flex; gap: 14px; position: absolute; left: var(--m); bottom: 40px; }
+.feat-dots button { all: unset; cursor: pointer; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--ink); opacity: .6; transition: background-color .2s var(--ease), opacity .2s var(--ease); }
+.feat-dots button[aria-pressed="true"] { background: var(--race); border-color: var(--race); opacity: 1; }
+.feat-dots button:focus-visible { outline: 3px solid var(--light); outline-offset: 3px; }
+.feat-count { position: absolute; right: var(--m); bottom: 36px; color: var(--muted); font-size: var(--step-small); display: none; }
+.feats.is-live .feat-count { display: block; }
+/* the pieces inside the fields */
+.opt { display: flex; gap: 8px; margin: 14px 0 18px; }
+.opt span { padding: 8px 14px; border-radius: 999px; background: var(--surface); font-size: 14px; }
+.opt span.on { background: var(--ink); color: var(--bg); font-weight: 600; }
+.ks { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; text-align: center; font-size: 13px; }
+.ks span { padding: 10px 0; border-radius: 999px; background: var(--surface); color: var(--muted); }
+.ks span b { display: block; color: var(--ink); font-size: 14px; font-weight: 600; }
+.ks span.k { background: var(--work); color: var(--on-hi); }
+.ks span.k b { color: var(--on-hi); }
+.ks span.l { background: var(--long); color: var(--on-hi); }
+.ks span.l b { color: var(--on-hi); }
+.frm { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 18px; }
+.frm div { padding: 10px 14px; border-radius: 14px; background: var(--surface); }
+.frm div span { display: block; color: var(--muted); font-size: 13px; }
+.frm div b { font-weight: 600; }
+
+
+.paces { margin-top: var(--section); background: var(--light); color: var(--on-light); min-height: 88svh; display: flex; flex-direction: column; padding: clamp(40px, 6vw, 88px) var(--m) clamp(32px, 4vw, 56px); border-radius: 40px 40px 0 0; }
+.paces h2 { font-size: clamp(2.25rem, 3.6vw, 3.5rem); max-width: 14ch; }
+.pc-ctl { margin-top: 28px; width: min(560px, 100%); }
+.seg { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; padding: 10px 18px; border-radius: 999px; background: rgba(0,0,0,.08); font-weight: 500; transition: background-color .18s var(--ease), color .18s var(--ease); }
+.seg input:checked + span { background: var(--on-light); color: var(--light); }
+.seg input:focus-visible + span { outline: 3px solid var(--on-light); outline-offset: 3px; }
+.goal { margin-top: 26px; }
+.goal label { display: flex; justify-content: space-between; align-items: baseline; font-weight: 500; }
+.goal output { font: 700 1.75rem/1 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.goal input { width: 100%; margin: 16px 0 0; height: 44px; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+.goal input::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: rgba(0,0,0,.18); }
+.goal input::-moz-range-track { height: 8px; border-radius: 4px; background: rgba(0,0,0,.18); }
+.goal input::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; margin-top: -12px; border-radius: 50%; background: var(--race); border: 0; }
+.goal input::-moz-range-thumb { width: 32px; height: 32px; border-radius: 50%; background: var(--race); border: 0; }
+.goal input:focus-visible { outline: 3px solid var(--on-light); outline-offset: 4px; }
+.pc-res { margin-top: auto; padding-top: 48px; display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; }
+.pc-big { font: 700 var(--step-giant)/.8 var(--display); letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.pc-big small { font-size: .2em; letter-spacing: 0; margin-left: .25em; }
+.pc-rest { list-style: none; margin: 0; padding: 0; min-width: 16em; font-size: var(--step-lead); }
+.pc-rest li { display: flex; justify-content: space-between; gap: 24px; padding: 4px 0; }
+.pc-rest b { font: 700 1em/1.3 var(--display); font-variant-numeric: tabular-nums; }
+
+/* ---------- the band that splits the page: the platform ---------- */
+.band { background: var(--mid); color: var(--on-mid); padding: clamp(64px, 9vw, 140px) var(--m); }
+.band .big { font-size: var(--step-head); max-width: 14ch; }
+.band-sent { margin-top: 24px; font-size: var(--step-lead); max-width: 30ch; }
+.band .quote { margin: 48px 0 0 auto; max-width: 44ch; font-size: var(--step-lead); line-height: 1.4; }
+.band cite { font-style: normal; }
+
+/* ---------- pricing: two plans, two fields ---------- */
+.plans { display: grid; grid-template-columns: 5fr 7fr; }
+.plan { min-height: 90svh; padding: 40px var(--m); display: flex; flex-direction: column; }
+.plan h2 { font-size: clamp(2.75rem, 5vw, 5rem); }
+.plan .who { margin-top: 16px; max-width: 26ch; font-size: var(--step-lead); line-height: 1.3; }
+.plan .inc { margin-top: 28px; max-width: 46ch; }
+.plan .foot { margin-top: auto; padding-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+.plan .price { font: 700 clamp(4rem, 10vw, 10rem)/.8 var(--display); letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.plan .price small { font: 400 var(--step-body)/1.3 var(--font); letter-spacing: 0; margin-left: .5em; display: inline-block; }
+.plan.free { background: var(--surface); color: var(--ink); }
+.plan.pro { background: var(--light); color: var(--on-light); }
+.plan.pro .btn { background: var(--race); color: var(--on-race); }
+.plan.free .btn { background: var(--ink); color: var(--bg); }
+
+/* ---------- questions: filled tiles, one open at a time ---------- */
+.faq { margin-top: var(--section); }
+.faq-h { grid-column: 1 / 5; align-self: start; position: sticky; top: 96px; }
+.faq-h h2 { font-size: clamp(2.25rem, 4vw, 3.75rem); max-width: 7ch; }
+.faq-list { grid-column: 5 / 13; display: grid; gap: 8px; }
+.faq details { background: var(--surface); border-radius: 22px; transition: background-color .2s var(--ease), color .2s var(--ease); }
+.faq details[open] { background: var(--accent); color: var(--on-accent); }
+.faq summary { list-style: none; cursor: pointer; min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 24px; font-size: 1.25rem; font-weight: 500; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary i { position: relative; flex: none; width: 16px; height: 16px; }
+.faq summary i::before, .faq summary i::after { content: ''; position: absolute; left: 0; top: 6.5px; width: 16px; height: 3px; border-radius: 2px; background: currentColor; transition: transform .2s var(--ease); }
+.faq summary i::after { transform: rotate(90deg); }
+.faq details[open] summary i::after { transform: rotate(0deg); }
+.faq summary:focus-visible { outline: 3px solid var(--light); outline-offset: 3px; border-radius: 22px; }
+.faq details p { padding: 0 24px 24px; max-width: 52ch; font-size: 1.0625rem; }
+
+/* ---------- close: one word is the button ---------- */
+.cta { display: block; margin-top: var(--section); position: relative; min-height: 60svh; background: var(--race); color: var(--on-race); text-decoration: none; border-radius: 30svh 30svh 0 0; overflow: hidden; transition: background-color .15s, color .15s; }
+.cta:hover, .cta:focus-visible { background: var(--ink); color: var(--bg); outline: none; }
+.cta-sent { position: absolute; left: clamp(40px, 9vw, 160px); top: clamp(40px, 9svh, 96px); max-width: 26ch; font-size: var(--step-lead); line-height: 1.3; font-weight: 500; }
+.cta svg { position: absolute; right: clamp(40px, 9vw, 160px); top: clamp(40px, 9svh, 96px); width: 48px; height: 48px; }
+.cta-word { position: absolute; left: var(--m); right: var(--m); bottom: 24px; font: 700 27vw/.78 var(--display); letter-spacing: -0.06em; white-space: nowrap; }
+
+/* ---------- footer: the name built from blocks ---------- */
+.foot-mark { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; align-items: end; height: 34svh; min-height: 200px; padding: 4px; }
+.foot-mark span { height: 100%; border-radius: 22px 22px 0 0; display: grid; place-items: end center; font: 700 min(26svh, 20vw)/.78 var(--display); letter-spacing: -0.05em; color: var(--bg); overflow: hidden; }
+.foot-mark span:nth-child(1) { height: 82%; background: var(--light); }
+.foot-mark span:nth-child(2) { height: 100%; background: var(--race); border-radius: 50% 50% 0 0; }
+.foot-mark span:nth-child(3) { height: 64%; background: var(--mid); color: var(--light); }
+.foot-mark span:nth-child(4) { height: 90%; background: var(--ink); }
+.foot-links { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px var(--gap); padding: 56px var(--m) 24px; font-size: 15px; }
+.foot-links nav { grid-column: 1 / 9; display: flex; flex-wrap: wrap; gap: 12px 32px; }
+.foot-links .contact { grid-column: 9 / 13; color: var(--muted); }
+.foot-last { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 0 var(--m) 28px; font-size: 15px; color: var(--muted); }
+.foot-last .btn { min-height: 40px; font-size: 15px; padding: 0 18px; }
+
+
+/* entrances: parts of a section rise in turn, never hidden without a script */
+html.js [data-rise] { opacity: 0; transform: translateY(24px); transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: calc(var(--i, 0) * 80ms); }
+html.js [data-rise].in { opacity: 1; transform: none; }
+
+/* ---------- tablet ---------- */
+@media (max-width: 1100px) {
+  .rail-act .link { display: none; }
+  .cal-text { grid-column: 1 / 6; }
+  .cal-text h2 { font-size: 2.75rem; }
+  .cal-says { font-size: 1.25rem; }
+  .cal { grid-column: 6 / 13; }
+  .cal-grid { font-size: 1rem; grid-template-columns: 2.4em repeat(7, 1fr) 3.2em; }
+  .show-fact { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  .hero { align-items: start; padding-top: 10svh; }
+  .hero-text { grid-column: 1 / 10; }
+  .orb { --D: min(72svh, 80vw); left: calc(100vw - .62 * var(--D)); top: auto; bottom: calc(-.32 * var(--D)); }
+}
+
+/* ---------- phone ---------- */
+@media (max-width: 767px) {
+  .rail { padding: 0 20px; }
+  .hero { display: block; padding: 28px 20px 0; min-height: calc(100svh - 64px); }
+  .hero h1 { font-size: 2.75rem; }
+  .hero-sent { margin-top: 18px; font-size: 1.125rem; }
+  .hero .row { margin-top: 24px; }
+  .hero .btn { width: 100%; }
+  .hero-note { margin-top: 16px; }
+  .orb { --D: 112vw; left: calc(100vw - .58 * var(--D)); top: auto; bottom: calc(-.5 * var(--D)); }
+
+  .cal-stage { grid-template-columns: 1fr; padding: 72px 20px 16px; align-content: center; row-gap: 16px; }
+  .cal-text, .cal { grid-column: 1; }
+  .cal-text h2 { font-size: 2.25rem; max-width: none; }
+  .cal-says { margin-top: 10px; min-height: 2.6em; font-size: 1.0625rem; }
+  .cal-figs { margin-top: 8px; }
+  .cal-figs b { font-size: 1.75rem; }
+  .cal { padding: 16px 12px; border-radius: 22px; }
+  .cal-grid { grid-template-columns: 2.2em repeat(7, 1fr) 3.4em; font-size: 14px; }
+  .cal-grid .wd, .cal-grid .mo, .cal-grid .wk-km { font-size: 13px; }
+  .cal-grid .d.race::before { width: 1.55em; height: 1.55em; margin: -.775em 0 0 -.775em; }
+  .cal-key { font-size: 13px; margin-top: 12px; gap: 8px 16px; }
+
+  .show { min-height: 0; padding: 0 20px; display: flex; flex-direction: column; gap: 24px; }
+  .show-disc, .show-frag, .show-list, .show-fact { position: relative; left: auto; top: auto; right: auto; bottom: auto; translate: none; }
+  .show-stage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; min-height: 92vw; }
+  .show-frag .ui { min-width: 0; }
+  .hc-big { font-size: 1.375rem; flex-wrap: wrap; }
+  .hc-big span { min-width: 0; overflow-wrap: anywhere; }
+  .show-disc { position: absolute; left: 50%; top: 50%; width: 86vw; translate: -50% -50%; }
+  .show-frag { width: 100%; }
+  .show-list { order: -1; }
+  .show-list ul { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; list-style: none; padding: 0; margin: 0; }
+  .show-list button { font-size: 1.5rem; }
+  .show-fact { display: block; width: auto; max-width: none; }
+
+  .how-fields { display: flex; flex-direction: column; min-height: 0; }
+  .how-right { order: -1; flex: 1 1 auto; padding: 28px 20px; }
+  .how.is-live .how-right { padding-top: 80px; }
+  .how-left { padding: 24px 20px 112px; }
+  .how.is-live .how-left { padding-top: 24px; }
+  .how-left h2 { font-size: 2.5rem; max-width: none; }
+  .how-frag .ui { font-size: 15px; padding: 20px; }
+  .how-frag .wk, .how-frag .lay { font-size: 14px; }
+  .how-bar { padding: 0 20px 20px; color: var(--on-light); }
+  .how-names { grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+  .how-names button:nth-child(n) { color: var(--on-light); }
+
+  .feat-stage { grid-template-columns: 1fr; padding: 80px 20px 72px; }
+  .feat-head { grid-column: 1; margin-bottom: 16px; }
+  .feat-list { grid-column: 1; gap: 48px; }
+  .feat { grid-template-columns: 1fr; row-gap: 20px; }
+  .feat-text, .feat-field { grid-column: 1; }
+  .feat-field { order: -1; min-height: 0; padding: 20px; border-radius: 24px; }
+  .feat-field .ui { font-size: 15px; }
+  .feat-name { font-size: 2.25rem; max-width: none; }
+  .feat-say { margin-top: 10px; font-size: 1.0625rem; }
+  .feats.is-live .feat-list { height: calc(100svh - 80px - 72px - 3.5rem); }
+  .feats.is-live .feat { display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+  .feats.is-live .feat .feat-field { height: auto; }
+  .feats.is-live .feat-dots { left: 20px; bottom: 28px; }
+  .feats.is-live .feat-count { right: 20px; bottom: 24px; }
+
+  .paces { border-radius: 28px 28px 0 0; min-height: 84svh; padding: 40px 20px 28px; }
+  .paces h2 { font-size: 2rem; }
+  .pc-res { padding-top: 40px; flex-direction: column; align-items: stretch; }
+  .pc-big { font-size: 30vw; }
+  .pc-rest { min-width: 0; font-size: 1.125rem; }
+
+  .band .quote { margin-left: 0; }
+  .plans { grid-template-columns: 1fr; }
+  .plans .pro { order: -1; }
+  .plan { min-height: 70svh; padding: 32px 20px 20px; }
+  .plan h2 { font-size: 12vw; }
+  .plan .price { font-size: 24vw; }
+  .plan .foot { flex-direction: column; align-items: stretch; }
+  .plan .btn { width: 100%; }
+
+  .faq-h { position: static; margin-bottom: 24px; }
+  .faq-h, .faq-list { grid-column: 1 / -1; }
+  .faq-h h2 { font-size: 9vw; max-width: none; }
+  .faq summary { font-size: 1.125rem; min-height: 64px; padding: 16px 20px; }
+  .faq details p { padding: 0 20px 20px; font-size: 1rem; }
+
+  .cta { min-height: 46svh; border-radius: 23svh 23svh 0 0; }
+  .cta-sent { left: 28px; top: 56px; font-size: 1.0625rem; max-width: 18ch; }
+  .cta svg { right: 28px; top: 56px; width: 32px; height: 32px; }
+  .cta-word { font-size: 25vw; }
+
+  .foot-mark { height: 22svh; min-height: 140px; }
+  .foot-mark span { border-radius: 14px 14px 0 0; font-size: 19vw; }
+  .foot-links { grid-template-columns: 1fr; padding: 32px 20px 20px; }
+  .foot-links nav, .foot-links .contact { grid-column: 1; }
+  .foot-last { padding: 0 20px 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  html.js [data-rise] { opacity: 1; transform: none; transition: none; }
+  .btn, .link, .faq details, .cta { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="rail" id="top">
+  <a class="mark" href="#top">S10 Solo</a>
+  <div class="rail-act">
+    <a class="link" href="#how">Как это работает</a>
+    <a class="link" href="#price">Цена</a>
+    <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan">Начать</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap" aria-labelledby="h1">
+    <div class="hero-text">
+      <h1 id="h1">S10 Solo — план до старта</h1>
+      <p class="hero-sent" data-rise>Назовите старт и цель. Solo разложит тренировки по датам, посчитает темпа и заполнит ваш календарь S10 за три минуты.</p>
+      <div class="row" data-rise style="--i:1">
+        <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan">Попробовать Solo</a>
+        <a class="link" href="#plan">Посмотреть, как выглядит</a>
+      </div>
+      <p class="hero-note dot" data-rise style="--i:2">Например, марафон в Валенсии 6 декабря</p>
+    </div>
+    <div class="orb" id="orb" aria-hidden="true"><span>6</span></div>
+  </section>
+
+  <section class="scene cal-sec" id="plan" data-scene="calendar" data-options='{"hold": 3}' aria-labelledby="cal-h">
+    <div class="scene-stage cal-stage">
+      <div class="cal-text">
+        <h2 id="cal-h">До Валенсии 12&nbsp;недель</h2>
+        <div class="cal-says">
+          <p>Старт отмечен: 6 декабря, марафон, цель 3:20.</p>
+          <p>Solo раскладывает план по датам, неделя за неделей.</p>
+          <p>Каждая тренировка в ваших темпах и километрах.</p>
+          <p>Календарь заполнен до самого старта.</p>
+        </div>
+        <div class="cal-figs">
+          <div><b class="num" id="cal-km">40 км</b><span id="cal-wk">объём недели, 30 ноя – 6 дек</span></div>
+          <div><b class="num" id="cal-n">68</b>тренировки</div>
+        </div>
+      </div>
+      <div class="cal" data-ui>
+        <div class="cal-grid" id="cal-grid" aria-label="Календарь с 14 сентября по 6 декабря"></div>
+        <div class="cal-key"><span class="e">лёгкая</span><span class="k">работа</span><span class="l">длительная</span><span class="r">старт</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="show" aria-labelledby="show-h">
+    <div class="show-stage">
+      <div class="show-disc" id="show-disc"></div>
+      <div class="show-frag">
+        <div class="ui" data-ui data-item="0">
+          <div class="hc-block">
+            <div class="hc-lbl">Сегодня, суббота 31 октября</div>
+            <div class="hc-big"><span>Восстановительная</span><span class="num">8 км</span></div>
+            <div class="hc-lbl">Темп 5:40–6:00 мин/км</div>
+          </div>
+          <div class="hc-block">
+            <div class="hc-lbl">Объём недели</div>
+            <div class="hc-big"><span class="num">44 из 68 км</span></div>
+            <div class="hc-scale" style="--w:65%"><i></i></div>
+            <div class="hc-week num"><span>Пн<b>—</b></span><span class="done">Вт<b>10</b></span><span class="done">Ср<b>13</b></span><span class="done">Чт<b>8</b></span><span class="done">Пт<b>11</b></span><span class="today">Сб<b>8</b></span><span>Вс<b>18</b></span></div>
+          </div>
+          <div class="hc-block">
+            <div class="hc-lbl">До старта</div>
+            <div class="hc-big"><span class="num">36 дней</span></div>
+            <div class="hc-lbl">Valencia, 6 дек, 42 км, прогноз 3:19:59</div>
+          </div>
+        </div>
+        <div class="ui" data-ui data-item="1" hidden>
+          <div class="ui-head"><b>Моя неделя</b><span class="ui-mut">26 окт – 1 ноя</span></div>
+          <div class="ui-day"><span class="dt">Вт 27</span><span class="ty">Восстановительная</span><span class="km">10 км</span><span class="fact ui-mut">Темп 5:40–6:00 · факт <b>12 км, 5:31</b>, быстрее задания</span></div>
+          <div class="ui-day"><span class="dt">Ср 28</span><span class="ty">Интервальная</span><span class="km">13 км</span><span class="fact ui-mut">Разминка 4 км · 3×2000 м по 4:00–4:05, отдых 400 м</span></div>
+          <div class="ui-day today"><span class="dt">Сб 31</span><span class="ty">Восстановительная</span><span class="km">8 км</span><span class="fact ui-mut">Сегодня · темп 5:40–6:00</span></div>
+          <div class="ui-day"><span class="dt">Вс 1</span><span class="ty">Длительная</span><span class="km">18 км</span><span class="fact ui-mut">Темп 5:40</span></div>
+        </div>
+        <div class="ui" data-ui data-item="2" hidden>
+          <div class="ui-head"><b>Мои темпа</b><span class="ui-mut">цель 3:20:00</span></div>
+          <div class="pz"><span>T5</span><b class="num">4:10</b><span class="ui-mut num">400 м за 1:40</span></div>
+          <div class="pz"><span>T10</span><b class="num">4:21</b><span class="ui-mut num">400 м за 1:44</span></div>
+          <div class="pz"><span>T21</span><b class="num">4:33</b><span class="ui-mut num">400 м за 1:49</span></div>
+          <div class="pz"><span>T42</span><b class="num">4:44</b><span class="ui-mut num">400 м за 1:54</span></div>
+          <div class="pz easy"><span>Лёгкий</span><b class="num">5:40–6:00</b><span></span></div>
+        </div>
+        <div class="ui" data-ui data-item="3" hidden>
+          <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">План до старта</span><span class="ui-mut">714 км</span></div>
+          <div id="show-weeks"></div>
+        </div>
+      </div>
+    </div>
+    <div class="show-list">
+      <h2 id="show-h">Solo каждый день</h2>
+      <ul>
+        <li><button type="button" aria-pressed="true" data-to="0">Сегодня</button></li>
+        <li><button type="button" aria-pressed="false" data-to="1">Неделя</button></li>
+        <li><button type="button" aria-pressed="false" data-to="2">Темпа</button></li>
+        <li><button type="button" aria-pressed="false" data-to="3">План</button></li>
+      </ul>
+    </div>
+    <p class="show-fact" id="show-fact" aria-live="polite">Открыли Solo — и сразу видно, что бежать сегодня, сколько осталось за неделю и сколько дней до старта.</p>
+  </section>
+
+  <section class="scene how" id="how" data-scene="how" data-options='{"hold": 3}' aria-labelledby="how-h">
+   <div class="scene-stage how-stage">
+    <div class="how-fields">
+      <div class="how-left">
+        <div class="how-clause" aria-live="polite"><h2 id="how-h">Сначала вы пишете цель</h2></div>
+      </div>
+      <div class="how-right">
+        <div class="how-frag">
+          <div class="ui" data-ui data-stage="0">
+            <div class="ui-lbl">Расскажите о себе и цели</div>
+            <div class="ui-box">Марафон 6 дек, Valencia, цель 3:20:00. Бегаю 5 раз в неделю, 50–60 км.</div>
+            <div class="ui-row" style="margin-top:14px"><span class="ui-mut">Марафон · 12 недель</span><span class="ui-btn">Сгенерировать</span></div>
+          </div>
+          <div class="ui" data-ui data-stage="1" hidden>
+            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">План до старта</span><span class="ui-mut">714 км</span></div>
+            <div id="how-weeks"></div>
+          </div>
+          <div class="ui" data-ui data-stage="2" hidden>
+            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">Первая неделя</span><span class="ui-mut">50 км</span></div>
+            <div class="lay"><span>Пн</span><span>Отдых</span><span></span></div>
+            <div class="lay"><span>Вт</span><span>Восстановительная</span><span>8 км</span></div>
+            <div class="lay"><span>Ср</span><span>Интервальная</span><span>10 км</span></div>
+            <div class="lay"><span>Чт</span><span>Восстановительная</span><span>6 км</span></div>
+            <div class="lay"><span>Пт</span><span>Развивающая</span><span>9 км</span></div>
+            <div class="lay"><span>Сб</span><span>Восстановительная</span><span>6 км</span></div>
+            <div class="lay"><span>Вс</span><span>Длительная</span><span>11 км</span></div>
+          </div>
+          <div class="ui" data-ui data-stage="3" hidden>
+            <div class="dc-title">Календарь заполнен</div>
+            <div class="dc-dates">14–27 сентября</div>
+            <div class="dc-figs num"><div><b>12</b>тренировок</div><div><b>104</b>км</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="how-bar">
+      <div class="how-track"><i></i></div>
+      <div class="how-names" role="group" aria-label="Этапы">
+        <button type="button" data-to="0" aria-pressed="true">Цель</button>
+        <button type="button" data-to="1" aria-pressed="false">План</button>
+        <button type="button" data-to="2" aria-pressed="false">Ваша неделя</button>
+        <button type="button" data-to="3" aria-pressed="false">Календарь</button>
+      </div>
+    </div>
+   </div>
+  </section>
+
+  <section class="scene feats" id="feats" data-scene="feats" data-options='{"hold": 5}' aria-labelledby="feat-h">
+   <div class="scene-stage feat-stage">
+    <h2 class="feat-head" id="feat-h">Что умеет Solo</h2>
+    <ol class="feat-list">
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Заполнить календарь</h3><p class="feat-say">Две беговые недели или сразу весь план до старта, одним нажатием.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-lbl">План в календарь</div>
+          <div class="opt"><span class="on">2 беговые недели</span><span>До старта</span></div>
+          <div class="ui-row"><span class="ui-mut">14–27 сен · 12 тренировок</span><span class="ui-btn">Заполнить календарь</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Сгенерировать план</h3><p class="feat-say">Напишите, как бегаете сейчас и к чему готовитесь. Solo превратит это в план по неделям.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-lbl">Расскажите о себе и цели</div>
+          <div class="ui-box">Марафон 6 дек, Valencia, цель 3:20:00. Бегаю 5 раз в неделю, 50–60 км.</div>
+          <div class="ui-row" style="margin-top:14px"><span class="ui-mut">Марафон · 12 недель</span><span class="ui-btn">Сгенерировать</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Мои темпа</h3><p class="feat-say">T5, T10, T21 и T42 из цели, из прогноза S10 по вашим тренировкам или ваши собственные.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-head"><b>Мои темпа</b><span class="ui-mut">цель 3:20:00</span></div>
+          <div class="pz"><span>T5</span><b class="num">4:10</b><span class="ui-mut num">400 м за 1:40</span></div>
+          <div class="pz"><span>T10</span><b class="num">4:21</b><span class="ui-mut num">400 м за 1:44</span></div>
+          <div class="pz"><span>T21</span><b class="num">4:33</b><span class="ui-mut num">400 м за 1:49</span></div>
+          <div class="pz"><span>T42</span><b class="num">4:44</b><span class="ui-mut num">400 м за 1:54</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">План и факт</h3><p class="feat-say">Рядом с каждым заданием — что вы пробежали на самом деле, по трекам из дневника.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-day"><span class="dt">Вт 27</span><span class="ty">Восстановительная</span><span class="km">10 км</span><span class="fact ui-mut">Темп 5:40–6:00 · факт <b>12 км, 5:31</b>, быстрее задания</span></div>
+          <div class="ui-day"><span class="dt">Ср 28</span><span class="ty">Интервальная</span><span class="km">13 км</span><span class="fact ui-mut">3×2000 м по 4:00–4:05 · факт <b>13 км</b>, в задании</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Запланировать неделю</h3><p class="feat-say">Выберите две ключевые тренировки, остальную неделю Solo рассчитает сам.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-row"><span class="ui-lbl">Неделя 2–8 ноября</span><span class="ui-mut">62 км</span></div>
+          <div class="ks num"><span>Пн<b>—</b></span><span>Вт<b>8</b></span><span class="k">Ср<b>12</b></span><span>Чт<b>8</b></span><span>Пт<b>10</b></span><span>Сб<b>6</b></span><span class="l">Вс<b>18</b></span></div>
+          <p class="ui-mut" style="margin-top:12px">Интервальная в среду и длительная в воскресенье, остальное посчитано.</p>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Сохранить старт</h3><p class="feat-say">Главный старт и цель на него: от них считается весь план и все темпа.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-lbl">Главный старт</div>
+          <div class="frm"><div><span>Старт</span><b>Valencia</b></div><div><span>Дата</span><b>6 декабря</b></div><div><span>Дистанция</span><b>Марафон</b></div><div><span>Цель</span><b class="num">3:20:00</b></div></div>
+          <span class="ui-btn">Сохранить старт</span>
+        </div></div>
+      </li>
+    </ol>
+    <div class="feat-dots" role="group" aria-label="Функции">
+      <button type="button" aria-pressed="true" aria-label="Заполнить календарь"></button><button type="button" aria-pressed="false" aria-label="Сгенерировать план"></button><button type="button" aria-pressed="false" aria-label="Мои темпа"></button><button type="button" aria-pressed="false" aria-label="План и факт"></button><button type="button" aria-pressed="false" aria-label="Запланировать неделю"></button><button type="button" aria-pressed="false" aria-label="Сохранить старт"></button>
+    </div>
+    <p class="feat-count num" id="feat-count" aria-live="polite">1 из 6</p>
+   </div>
+  </section>
+
+  <section class="paces" id="paces" aria-labelledby="pc-h">
+    <h2 id="pc-h">Ваши темпа исходя из цели</h2>
+    <form class="pc-ctl" id="pc-form" data-ui onsubmit="return false">
+      <fieldset class="seg">
+        <legend class="vh">Дистанция</legend>
+        <label><input type="radio" name="d" value="42.195" checked><span>Марафон</span></label>
+        <label><input type="radio" name="d" value="21.0975"><span>Полумарафон</span></label>
+        <label><input type="radio" name="d" value="10"><span>10 км</span></label>
+        <label><input type="radio" name="d" value="5"><span>5 км</span></label>
+      </fieldset>
+      <div class="goal">
+        <label for="pc-t">Цель <output id="pc-v" for="pc-t" class="num">3:20:00</output></label>
+        <input id="pc-t" type="range" min="9000" max="19800" step="60" value="12000" aria-valuetext="3:20:00">
+      </div>
+    </form>
+    <div class="pc-res" aria-live="polite">
+      <div class="pc-big"><span id="pc-main">4:44</span><small>/км</small></div>
+      <ul class="pc-rest num" id="pc-rest">
+        <li><span>5 км</span><b>4:10</b></li>
+        <li><span>10 км</span><b>4:21</b></li>
+        <li><span>Полумарафон</span><b>4:33</b></li>
+        <li><span>Лёгкий бег</span><b>5:40–6:00</b></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="band-h">
+    <h2 class="big" id="band-h">33&nbsp;000 атлетов и 410&nbsp;тренеров</h2>
+    <p class="band-sent" data-rise>Solo работает на S10, где челленджи выходят каждую неделю.</p>
+    <blockquote class="quote" data-rise style="--i:1">«Когда вы регулярно тратите на что-то час-полтора в день, имеет смысл делать это осознанно. Именно так добиваются результатов» — <cite>Юрий Строфилов, основатель S10.run</cite></blockquote>
+  </section>
+
+  <section class="plans" id="price" aria-label="Цена">
+    <div class="plan free">
+      <h2>Регистрация</h2>
+      <p class="who">Аккаунт S10. Solo откроется сразу после входа.</p>
+      <p class="inc">Зарегистрироваться можно бесплатно. Заполнять календарь планом Solo будет с Premium.</p>
+      <div class="foot"><div class="price num">0&nbsp;₽</div><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan">Зарегистрироваться</a></div>
+    </div>
+    <div class="plan pro">
+      <h2>Premium</h2>
+      <p class="who">Для тех, кто готовится к старту с Solo.</p>
+      <p class="inc">S10 Solo заполняет календарь планом до старта. Глубокий анализ тренировок, Telegram-бот и приложения для iOS и Android, челленджи каждую неделю и больше 100 подкастов.</p>
+      <div class="foot"><div class="price num">750&nbsp;₽<small>в месяц<br>или 9 €</small></div><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan">Попробовать Solo</a></div>
+    </div>
+  </section>
+
+  <section class="faq wrap grid" id="faq" aria-labelledby="fq-h">
+    <div class="faq-h"><h2 id="fq-h">Частые вопросы</h2></div>
+    <div class="faq-list">
+      <details name="faq" open><summary>Мне нужен тренер?<i></i></summary><p>Нет. Solo сделан для тех, кто готовится сам. Если тренер у вас есть на S10, он увидит тот же план и сможет его поправить.</p></details>
+      <details name="faq"><summary>А если старта пока нет?<i></i></summary><p>Выберите «Отсутствует». План начнётся с ближайшей беговой недели, а его длину вы зададите сами.</p></details>
+      <details name="faq"><summary>Откуда берутся темпа?<i></i></summary><p>Из цели на старт, из прогноза S10 по вашим тренировкам или ваши собственные. Лёгкий бег считается от марафонского темпа.</p></details>
+      <details name="faq"><summary>Solo не испортит мой календарь?<i></i></summary><p>Прошедшие дни и сегодня он не трогает, а дни, где уже стоит задача, оставляет как есть.</p></details>
+      <details name="faq"><summary>Сколько это стоит?<i></i></summary><p>Регистрация бесплатна. Заполнение календаря — в Premium: 750 ₽ или 9 € в месяц.</p></details>
+      <details name="faq"><summary>Работает с телефона?<i></i></summary><p>Да, в браузере. План хранится в профиле, поэтому на любом устройстве открывается одна и та же неделя.</p></details>
+    </div>
+  </section>
+
+  <a class="cta" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan" aria-label="Начать с Solo: вход в S10">
+    <span class="cta-sent">Войдите в S10, и Solo откроется сразу после входа.</span>
+    <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M12 36 36 12M16 12h20v20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="cta-word" aria-hidden="true">Начать</span>
+  </a>
+</main>
+
+<footer>
+  <div class="foot-mark" aria-hidden="true"><span>S</span><span>o</span><span>l</span><span>o</span></div>
+  <div class="foot-links">
+    <nav aria-label="Ссылки"><a class="link" href="https://s10.run/premium">Premium</a><a class="link" href="https://t.me/+wP4aOZ4910I2MTk6">Вопросы в Telegram</a><a class="link" href="https://s10.run/">S10.run</a><a class="link" href="#faq">Частые вопросы</a></nav>
+    <p class="contact">S10 Solo · подготовка к старту без тренера</p>
+  </div>
+  <div class="foot-last"><span>© 2026 · <a class="link" href="https://s10.run/post/3578/">Персональные данные</a></span><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan">Начать</a></div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+<script src="scenes/stage.js"></script>
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fmt = (s) => { const r = Math.round(s); return Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); };
+  const hms = (s) => { const r = Math.round(s), h = Math.floor(r / 3600), m = Math.floor(r % 3600 / 60), x = r % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+
+
+  /* the plan: 12 weeks, 14 Sep – 6 Dec 2026; a steady build, an easier week every fourth, the taper */
+  const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  const VOL = [50, 54, 58, 54, 60, 64, 68, 62, 70, 72, 62, 40];
+  const span = (w) => {
+    const a = new Date(2026, 8, 14 + w * 7), b = new Date(2026, 8, 20 + w * 7);
+    return a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${MONTHS[b.getMonth()]}` : `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]}`;
+  };
+  const weeksHtml = VOL.map((v, w) => `<div class="wk${w === 11 ? ' race' : ''}"><span>${span(w)}</span><i style="width:${Math.round(v / 80 * 100)}%"></i><span>${v} км</span></div>`).join('');
+  $('#how-weeks').innerHTML = weeksHtml;
+  $('#show-weeks').innerHTML = weeksHtml;
+
+  /* the calendar */
+  const grid = $('#cal-grid'), days = [];
+  grid.insertAdjacentHTML('beforeend', '<span></span>' + ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((d) => `<span class="wd">${d}</span>`).join('') + '<span class="wd">км</span>');
+  let shownMonth = -1;
+  for (let w = 0; w < 12; w++) {
+    const m = new Date(2026, 8, 14 + w * 7).getMonth(), endM = new Date(2026, 8, 20 + w * 7).getMonth();
+    const label = m !== shownMonth ? MONTHS[m] : endM !== shownMonth && endM !== m ? MONTHS[endM] : '';
+    if (label) shownMonth = label === MONTHS[m] ? m : endM;
+    grid.insertAdjacentHTML('beforeend', `<span class="mo">${label}</span>`);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(2026, 8, 14 + w * 7 + i), race = w === 11 && i === 6;
+      // Mon rest; Wed interval and Fri development (work), Sun long; race week: Tue easy, Wed short work, Thu–Sat rest
+      const run = race || (w < 11 ? i !== 0 : i === 1 || i === 2);
+      const work = run && (w < 11 ? i === 2 || i === 4 : i === 2), long = w < 11 && i === 6;
+      const el = document.createElement('span');
+      el.className = 'd' + (race ? ' race' : long ? ' long' : work ? ' work' : run ? ' run' : '');
+      el.textContent = d.getDate();
+      if (race) el.setAttribute('aria-label', '6 декабря, старт');
+      grid.appendChild(el);
+      days.push({ el, run: run && !race });
+    }
+    grid.insertAdjacentHTML('beforeend', `<span class="wk-km">${VOL[w]}</span>`);
+  }
+  const wkKm = $$('.wk-km', grid), runs = days.filter((d) => d.run);
+  const kmEl = $('#cal-km'), wkEl = $('#cal-wk'), nEl = $('#cal-n');
+  const showUpTo = (n) => {
+    days.forEach((d, i) => d.el.classList.toggle('on', i < n && d.run));
+    wkKm.forEach((el, w) => el.classList.toggle('on', n >= w * 7 + 7));
+    const w = Math.min(11, Math.max(0, Math.ceil(n / 7) - 1));
+    kmEl.textContent = VOL[w] + ' км';
+    wkEl.textContent = 'объём недели, ' + span(w);
+    nEl.textContent = runs.filter((d) => d.el.classList.contains('on')).length;
+  };
+  nEl.textContent = runs.length;
+
+  window.Scenes = window.Scenes || {};
+  Scenes.calendar = (root, o) => Stage.scene(root, {
+    hold: o.hold ?? 3, beats: 4, scrub: Stage.lenis ? true : 0.5,
+    build(tl) {
+      const st = { n: 0 };
+      root.dataset.beat = '0';
+      showUpTo(0);
+      tl.to(st, { n: days.length, duration: 0.82, ease: 'none', onUpdate: () => showUpTo(Math.floor(st.n)) }, 0.1);
+    },
+    rest() { showUpTo(days.length); },
+  });
+
+  /* the orb: the hero's race circle shrinks and lands on 6 December as the calendar arrives */
+  const orb = $('#orb'), calSec = $('#plan'), raceCell = $('.d.race', grid);
+  const flight = () => {
+    if (reduced) return;
+    let S, T, calTop;
+    // S: the orb's centre and size in the hero (page coordinates); T: the race circle's centre and size when the calendar is pinned (viewport)
+    const measure = () => {
+      orb.classList.remove('flying', 'gone'); orb.style.cssText = '';
+      const r = orb.getBoundingClientRect();
+      S = { x: r.left + r.width / 2, y: r.top + scrollY + r.height / 2, d: r.width };
+      const sr = $('.cal-stage').getBoundingClientRect(), cr = raceCell.getBoundingClientRect(), cs = getComputedStyle(raceCell, '::before');
+      T = { x: cr.left + cr.width / 2, y: cr.top - sr.top + parseFloat(cs.top), d: parseFloat(cs.width) };
+      calTop = calSec.getBoundingClientRect().top + scrollY;
+      orb.classList.add('flying');
+      orb.style.left = (S.x - S.d / 2) + 'px'; orb.style.top = '0px';
+    };
+    const place = () => {
+      const p = Math.min(1, Math.max(0, scrollY / calTop)), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      const cx = S.x + (T.x - S.x) * e, cy = (S.y - scrollY) + (T.y - (S.y - scrollY)) * e, s = 1 - (1 - T.d / S.d) * e;
+      orb.style.transform = `translate(${cx - S.x}px, ${cy - S.d / 2}px) scale(${s})`;
+      const landed = p >= 1;
+      orb.classList.toggle('gone', landed);
+      calSec.classList.toggle('waiting', !landed);
+    };
+    measure(); place();
+    addEventListener('scroll', place, { passive: true });
+    let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { measure(); place(); }, 150); });
+    if (window.ScrollTrigger) ScrollTrigger.addEventListener('refresh', () => { measure(); place(); });
+  };
+
+  /* showcase: the list picks the fragment and the disc's colour */
+  const FACTS = [
+    'Открыли Solo — и сразу видно, что бежать сегодня, сколько осталось за неделю и сколько дней до старта.',
+    'Рядом с заданием — факт: сколько пробежали, в каком темпе, быстрее или медленнее, чем нужно.',
+    'Каждая тренировка написана в минутах на километр из ваших T5, T10, T21 и T42. Никаких «T21+8» в дневнике.',
+    'Все недели до старта с объёмом: ровный рост, лёгкая неделя каждую четвёртую и подводка к гонке.',
+  ];
+  const DISC = ['--accent', '--light', '--mid', '--ink'];
+  const disc = $('#show-disc'), frags = $$('.show-frag .ui'), picks = $$('.show-list button'), fact = $('#show-fact');
+  let item = 0;
+  function showItem(k, force) {
+    if (k === item && !force) return;
+    item = k;
+    frags.forEach((f, i) => { f.hidden = i !== k; });
+    picks.forEach((b, i) => b.setAttribute('aria-pressed', String(i === k)));
+    fact.textContent = FACTS[k];
+    disc.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue(DISC[k]).trim();
+  }
+  picks.forEach((b) => {
+    b.addEventListener('click', () => showItem(+b.dataset.to));
+    b.addEventListener('mouseenter', () => matchMedia('(hover: hover)').matches && showItem(+b.dataset.to));
+    b.addEventListener('focus', () => showItem(+b.dataset.to));
+  });
+  showItem(0, true);
+
+  /* how it works: the scroll moves the stages; the names jump to theirs */
+  const CLAUSES = ['Сначала вы пишете цель', 'Потом Solo собирает план', 'Дальше вы ставите дни', 'И календарь заполнен'];
+  const howRoot = $('#how'), hH = $('#how-h'), hfr = $$('.how-frag .ui'), names = $$('.how-names button'), track = $('.how-track');
+  let stage = 0;
+  const setStage = (i, force) => {
+    if (i === stage && !force) return;
+    stage = i;
+    hH.style.opacity = 0;
+    setTimeout(() => { hH.textContent = CLAUSES[i]; hH.style.opacity = 1; }, reduced ? 0 : 200);
+    hfr.forEach((f, k) => { f.hidden = k !== i; });
+    names.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
+    if (!howRoot.classList.contains('is-live')) track.style.setProperty('--pos', ((i + 0.5) / 4 * 100) + '%');
+  };
+  names.forEach((b) => b.addEventListener('click', () => {
+    const k = +b.dataset.to;
+    if (!howRoot.classList.contains('is-live')) return setStage(k);
+    const top = howRoot.getBoundingClientRect().top + scrollY, run = howRoot.offsetHeight - innerHeight;
+    const y = top + run * (k + 0.5) / 4;
+    Stage.lenis ? Stage.lenis.scrollTo(y) : scrollTo({ top: y, behavior: 'smooth' });
+  }));
+  Scenes.how = (root, o) => Stage.scene(root, {
+    hold: o.hold ?? 3, scrub: Stage.lenis ? true : 0.4,
+    build(tl) {
+      const st = { p: 0 };
+      tl.to(st, { p: 1, duration: 1, ease: 'none', onUpdate: () => {
+        track.style.setProperty('--pos', (st.p * 100) + '%');
+        setStage(Math.min(3, Math.floor(st.p * 4)));
+      } }, 0);
+    },
+    rest() { setStage(stage, true); },
+  });
+
+  /* features: the scroll steps through them; the dots jump to theirs */
+  const featRoot = $('#feats'), feats = $$('.feat', featRoot), fdots = $$('.feat-dots button'), fcount = $('#feat-count');
+  let feat = -1;
+  const setFeat = (k) => {
+    if (k === feat) return;
+    feat = k;
+    feats.forEach((f, i) => f.classList.toggle('on', i === k));
+    fdots.forEach((b, i) => b.setAttribute('aria-pressed', String(i === k)));
+    fcount.textContent = (k + 1) + ' из ' + feats.length;
+  };
+  fdots.forEach((b, k) => b.addEventListener('click', () => {
+    const top = featRoot.getBoundingClientRect().top + scrollY, run = featRoot.offsetHeight - innerHeight;
+    const y = top + run * (k + 0.5) / feats.length;
+    Stage.lenis ? Stage.lenis.scrollTo(y) : scrollTo({ top: y, behavior: 'smooth' });
+  }));
+  Scenes.feats = (root, o) => Stage.scene(root, {
+    hold: o.hold ?? 5, scrub: Stage.lenis ? true : 0.4,
+    build(tl) {
+      const st = { p: 0 };
+      setFeat(0);
+      tl.to(st, { p: 1, duration: 1, ease: 'none', onUpdate: () => setFeat(Math.min(feats.length - 1, Math.floor(st.p * feats.length))) }, 0);
+    },
+    rest() { feats.forEach((f) => f.classList.remove('on')); },
+  });
+
+  /* paces from a goal: Riegel k = 1.06, easy runs from marathon pace (the same formulas as Solo itself) */
+  const RANGE = { '42.195': [9000, 19800, 60, 12000], '21.0975': [4200, 9600, 30, 5700], '10': [1800, 4500, 15, 2580], '5': [900, 2400, 5, 1260] };
+  const form = $('#pc-form'), tIn = $('#pc-t'), tOut = $('#pc-v'), main = $('#pc-main'), rest = $$('#pc-rest li');
+  const NAME = { '42.195': 'Марафон', '21.0975': 'Полумарафон', '10': '10 км', '5': '5 км' };
+  const calc = () => {
+    const D = +form.d.value, sec = +tIn.value;
+    const at = (d) => sec * (d / D) ** 1.06 / d, t42 = at(42.195);
+    const L = Math.min(1, Math.max(0, (t42 - 285) / (410 - 285))), lo = t42 + 55 - 45 * L, hi = lo + 20 + 10 * L, r5 = (x) => Math.round(x / 5) * 5;
+    tOut.textContent = hms(sec); tIn.setAttribute('aria-valuetext', hms(sec));
+    main.textContent = fmt(at(D));
+    const others = [[5, '5 км'], [10, '10 км'], [21.0975, 'Полумарафон'], [42.195, 'Марафон']].filter(([d]) => d !== D);
+    others.forEach(([d, n], i) => { rest[i].innerHTML = `<span>${n}</span><b>${fmt(at(d))}</b>`; });
+    rest[3].innerHTML = `<span>Лёгкий бег</span><b>${fmt(r5(lo))}–${fmt(r5(hi))}</b>`;
+  };
+  form.addEventListener('change', (e) => {
+    if (e.target.name !== 'd') return;
+    const [mn, mx, stp, def] = RANGE[e.target.value];
+    tIn.min = mn; tIn.max = mx; tIn.step = stp; tIn.value = def;
+    calc();
+  });
+  tIn.addEventListener('input', calc);
+  calc();
+
+  /* entrances */
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -12% 0px' }) : null;
+  $$('[data-rise]').forEach((el) => (io && !reduced ? io.observe(el) : el.classList.add('in')));
+
+  /* the disc and its fragment settle as the section arrives */
+  if (window.gsap && window.ScrollTrigger && !reduced) {
+    gsap.registerPlugin(ScrollTrigger);
+    gsap.fromTo('#show-disc', { scale: 0.6 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: '.show', start: 'top bottom', end: 'top 20%', scrub: 0.4 } });
+    gsap.fromTo('.show-frag', { yPercent: 18 }, { yPercent: 0, ease: 'none', scrollTrigger: { trigger: '.show', start: 'top bottom', end: 'top 20%', scrub: 0.4 } });
+    gsap.fromTo('.foot-mark span', { yPercent: 40 }, { yPercent: 0, stagger: 0.08, ease: 'none', scrollTrigger: { trigger: '.foot-mark', start: 'top bottom', end: 'bottom bottom', scrub: 0.4 } });
+  }
+
+  if (window.Stage) { Stage.smooth(); Stage.init(); }
+  if (document.fonts) document.fonts.ready.then(flight); else flight();
+})();
+</script>
+</body>
+</html>
