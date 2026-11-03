@@ -29,28 +29,28 @@
   --bg: #191970; --surface: #22227e; --deep: #10104f;
   --ink: #ffffff; --muted: rgba(255,255,255,.78);
   --accent: #58A6FF; --on-accent: #0c0c45;
-  --hi: #58A6FF; --tint: #191970; --scrim: rgba(8,8,40,.42);
+  --hi: #58A6FF; --on-hi: #0c0c45; --tint: #191970; --scrim: rgba(8,8,40,.42);
 }
 [data-p="1"] {
   /* pacific blue · tomato · mustard */
   --bg: #06323a; --surface: #0b4650; --deep: #032329;
   --ink: #fbf6e4; --muted: rgba(251,246,228,.8);
   --accent: #FE4A49; --on-accent: #2a0606;
-  --hi: #FED766; --tint: #009FB7; --scrim: rgba(2,22,26,.45);
+  --hi: #FED766; --on-hi: #2a2206; --tint: #009FB7; --scrim: rgba(2,22,26,.45);
 }
 [data-p="3"] {
   /* maroon · medium violet red · light cyan */
   --bg: #4a0008; --surface: #800000; --deep: #2e0005;
   --ink: #E0FFFF; --muted: rgba(224,255,255,.8);
   --accent: #C71585; --on-accent: #ffffff;
-  --hi: #E0FFFF; --tint: #800000; --scrim: rgba(30,0,4,.45);
+  --hi: #E0FFFF; --on-hi: #4a0008; --tint: #800000; --scrim: rgba(30,0,4,.45);
 }
 [data-p="4"] {
   /* espresso · burnt peach · soft apricot */
   --bg: #2e1a14; --surface: #4E2C23; --deep: #1f110d;
   --ink: #FFDAB9; --muted: rgba(255,218,185,.8);
   --accent: #E2725B; --on-accent: #23120d;
-  --hi: #E2725B; --tint: #4E2C23; --scrim: rgba(20,10,7,.45);
+  --hi: #E2725B; --on-hi: #23120d; --tint: #4E2C23; --scrim: rgba(20,10,7,.45);
 }
 
 :root {
@@ -127,8 +127,8 @@ h2 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-sp
 .hc-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 14px; text-align: center; font-size: var(--step-small); }
 .hc-week span { display: block; padding: 8px 0; background: var(--deep); color: var(--muted); }
 .hc-week b { display: block; font-weight: 500; color: var(--ink); font-size: var(--step-body); }
-.hc-week .done { background: var(--hi); color: var(--on-accent); }
-.hc-week .done b { color: var(--on-accent); }
+.hc-week .done { background: var(--hi); color: var(--on-hi); }
+.hc-week .done b { color: var(--on-hi); }
 .hc-week .today { outline: 2px solid var(--ink); outline-offset: -2px; }
 
 /* ---------- scene: the calendar to the race fills as the page scrolls ---------- */
@@ -177,12 +177,12 @@ h2 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-sp
 /* ---------- showcase: one chapter per screen, the field grows to the edges ---------- */
 .chapters { margin-top: var(--section); }
 .chapter { position: relative; height: 100svh; min-height: 640px; }
-.chapter .field { position: absolute; inset: 0; background: var(--surface); }
-.chapter .portrait { position: absolute; left: 50%; top: 50%; width: min(506px, 36vw); aspect-ratio: 3 / 4; translate: -50% -50%; }
+.chapter { isolation: isolate; }
+.chapter .field { position: absolute; inset: 0; z-index: -1; background: var(--surface); }
+.chapter .portrait { position: absolute; inset: 0; margin: auto; width: min(506px, 36vw); height: max-content; }
 .chapter h2, .chapter h3 { position: absolute; left: var(--m); top: var(--m); max-width: 14ch; font-weight: 300; font-size: var(--step-lead); line-height: 1.1; letter-spacing: -0.02em; }
 .chapter .say { position: absolute; left: var(--m); bottom: var(--m); max-width: 32ch; }
 .chapter .go { position: absolute; right: var(--m); bottom: var(--m); }
-.chapter:nth-child(2) .field { background: var(--deep); }
 
 /* interface fragments: the product's own panels, drawn in the page's colours */
 .ui { background: var(--deep); color: var(--ink); font-size: 16px; line-height: 1.4; padding: 20px; }
@@ -200,7 +200,7 @@ h2 { font-weight: 300; font-size: var(--step-head); line-height: 1.02; letter-sp
 .ui-day .fact { grid-column: 2 / 4; font-size: 14px; }
 .ui-day .fact b { font-weight: 500; color: var(--hi); }
 .ui-day.today { background: var(--surface); margin-inline: -12px; padding-inline: 12px; }
-.chapter .portrait.ui { padding: 28px; overflow: hidden; aspect-ratio: auto; font-size: 17px; }
+.chapter .portrait.ui { padding: 28px; font-size: 17px; }
 .ui-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 12px; }
 .ui-head b { font-weight: 500; }
 .pz { display: grid; grid-template-columns: 4.5em 1fr auto; align-items: baseline; gap: 12px; padding: 10px 0; }
@@ -370,12 +370,12 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   .cal-key { font-size: 13px; }
   .cal-key { margin-top: 12px; gap: 16px; }
 
-  .chapter { min-height: 600px; }
-  .chapter .portrait { width: 80vw; top: 45%; }
-  .chapter h2, .chapter h3 { top: 24px; left: 20px; font-size: 1.5rem; }
-  .chapter .say { left: 20px; right: 20px; bottom: 56px; }
-  .chapter .go { left: 20px; right: auto; bottom: 20px; }
-  .chapter .portrait.ui { padding: 16px; }
+  .chapter { height: auto; min-height: 100svh; display: flex; flex-direction: column; justify-content: center; gap: 24px; padding: 88px 20px 40px; }
+  .chapter h2, .chapter h3, .chapter .say, .chapter .go { position: relative; inset: auto; font-size: inherit; }
+  .chapter h2, .chapter h3 { font-size: 1.75rem; order: -1; }
+  .chapter .portrait { position: relative; inset: auto; margin: 0; width: 100%; }
+  .chapter .portrait.ui { padding: 20px; font-size: 15px; }
+  .ui-day { grid-template-columns: 3.6em 1fr auto; gap: 2px 10px; }
 
   .how-fields { display: flex; flex-direction: column; min-height: 0; }
   .how-right { order: -1; flex: 1 1 auto; padding: 28px 20px; place-items: center; }
@@ -395,7 +395,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   .paces-l, .paces-r, .price-l, .price-r, .stats-text, .stats-film { grid-column: 1; }
   .paces .grid { display: flex; flex-direction: column; }
   .paces-l { display: contents; }
-  .paces-l h2 { order: 1; } .paces-l > p { order: 2; } .paces-r { order: 3; margin-top: 40px; } .paces-form { order: 4; margin-top: 48px; }
+  .paces-l h2 { order: 1; } .paces-r { order: 3; margin-top: 40px; } .paces-form { order: 4; margin-top: 48px; }
   #pc-out { grid-template-columns: 1fr; gap: 16px; }
   .stats { min-height: 70svh; }
   .stats-film { margin-top: 40px; }
@@ -416,7 +416,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   .foot { grid-template-columns: 1fr; gap: 8px; padding: 20svh 20px 24px; }
   .foot nav { flex-wrap: wrap; gap: 8px 20px; }
   .foot .r { text-align: left; }
-  .pal { position: static; width: max-content; margin: 0 20px 24px; box-shadow: none; }
+  .pal { position: static; width: max-content; margin: 0 20px 24px; box-shadow: none; } /* taste-skill-ignore: removes the picker shadow */
   .how-frag .ui { font-size: 15px; padding: 20px; }
   .how-frag .wk, .how-frag .lay { font-size: 14px; }
 }
@@ -458,10 +458,10 @@ html.js [data-rise].in { opacity: 1; transform: none; }
       </div>
       <div class="hc-block">
         <div class="hc-lbl">Объём недели</div>
-        <div class="hc-big"><b class="num">16 из 81 км</b></div>
-        <div class="hc-scale" style="--w:20%"><i></i></div>
+        <div class="hc-big"><b class="num">44 из 68 км</b></div>
+        <div class="hc-scale" style="--w:65%"><i></i></div>
         <div class="hc-week num">
-          <span>Пн<b>8</b></span><span class="done">Вт<b>16</b></span><span>Ср<b>13</b></span><span>Чт<b>8</b></span><span>Пт<b>11</b></span><span class="today">Сб<b>8</b></span><span>Вс<b>21</b></span>
+          <span>Пн<b>—</b></span><span class="done">Вт<b>10</b></span><span class="done">Ср<b>13</b></span><span class="done">Чт<b>8</b></span><span class="done">Пт<b>11</b></span><span class="today">Сб<b>8</b></span><span>Вс<b>18</b></span>
         </div>
       </div>
       <div class="hc-block">
@@ -504,7 +504,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
         <div class="pz"><span>T21</span><b class="num">4:33</b><span class="ui-mut num">400 м за 1:49</span></div>
         <div class="pz"><span>T42</span><b class="num">4:44</b><span class="ui-mut num">400 м за 1:54</span></div>
         <div class="pz easy"><span>Лёгкий</span><b class="num">5:40–6:00</b><span></span></div>
-        <div class="ui-box" style="margin-top:20px"><span class="ui-mut">В дневнике:</span><br>Развивающая · 2×3000 м по 4:21–4:25, отдых 400 м</div>
+        <div class="ui-box" style="margin-top:20px"><span class="ui-mut">В дневнике:</span><br>Развивающая · 2×3000 м по 4:21–4:25, отдых 400&nbsp;м</div>
       </div>
       <h2 id="ch1">Темп вместо догадок</h2>
       <p class="say">Каждая тренировка написана в минутах на километр из ваших T5, T10, T21 и T42. Никаких «T21+8» в дневнике.</p>
@@ -514,28 +514,15 @@ html.js [data-rise].in { opacity: 1; transform: none; }
       <div class="field" data-grow></div>
       <div class="portrait ui" data-zoom data-ui>
         <div class="ui-head"><b>Моя неделя</b><span class="ui-mut">26 окт – 1 ноя</span></div>
-        <div class="ui-day"><span class="dt">Вт 27</span><span class="ty">Восстановительная</span><span class="km">12 км</span><span class="fact ui-mut">Темп 5:40–6:00 · факт <b>16 км, 5:31</b>, быстрее задания</span></div>
+        <div class="ui-day"><span class="dt">Вт 27</span><span class="ty">Восстановительная</span><span class="km">10 км</span><span class="fact ui-mut">Темп 5:40–6:00 · факт <b>12 км, 5:31</b>, быстрее задания</span></div>
         <div class="ui-day"><span class="dt">Ср 28</span><span class="ty">Интервальная</span><span class="km">13 км</span><span class="fact ui-mut">Разминка 4 км · 3×2000 м по 4:00–4:05, отдых 400 м · заминка 2200 м</span></div>
         <div class="ui-day"><span class="dt">Пт 30</span><span class="ty">Развивающая</span><span class="km">11 км</span><span class="fact ui-mut">Разминка 2 км · 2×3000 м, отдых 400 м · заминка 2 км</span></div>
         <div class="ui-day today"><span class="dt">Сб 31</span><span class="ty">Восстановительная</span><span class="km">8 км</span><span class="fact ui-mut">Сегодня · темп 5:40–6:00</span></div>
-        <div class="ui-day"><span class="dt">Вс 1</span><span class="ty">Длительная</span><span class="km">21 км</span><span class="fact ui-mut">Темп 5:40</span></div>
+        <div class="ui-day"><span class="dt">Вс 1</span><span class="ty">Длительная</span><span class="km">18 км</span><span class="fact ui-mut">Темп 5:40</span></div>
       </div>
       <h2 id="ch2">Неделя как на ладони</h2>
       <p class="say">Рядом с заданием — факт: сколько пробежали, в каком темпе, быстрее или медленнее, чем нужно.</p>
       <a class="go link" href="#how">Как это работает</a>
-    </section>
-    <section class="chapter" aria-labelledby="ch3">
-      <div class="field" data-grow></div>
-      <div class="portrait ui" data-zoom data-ui>
-        <div class="ui-head"><b>План до старта</b><span class="ui-mut">в профиле S10</span></div>
-        <div class="pv on"><b>Марафон Valencia · 12 недель</b><span class="ui-mut">Активный · в календаре 14–27 сен</span></div>
-        <div class="pv"><b>Версия тренера</b><span class="ui-mut">Сохранена 10 сентября</span></div>
-        <div class="pv"><b>Из текста о себе и цели</b><span class="ui-mut">Сгенерирован 9 сентября</span></div>
-        <div class="ui-row" style="margin-top:20px;justify-content:flex-start;gap:8px"><span class="ui-btn">Заполнить календарь</span><span class="ui-btn ghost">Вернуть как было</span></div>
-      </div>
-      <h2 id="ch3">Один план везде</h2>
-      <p class="say">План хранится в профиле S10: телефон, ноутбук и ваш тренер открывают одну и ту же неделю.</p>
-      <a class="go link" href="#faq">Вопросы</a>
     </section>
   </div>
 
@@ -555,34 +542,33 @@ html.js [data-rise].in { opacity: 1; transform: none; }
             <div class="ui-row" style="margin-top:14px"><span class="ui-mut">Марафон · 12 недель</span><span class="ui-btn">Сгенерировать</span></div>
           </div>
           <div class="ui" data-ui data-stage="1" hidden>
-            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">План до старта</span><span class="ui-mut">790 км</span></div>
-            <div class="wk"><span>14–20 сен</span><i style="width:52%"></i><span>52 км</span></div>
-            <div class="wk"><span>21–27 сен</span><i style="width:58%"></i><span>58 км</span></div>
-            <div class="wk"><span>28 сен – 4 окт</span><i style="width:63%"></i><span>63 км</span></div>
-            <div class="wk"><span>5–11 окт</span><i style="width:58%"></i><span>58 км</span></div>
-            <div class="wk"><span>12–18 окт</span><i style="width:68%"></i><span>68 км</span></div>
-            <div class="wk"><span>19–25 окт</span><i style="width:74%"></i><span>74 км</span></div>
-            <div class="wk"><span>26 окт – 1 ноя</span><i style="width:66%"></i><span>66 км</span></div>
-            <div class="wk"><span>2–8 ноя</span><i style="width:78%"></i><span>78 км</span></div>
-            <div class="wk"><span>9–15 ноя</span><i style="width:81%"></i><span>81 км</span></div>
-            <div class="wk"><span>16–22 ноя</span><i style="width:72%"></i><span>72 км</span></div>
-            <div class="wk"><span>23–29 ноя</span><i style="width:60%"></i><span>60 км</span></div>
-            <div class="wk race"><span>30 ноя – 6 дек</span><i style="width:60%"></i><span>60 км</span></div>
+            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">План до старта</span><span class="ui-mut">734 км</span></div>
+            <div class="wk"><span>14–20 сен</span><i style="width:62%"></i><span>50 км</span></div>
+            <div class="wk"><span>21–27 сен</span><i style="width:68%"></i><span>54 км</span></div>
+            <div class="wk"><span>28 сен – 4 окт</span><i style="width:72%"></i><span>58 км</span></div>
+            <div class="wk"><span>5–11 окт</span><i style="width:68%"></i><span>54 км</span></div>
+            <div class="wk"><span>12–18 окт</span><i style="width:75%"></i><span>60 км</span></div>
+            <div class="wk"><span>19–25 окт</span><i style="width:80%"></i><span>64 км</span></div>
+            <div class="wk"><span>26 окт – 1 ноя</span><i style="width:85%"></i><span>68 км</span></div>
+            <div class="wk"><span>2–8 ноя</span><i style="width:78%"></i><span>62 км</span></div>
+            <div class="wk"><span>9–15 ноя</span><i style="width:88%"></i><span>70 км</span></div>
+            <div class="wk"><span>16–22 ноя</span><i style="width:90%"></i><span>72 км</span></div>
+            <div class="wk"><span>23–29 ноя</span><i style="width:78%"></i><span>62 км</span></div>
+            <div class="wk race"><span>30 ноя – 6 дек</span><i style="width:75%"></i><span>60 км</span></div>
           </div>
           <div class="ui" data-ui data-stage="2" hidden>
-            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">Первая неделя</span><span class="ui-mut">52 км</span></div>
+            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">Первая неделя</span><span class="ui-mut">50 км</span></div>
             <div class="lay"><span>Пн</span><span>Отдых</span><span></span></div>
             <div class="lay"><span>Вт</span><span>Восстановительная</span><span>8 км</span></div>
             <div class="lay"><span>Ср</span><span>Интервальная</span><span>10 км</span></div>
             <div class="lay"><span>Чт</span><span>Восстановительная</span><span>6 км</span></div>
             <div class="lay"><span>Пт</span><span>Развивающая</span><span>9 км</span></div>
             <div class="lay"><span>Сб</span><span>Восстановительная</span><span>6 км</span></div>
-            <div class="lay"><span>Вс</span><span>Длительная</span><span>13 км</span></div>
+            <div class="lay"><span>Вс</span><span>Длительная</span><span>11 км</span></div>
           </div>
           <div class="ui" data-ui data-stage="3" hidden>
             <div class="ui-lbl">Календарь заполнен</div>
-            <p class="ui-mut" style="margin-top:6px">14–27 сентября · 12 тренировок · 110 км. Дни, где уже стояла задача, остались как были.</p>
-            <div class="ui-row" style="margin-top:16px;justify-content:flex-start"><span class="ui-btn">Следующие 2 недели</span><span class="ui-btn ghost">Вернуть как было</span></div>
+            <p class="ui-mut" style="margin-top:6px">14–27 сентября · 12 тренировок · 104 км</p>
           </div>
         </div>
       </div>
@@ -603,12 +589,11 @@ html.js [data-rise].in { opacity: 1; transform: none; }
     <h2 class="vh" id="cmd-h">Что умеет Solo</h2>
     <div class="grid"><input class="cmd-search" id="cmd-q" type="search" placeholder="Что умеет Solo" aria-label="Найти, что умеет Solo" autocomplete="off"></div>
     <ul class="cmd-list" id="cmd-list">
-      <li class="sel"><button type="button">Заполнить календарь</button><p class="say">Две беговые недели или всё до старта. Прошедшие дни не трогаются, дни с задачей остаются.</p></li>
-      <li><button type="button">Сгенерировать план</button><p class="say">Расскажите о себе и цели обычными словами — план по неделям соберётся из текста.</p></li>
+      <li class="sel"><button type="button">Заполнить календарь</button><p class="say">Две беговые недели или сразу весь план до старта, одним нажатием.</p></li>
+      <li><button type="button">Сгенерировать план</button><p class="say">Напишите, как бегаете сейчас и к чему готовитесь. Solo превратит это в план по неделям.</p></li>
       <li><button type="button">Мои темпа</button><p class="say">T5, T10, T21 и T42 из цели, из прогноза S10 по вашим тренировкам или ваши собственные.</p></li>
       <li><button type="button">План и факт</button><p class="say">Рядом с каждым заданием — что вы пробежали на самом деле, по трекам из дневника.</p></li>
-      <li><button type="button">Запланировать неделю</button><p class="say">Выберите две ключевые тренировки, остальные дни рассчитает сервер S10.</p></li>
-      <li><button type="button">Вернуть как было</button><p class="say">Отменяет последнее заполнение. Дни, которые вы поправили после, не трогаются.</p></li>
+      <li><button type="button">Запланировать неделю</button><p class="say">Выберите две ключевые тренировки, остальную неделю Solo рассчитает сам.</p></li>
       <li><button type="button">Сохранить старт</button><p class="say">Главный старт и цель на него: от них считается весь план и все темпа.</p></li>
     </ul>
     <p class="cmd-none" id="cmd-none" hidden>Такого Solo пока не умеет. Напишите нам в Telegram, что нужно.</p>
@@ -617,8 +602,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   <section class="paces wrap" id="paces" aria-labelledby="pc-h">
     <div class="grid">
       <div class="paces-l">
-        <h2 id="pc-h">Ваши темпа за секунду</h2>
-        <p data-rise style="--i:1">Введите цель на старт. Solo посчитает темп на 5, 10, 21 и 42 км и лёгкий бег — по ним пишется каждая тренировка.</p>
+        <h2 id="pc-h">Ваши темпа исходя из цели</h2>
         <form class="paces-form" id="pc-form" data-rise style="--i:2" onsubmit="return false">
           <fieldset class="seg">
             <legend>Дистанция</legend>
@@ -629,8 +613,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
           </fieldset>
           <div class="goal">
             <label for="pc-t">Цель</label>
-            <input id="pc-t" inputmode="numeric" value="3:20:00" aria-describedby="pc-hint" autocomplete="off">
-            <small id="pc-hint">Часы:минуты:секунды или минуты:секунды</small>
+            <input id="pc-t" inputmode="numeric" value="3:20:00" autocomplete="off">
           </div>
         </form>
       </div>
@@ -642,7 +625,6 @@ html.js [data-rise].in { opacity: 1; transform: none; }
           <div class="pace-row"><dt>Марафон</dt><dd class="num">4:44</dd></div>
           <div class="pace-row easy"><dt>Лёгкий бег</dt><dd class="num">5:40–6:00</dd></div>
         </dl>
-        <p class="pace-note">Минуты на километр. Считается по формуле Ригеля, как прогноз S10: для цели 3:20 он даёт 4:11, 4:20, 4:33 и 4:44.</p>
       </div>
     </div>
   </section>
@@ -669,7 +651,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
       <p class="price-eur">или 9 € в месяц</p>
       <ul class="price-inc">
         <li data-rise style="--i:2">S10 Solo: план до старта и разбор недели</li>
-        <li data-rise style="--i:3">Анализ тренировок: графики, 20:80, каденс, интервалы</li>
+        <li data-rise style="--i:3">Глубокий анализ тренировок</li>
         <li data-rise style="--i:4">Telegram-бот и приложения для iOS и Android</li>
         <li data-rise style="--i:5">Челленджи каждую неделю и больше 100 подкастов</li>
       </ul>
@@ -682,7 +664,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
     <div class="faq-row" data-rise><h3>Мне нужен тренер?</h3><p>Нет. Solo сделан для тех, кто готовится сам. Если тренер у вас есть на S10, он увидит тот же план и сможет его поправить.</p></div>
     <div class="faq-row" data-rise><h3>А если старта пока нет?</h3><p>Выберите «Отсутствует». План начнётся с ближайшей беговой недели, а его длину вы зададите сами.</p></div>
     <div class="faq-row" data-rise><h3>Откуда берутся темпа?</h3><p>Из цели на старт, из прогноза S10 по вашим тренировкам или ваши собственные. Лёгкий бег считается от марафонского темпа.</p></div>
-    <div class="faq-row" data-rise><h3>Solo не испортит мой календарь?</h3><p>Прошедшие дни и сегодня он не трогает, дни с задачей оставляет. «Вернуть как было» отменяет последнее заполнение.</p></div>
+    <div class="faq-row" data-rise><h3>Solo не испортит мой календарь?</h3><p>Прошедшие дни и сегодня он не трогает, а дни, где уже стоит задача, оставляет как есть.</p></div>
     <div class="faq-row" data-rise><h3>Сколько это стоит?</h3><p>Регистрация бесплатна. Заполнение календаря — в Premium: 750 ₽ или 9 € в месяц.</p></div>
     <div class="faq-row" data-rise><h3>Работает с телефона?</h3><p>Да, в браузере. План хранится в профиле, поэтому на любом устройстве открывается одна и та же неделя.</p></div>
   </section>
@@ -735,7 +717,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
 
   /* the calendar: 12 weeks, 14 Sep – 6 Dec 2026, the race on Sunday */
   const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-  const VOL = [52, 58, 63, 58, 68, 74, 66, 78, 81, 72, 60, 60];
+  const VOL = [50, 54, 58, 54, 60, 64, 68, 62, 70, 72, 62, 60];
   const grid = $('#cal-grid'), days = [];
   grid.insertAdjacentHTML('beforeend', '<span></span>' + ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((d) => `<span class="wd">${d}</span>`).join('') + '<span class="wd">км</span>');
   let shownMonth = -1;
