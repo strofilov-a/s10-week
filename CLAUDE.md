@@ -22,6 +22,7 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 | `solo.js` | The whole page: one file, no build, no dependencies. Live on s10.run (by hostname), demo anywhere else. |
 | `demo/index.html`, `demo/fixtures.js` | Demo on an anonymised snapshot (31.10.2026). Published on GitHub Pages: https://strofilov-a.github.io/s10-week/demo/ (`?newbie`: as a just-signed-up athlete, afresh each visit; `&free`: no premium) |
 | `index.html` | GitHub Pages root: redirects to `demo/` outside s10.run. |
+| `landing/` | Promo page for S10 Solo (traffic from Instagram/Threads): one `index.html` + `scenes/` (taste-skill scroll stage, GSAP/Lenis from jsdelivr). No photos (owner, 03.11.2026). Every button goes to `/login?back=…/solo/plan`. Four palettes (`?p=1..4`, picker until the owner chooses). https://strofilov-a.github.io/s10-week/landing/ |
 | `deploy/solo.html` | The page shell for s10.run (copied from the `/calc3` template: `/t5` Roboto fonts, icons, cookie consent). |
 | `deploy/ЗАДАНИЕ.md` | The one-page brief for the S10 developer (copied into `release/` as `README.md`). |
 | `deploy/build.cjs` | `npm run build`: cuts every demo-marked block (`/*<demo>*/…/*</demo>*/`) out of `solo.js` into `release/`, stamps `?v=` with a hash of the code, checks no demo is left and that it parses. Mark any new demo-only code so. |
