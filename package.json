@@ -5,7 +5,9 @@
   "scripts": {
     "serve": "python3 -m http.server 8766 --bind 127.0.0.1",
     "test": "node --check solo.js && node tests/check.cjs && node deploy/build.cjs && node tests/release.cjs && node tests/landing.cjs",
-    "build": "node deploy/build.cjs"
+    "build": "node deploy/build.cjs",
+    "zip": "npm test && node deploy/zip.cjs",
+    "live": "node deploy/live.cjs"
   },
   "devDependencies": {
     "gsap": "^3.15.0",

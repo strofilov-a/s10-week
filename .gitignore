@@ -3,3 +3,4 @@ node_modules/
 landing/.taste-skill/
 .claude/launch.json
 landing-v2/.taste-skill/
+dist/

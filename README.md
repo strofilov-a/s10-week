@@ -28,12 +28,13 @@ Colours: palette №3 «Лист, синяя и красная ручка» is t
 | `landing/` | Promo page for S10 Solo: https://strofilov-a.github.io/s10-week/landing/ (`?p=1`, `3` or `4` picks a palette). |
 | `landing-v2/` | The same page redesigned after a taste review: https://strofilov-a.github.io/s10-week/landing-v2/ |
 | `deploy/solo.html`, `deploy/ЗАДАНИЕ.md` | The page shell for s10.run and the one-page brief for the S10 developer. |
-| `deploy/build.cjs`, `release/` | `npm run build` makes `release/`, the folder for the S10 developer: production `solo.js` without the demo, `solo.html`, the brief. |
+| `deploy/build.cjs`, `release/` | `npm run build` makes `release/`, the folder for the S10 developer: production `solo.js` without the demo, `solo.html`, `solo-start.html`, the brief. |
+| `deploy/zip.cjs`, `deploy/live.cjs`, `deploy/live.json` | `npm run zip` packs `release/` as `dist/solo_release_<id>.zip`, its brief marking which files changed since the live site; `npm run live` checks what s10.run serves and records it once a release is up. |
 | `tests/check.cjs` | Browser checks against the demo (`tests/README.md`). |
 | `CLAUDE.md` | Context, decisions and rules for Claude Code. |
 | `demo/index.html`, `demo/fixtures.js` | Demo with an anonymised snapshot of real data (31.10.2026; no name, email or GPS). Live demo: https://strofilov-a.github.io/s10-week/demo/. For GitHub Pages or any static host. Nothing is sent anywhere. `?open=plan` opens the planner with a computed schedule. |
 
-## Going live on s10.run (for the developer)
+## Going live on s10.run (for the developer; done 06.11.2026)
 1. Put `solo.js` at `/t5/solo/solo.js`.
 2. Serve `deploy/solo.html` at `https://s10.run/solo/plan`, the way `/calc3` is served (not `index.html`: that one only
    redirects to the demo on GitHub Pages). Today every `/solo/…` path goes to the S10 Solo club page (`/solo/plan`
@@ -41,8 +42,9 @@ Colours: palette №3 «Лист, синяя и красная ручка» is t
 3. Open it logged in. A coach can view an athlete with `?id=<athlete id>`.
 4. Add «Моя неделя» to the site menu.
 
-For each new release: replace `/t5/solo/solo.js` and bump `?v=` in `solo.html`. It must be served from s10.run itself:
-it uses the logged-in session cookie for the API. The same steps in Russian: `deploy/ЗАДАНИЕ.md`.
+For each new release: `npm run zip`, send the zip; the developer replaces the files its README marks as changed (`?v=`
+in `solo.html` is already bumped). Then `npm run live` confirms the site serves it. `solo.js` must be served from
+s10.run itself: it uses the logged-in session cookie for the API. The same steps in Russian: `deploy/ЗАДАНИЕ.md`.
 
 ## API used (all existing endpoints, same calls calc3/calc5 make)
 Reads:

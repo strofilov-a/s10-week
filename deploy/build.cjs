@@ -26,7 +26,6 @@ try { execFileSync(process.execPath, ['--check', path.join(OUT, 't5', 'solo', 's
 const html = fs.readFileSync(path.join(ROOT, 'deploy', 'solo.html'), 'utf8').replace(/\/t5\/solo\/solo\.js\?v=[^"]*/, `/t5/solo/solo.js?v=${stamp}`);
 if (!html.includes(`?v=${stamp}`)) fail('solo.html: no /t5/solo/solo.js?v= to stamp');
 fs.writeFileSync(path.join(OUT, 'solo.html'), html);
-fs.copyFileSync(path.join(ROOT, 'deploy', 'ЗАДАНИЕ.md'), path.join(OUT, 'README.md')); // a Latin name survives any zip tool
 
 // the promo page (landing-v2) as one file for /solo/start: its stage and the scroll libraries inlined from node_modules,
 // so it depends on no CDN (jsDelivr is not reliably reachable from Russia); only the fonts still come from Google
@@ -48,5 +47,20 @@ const land = landSrc
   });
 fs.writeFileSync(path.join(OUT, 'solo-start.html'), land);
 
+// the brief opens with what to replace this time: each file against what s10.run serves (deploy/live.json, recorded
+// by `npm run live` after the developer has put a release up)
+const { FILES, hash, releaseId } = require('./files.cjs');
+const live = JSON.parse(fs.readFileSync(path.join(ROOT, 'deploy', 'live.json'), 'utf8'));
+const hashes = Object.fromEntries(FILES.map((f) => [f.file, hash(fs.readFileSync(path.join(OUT, f.file)))]));
+const changed = FILES.filter((f) => hashes[f.file] !== live.files?.[f.file]);
+const rel = releaseId(hashes);
+const table = changed.length
+  ? `Заменить на сервере файлы из архива, на те же места, что в прошлый раз:\n\n| Файл в архиве | Адрес на сайте | В этом релизе |\n|---|---|---|\n${FILES.map((f) => `| \`${f.file}\` | \`${f.url}\` | ${changed.includes(f) ? '**изменился**' : 'без изменений'} |`).join('\n')}`
+  : 'Все три файла такие же, как на сервере сейчас: выкладывать нечего.';
+const brief = fs.readFileSync(path.join(ROOT, 'deploy', 'ЗАДАНИЕ.md'), 'utf8');
+if (!brief.includes('{{release}}') || !brief.includes('{{files}}')) fail('deploy/ЗАДАНИЕ.md: no {{release}} or {{files}}');
+fs.writeFileSync(path.join(OUT, 'README.md'), brief.replace('{{release}}', rel).replace('{{files}}', table)); // a Latin name survives any zip tool
+
 const kb = (f) => (fs.statSync(path.join(OUT, f)).size / 1024).toFixed(0) + ' KB';
-console.log(`release ${stamp}\n  release/t5/solo/solo.js  ${kb('t5/solo/solo.js')} (source ${(Buffer.byteLength(src) / 1024).toFixed(0)} KB, ${opens} demo blocks cut)\n  release/solo.html\n  release/solo-start.html  ${kb('solo-start.html')} (the promo page, scripts inlined)\n  release/README.md`);
+const mark = (f) => (changed.some((c) => c.file === f) ? 'changed' : 'as on s10.run');
+console.log(`release ${rel} (solo.js ${stamp}; live on s10.run: ${live.release})\n  release/t5/solo/solo.js  ${kb('t5/solo/solo.js')} (source ${(Buffer.byteLength(src) / 1024).toFixed(0)} KB, ${opens} demo blocks cut), ${mark('t5/solo/solo.js')}\n  release/solo.html  ${mark('solo.html')}\n  release/solo-start.html  ${kb('solo-start.html')} (the promo page, scripts inlined), ${mark('solo-start.html')}\n  release/README.md`);
