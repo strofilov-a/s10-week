@@ -59,7 +59,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // 1. the week view
   { const p = await open();
     check('page loads without errors', !p.errors.length, p.errors.join('; '));
-    check('summary: volume, days to race, readiness', (await p.$$eval('.w-stat .w-lb', (l) => l.map((x) => x.textContent))).join('|') === 'Объём недели|До старта|Шанс на цель');
+    check('summary: volume, days to race, readiness', (await p.$$eval('.w-stat .w-lb', (l) => l.map((x) => x.textContent))).join('|') === 'Объём недели|До старта|Вероятность достижения цели');
     check('calendar: race is a red disc', !!(await p.$('.w-cd.race')));
     check('site header with the logo', !!(await p.$('.w-top .w-wm svg')));
     await p.click('.w-cd[data-d="2026-10-21"]'); await wait(200);
@@ -321,7 +321,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const full = await ready(HISTORY(true)), none = await ready(HISTORY(false)), slow = await ready(HISTORY(true, '4:50')), quick = await ready(HISTORY(true, '4:15'));
   const better = await ready(HISTORY(true) + `; x.results[1].realhms = 5600`);
   check('chance: every workout done, form from the last race (Lisbon half 1:38 → 3:25), goal 3:20 in 5 weeks: about 40%', num(full) >= 30 && num(full) <= 60 && full.card.includes('по старту Lisbon') && full.card.replace(/\s+/g, ' ').includes('Форма сейчас 3:25') && full.card.includes('12 из 12 выполнено, 6 из 6 в заданном темпе'), `${full.pct} ${full.card.replace(/\s+/g, ' ').slice(0, 220)}`);
-  check('chance: «подробнее» opens the plan tab at the card', full.tab && full.card.startsWith('Шанс на цель') && !full.errors, full.errors);
+  check('chance: «подробнее» opens the plan tab at the card', full.tab && full.card.startsWith('Вероятность достижения цели') && !full.errors, full.errors);
   check('chance: nothing run lowers it, the break shown', num(none) < num(full) - 15 && none.card.includes('без бега'), `${none.pct} vs ${full.pct}`);
   check('chance: key workouts slower than the task lower it, faster raise it', num(slow) < num(full) && num(quick) > num(full) && slow.card.includes('медленнее задания') && quick.card.includes('быстрее задания'), `${slow.pct} < ${full.pct} < ${quick.pct}`);
   check('chance: a faster last race raises it', num(better) > num(full) + 15, `${better.pct} vs ${full.pct}`);
