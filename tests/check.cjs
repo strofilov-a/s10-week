@@ -306,12 +306,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   }
 
   // 7e. readiness: six made-up weeks before 31 Oct (Tue easy, Wed intervals, Thu easy, Fri a pace-only tempo, Sun long)
-  const HISTORY = (run, tempo = '4:32') => `{
+  const HISTORY = (run, tempo = '4:32', frac = 1) => `{
     const add = (s, n) => { const d = new Date(s + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
     const W = { 1: [1, '5:40-6:00', 10], 2: [3, '3 км разминка 5×1000 м 3:50-3:55 отдых 400 м 2 км заминка', 12], 3: [1, '5:40-6:00', 8], 4: [2, '4:30-4:35', 10], 6: [5, '5:20', 25] };
     const L = x.diary.diaryTasksInfo.filter((r) => r.date >= '2026-10-31');
     for (let d = '2026-09-19'; d < '2026-10-31'; d = add(d, 1)) { const w = (new Date(d + 'T12:00:00Z').getUTCDay() + 6) % 7, p = W[w];
-      if (p) L.push({ date: d, type: p[0], comment: p[1], target: p[2], tracks: ${run} ? [{ type: 'run', km: p[2], pace: p[0] === 2 ? '${tempo}' : '5:00', time: '1:00:00', json: { subtype: 'RUNNING' } }] : [] }); }
+      if (p) L.push({ date: d, type: p[0], comment: p[1], target: p[2], tracks: ${run} ? [{ type: 'run', km: p[2] * ${frac}, pace: p[0] === 2 ? '${tempo}' : '5:00', time: '1:00:00', json: { subtype: 'RUNNING' } }] : [] }); }
     x.diary.diaryTasksInfo = L;
   }`;
   const ready = async (mod) => { const p = await open({ init: hook(mod) }); await wait(400);
@@ -328,6 +328,54 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     check('readiness: S10 forecast 4% slower than the goal takes 20% off', r.pct === '80%' && r.card.includes('прогноз медленнее цели'), `${r.pct} ${(r.card.match(/Прогноз S10.*/) || [''])[0]}`); }
   { const p = await open({ path: '?newbie', init: hook() }); await p.click('[data-act=onbnone]'); await wait(300);
     check('readiness: a new athlete gets «мало данных», not a figure', (await p.$eval('.w-stat-r', (x) => x.innerText)).includes('мало данных') && (await p.$eval('.w-stat-r .w-lb', (x) => x.innerText)) === 'Выполнение плана');
+    await p.close(); }
+
+  // 7f. re-plan (stages 2 and 3): proposals from what was run, written with undo, the previous plan back on undo
+  const MON27 = Date.parse('2026-10-27T09:00:00Z') / 1000; // Tue 27 Oct, Moscow
+  { const p = await open({ path: '?tab=plan', init: hook(HISTORY(true, '4:32', 0.5)) });
+    await p.click('[data-act=fillask]'); await p.click('[data-act=fillyes]'); await wait(2500);
+    const filled = await p.evaluate(() => window.__tasks.slice()), kmOf = (l) => l.reduce((a, t) => a + +t.prekm, 0);
+    await p.click('[data-act=rprules]'); await wait(300);
+    const why = await p.$eval('.w-rp', (x) => x.innerText);
+    check('re-plan by rules: half the volume run, next weeks lower, the race week as planned', why.includes('(50%)') && (await p.$$('.w-rp-weeks li')).length >= 3 && !(await p.$$eval('.w-rp-weeks li', (l) => l.map((x) => x.innerText))).some((t) => t.includes('30 ноя')), why.slice(0, 200));
+    await p.click('[data-act=rpapply]'); await wait(2500);
+    const all = await p.evaluate(() => window.__tasks.slice()), again = all.slice(filled.length), dates = new Set(again.map((t) => t.d));
+    const flash = await p.$eval('.w-flash', (x) => x.innerText).catch(() => '');
+    check('re-plan: the filled days rewritten with less km, nothing past or empty touched', again.length > 0 && again.every((t) => t.d >= '2026-11-02' && filled.some((f) => f.d === t.d)) && kmOf(again) < kmOf(filled.filter((f) => dates.has(f.d))) && flash.includes('План перестроен'), `${again.length} days, ${kmOf(again)} km vs ${kmOf(filled.filter((f) => dates.has(f.d)))}; ${flash.slice(0, 80)}`);
+    check('re-plan: saved as a new active version', (await p.innerText('#w-plan2-h')).includes('перестроен'));
+    await p.click('.w-flash [data-act=undoask]'); await p.click('[data-act=undoyes]'); await wait(2500);
+    check('undo of a re-plan: the days back, the previous plan active again', (await p.$eval('.w-flash', (x) => x.innerText).catch(() => '')).includes('вернули') && (await p.innerText('#w-plan2-h')).includes('valencia · 7 нед.') && !p.errors.length, `${(await p.innerText('#w-plan2-h'))} ${p.errors.join('; ')}`);
+    await p.close(); }
+  { const MOVE = HISTORY(true) + `; x.me.nowmsk = ${MON27}; x.diary.diaryTasksInfo = x.diary.diaryTasksInfo.filter((r) => !['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29'].includes(r.date)); x.diary.diaryTasksInfo.push({ date: '2026-10-26', type: 3, comment: '3 км разминка 5×1000 м 3:50-3:55 отдых 400 м 2 км заминка', target: 12, tracks: [] })`;
+    const p = await open({ path: '?tab=plan', init: hook(MOVE) });
+    await p.click('[data-act=rprules]'); await wait(300);
+    const why = (await p.$eval('.w-rp', (x) => x.innerText)).replace(/\s/g, ' ');
+    await p.click('[data-act=rpapply]'); await wait(2000);
+    const t = await p.evaluate(() => window.__tasks.find((x) => x.d === '2026-10-28'));
+    check('re-plan: a key workout missed on Monday goes to Wednesday (no hard day around)', why.includes('переносится на ср 28 окт') && t && +t.typtrain === 3 && t.prekm === '12', `${why.match(/Пропущенная.*/)?.[0] || why.slice(0, 120)} ${JSON.stringify(t)}`);
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(HISTORY(true, '4:20')) });
+    await p.click('[data-act=rprules]'); await wait(300);
+    const why = await p.$eval('.w-rp', (x) => x.innerText);
+    check('re-plan: tempos 10 s faster than the task: paces 10 s faster (T5 3:47 → 3:37)', why.includes('быстрее на 10 с') && why.includes('T5 3:37'), (why.match(/Темпа.*/) || [why.slice(0, 120)])[0]);
+    await p.click('[data-act=rpapply]'); await wait(2000);
+    await p.click('#tab-paces'); await wait(200);
+    check('re-plan: the new paces become the athlete\'s own', (await p.inputValue('input[data-k="5"]')) === '3:37' && (await p.$eval('select[data-p=pacesrc]', (x) => x.value)) === 'own');
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(HISTORY(true)) });
+    await p.click('[data-act=rprules]'); await wait(300);
+    check('re-plan: everything as planned: nothing to change, nothing to write', (await p.$eval('.w-rp', (x) => x.innerText)).includes('менять нечего') && await p.$eval('[data-act=rpapply]', (b) => b.disabled));
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(HISTORY(true, '4:32', 0.5)) });
+    await p.click('[data-act=rpai]'); await wait(4500);
+    const rows = await p.$$eval('.w-rp-weeks li', (l) => l.map((x) => x.innerText));
+    check('re-plan with AI: the generator rewrites the weeks from next Monday', rows.length === 5 && rows[0].includes('2–8 ноя') && rows.every((r) => r.includes('→')), rows.join(' | '));
+    await p.click('[data-act=rpapply]'); await wait(2000);
+    check('re-plan with AI: saved, the flash says so', (await p.$eval('.w-flash', (x) => x.innerText).catch(() => '')).includes('с ИИ') && !p.errors.length, p.errors.join('; '));
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(HISTORY(true, '4:32', 0.5) + '; x.me.isPremium = false') });
+    await p.click('[data-act=rprules]'); await wait(300);
+    check('re-plan without premium: the proposal is shown, writing disabled', await p.$eval('[data-act=rpapply]', (b) => b.disabled) && !!(await p.$('.w-rp .w-prem')));
     await p.close(); }
 
   // 8. no sideways scroll

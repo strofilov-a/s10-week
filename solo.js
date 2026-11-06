@@ -288,6 +288,7 @@
   // key workouts (развивающая, интервальная, повторная) 35%, volume 25%, long runs 25%, regularity 15%, the parts with
   // nothing planned left out and the rest reweighted. A workout is done at 80% of its km; a pace-only task is in its
   // pace within 5 s/km. Then the S10 forecast against the goal: each 1% slower takes 5% off, at most half.
+  const doneDay = (x) => { const km = runKm(x), t = +x?.target || 0; return t ? km >= READY.done * t : km > 0; };
   const READY_LABEL = () => (race ? 'Готовность к цели' : 'Выполнение плана');
   function readiness() {
     const from = add(today, -READY.days), rows = [];
@@ -295,7 +296,7 @@
     if (runKm(days.get(today)) > 0) rows.push({ d: today, x: days.get(today), k: 2 }); // today counts once it is run
     const planned = rows.filter((r) => isRun(r.x));
     if (planned.length < READY.minDays) return null;
-    const done = (r) => { const km = runKm(r.x), t = +r.x.target || 0; return t ? km >= READY.done * t : km > 0; };
+    const done = (r) => doneDay(r.x);
     const share = (list) => { const all = list.reduce((a, r) => a + r.k, 0); return all ? list.filter(done).reduce((a, r) => a + r.k, 0) / all : null; };
     // key workouts, and of those done with a pace-only task, how many were in its pace
     const keys = planned.filter((r) => [2, 3, 4].includes(+r.x.type)), keyDone = keys.filter(done);
@@ -338,6 +339,7 @@
       <ul class="w-ready-p">${R.parts.map((p) => `<li><span class="w-ready-n">${p.label}</span><span class="num w-ready-s">${Math.round(p.score * 100)}%</span>${readyBar(Math.round(p.score * 100), 'sm')}<span class="w-muted">${esc(p.text)}</span></li>`).join('')}
         ${R.fc ? `<li><span class="w-ready-n">Прогноз S10</span><span class="num w-ready-s">${R.fc.f < 1 ? `−${Math.round((1 - R.fc.f) * 100)}%` : '—'}</span><span aria-hidden="true"></span><span class="w-muted">${fmtHms(R.fc.sec)} при цели ${fmtHms(R.fc.goal)}${R.fc.f < 1 ? ', прогноз медленнее цели' : ', не медленнее цели'}</span></li>` : ''}</ul>
       <p class="w-note">Считается по вашему дневнику за последние 6 недель, последние две недели весят вдвое больше. Тренировка выполнена, если пробежано не меньше 80% её километров; темп проверяется у заданий, где задан только темп. Это оценка по правилам, а не вероятность.</p>
+      ${replanHTML()}
     </section>`;
   }
 
@@ -385,13 +387,14 @@
     });
     return { mon, target, total: out.reduce((a, t) => a + t.prekm, 0), days: out };
   }
+  const sameDay = (x, t) => !!x && +x.type === +t.typtrain && +x.target === +t.prekm && String(x.comment || '').trim() === String(t.task).trim();
   let keepExisting = true;
   let fillSpan = store.get('fillSpan', '2w'); // '2w': tomorrow + 14 days, so the athlete can adjust before the next fill; 'race': to the race
   function fillPreview(span = fillSpan) {
     const p = plan(); if (!p || !raceMon) return null;
     const weeks = p.plan.weeks.slice().sort((a, b) => a.week - b.week).map((w) => layWeek(w, p));
     const base = weeks.flatMap((w) => w.days).filter((t) => t.d > today && (!race || t.d !== race.d)); // the main race day stays as set on «Настройка плана»
-    const same = (t) => { const x = days.get(t.d); return x && +x.type === +t.typtrain && +x.target === +t.prekm && String(x.comment || '').trim() === String(t.task).trim(); };
+    const same = (t) => sameDay(days.get(t.d), t);
     const pick = (from, until) => {
       const all = base.filter((t) => t.d >= from && t.d <= until);
       const keep = keepExisting ? all.filter((t) => isRun(days.get(t.d))) : [];
@@ -557,6 +560,16 @@
   }
 
   /* ================= whole plan: fill, save version, generate ================= */
+  // writes days one Mon–Sun week per request, `say(i, n)` before each; stops at the first refusal
+  async function writeByWeek(list, say) {
+    const weeks = []; for (const t of list) { const g = last(weeks); if (g && g.mon === monday(t.d)) g.list.push(t); else weeks.push({ mon: monday(t.d), list: [t] }); }
+    let done = 0, upto = null, error = null;
+    for (let i = 0; i < weeks.length; i++) {
+      say(i + 1, weeks.length);
+      try { await writeTasks(weeks[i].list); done += weeks[i].list.length; upto = last(weeks[i].list).d; } catch (e) { error = e; break; }
+    }
+    return { done, upto, error };
+  }
   async function fillCalendar() {
     if (!me.isPremium) { fill.err = 'Ставить задачи можно с премиум-подпиской S10.'; return render(); }
     fill.busy = true; fill.err = ''; fill.progress = 'Проверяю дневник…'; render();
@@ -565,12 +578,7 @@
     fill.snap = f.write.slice();
     const before = f.write.map((t) => { const x = days.get(t.d); return [t.d, x ? +x.type || 0 : null, x ? +x.target || 0 : 0, x?.comment || '', x?.location || '', x?.prediction || '', +t.typtrain, +t.prekm, fp(t.task)]; });
     const prevFilled = sel.src === 'version' ? plan()?.filled || null : null;
-    const weeks = []; for (const t of f.write) { const g = last(weeks); if (g && g.mon === monday(t.d)) g.list.push(t); else weeks.push({ mon: monday(t.d), list: [t] }); }
-    let done = 0, upto = null, error = null;
-    for (let i = 0; i < weeks.length; i++) {
-      fill.progress = `Записываю неделю ${i + 1} из ${weeks.length}…`; render();
-      try { await writeTasks(weeks[i].list); done += weeks[i].list.length; upto = last(weeks[i].list).d; } catch (e) { error = e; break; }
-    }
+    const { done, upto, error } = await writeByWeek(f.write, (i, k) => { fill.progress = `Записываю неделю ${i} из ${k}…`; render(); });
     await loadRange(f.write[0].d, last(f.write).d, true).catch(() => {});
     const a = f.write[0].d, b = last(f.write).d, n = f.write.length;
     const rec = done ? { at: new Date().toISOString(), prevFilled, days: before.slice(0, done) } : null;
@@ -592,7 +600,7 @@
   }
   // writes the chosen plan with the current settings to the profile and marks it active; re-reads the list first,
   // so a version the coach saved meanwhile in calc5 is kept
-  async function storePlan({ asNew = false, filled = null, undo: undoRec } = {}) {
+  async function storePlan({ asNew = false, filled = null, undo: undoRec, name = '' } = {}) {
     const p = plan(); if (!p) return null;
     let list = versions;
     try { const r = await get(`/apiweb/userparam.php?action=get&param[]=studentPlans${id}`); list = parseList(r.param?.[`studentPlans${id}`]); } catch { /* keep what we have */ }
@@ -601,7 +609,7 @@
     const f0 = old?.filled, f = filled ? { at: new Date().toISOString(), from: f0?.from && f0.from < filled.from ? f0.from : filled.from, to: f0?.to && f0.to > filled.to ? f0.to : filled.to } : f0 || null;
     const v = {
       ...(old || {}), id: keepId || Math.random().toString(36).slice(2, 16),
-      name: old?.name || `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${p.plan.weeks.length} нед.`, savedAt: new Date().toISOString(),
+      name: name || old?.name || `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${p.plan.weeks.length} нед.`, savedAt: new Date().toISOString(),
       templateId: old?.templateId || (sel.src === 'library' ? p.id : p.templateId || null), distance: p.distance || null, plan: { weeks: p.plan.weeks },
       student: { ...(old?.student || {}), raceDate: race?.d || null, noRace: !race && noRace ? true : undefined, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], easy: PACE?.easy, volume: String(volume || firstKm(p)), layout: layout.slice() },
       active: true, filled: f, undo: undoRec === undefined ? old?.undo || null : undoRec,
@@ -613,10 +621,12 @@
     return v;
   }
   // changes one saved version in the profile (re-read first), e.g. to drop the undo record after «Вернуть как было»
-  async function patchVersion(vid, patch) {
+  const patchVersion = (vid, patch) => editVersions((list) => list.map((v) => (v.id === vid ? { ...v, ...patch } : v)));
+  // changes the saved list (re-read first, so a version the coach saved meanwhile is kept)
+  async function editVersions(fn) {
     let list = versions;
     try { const r = await get(`/apiweb/userparam.php?action=get&param[]=studentPlans${id}`); list = parseList(r.param?.[`studentPlans${id}`]); } catch { /* keep what we have */ }
-    const next = list.map((v) => (v.id === vid ? { ...v, ...patch } : v));
+    const next = fn(list);
     const fd = new FormData(); fd.append('action', 'set'); fd.append('id', id); fd.append(`param[studentPlans${id}]`, JSON.stringify(next));
     await post('/apiweb/userparam.php', fd);
     versions = next.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
@@ -633,12 +643,7 @@
       if (!(x && +x.type === nt && +x.target === nk && fp(x.comment) === nf)) { changed.push(d); continue; } // changed after the fill: not ours to touch
       back.push(wt === null ? { d, typtrain: 0, task: '', prekm: 0, location: '', prediction: '' } : { d, typtrain: wt, task: wc, prekm: wk, location: wl, prediction: wp });
     }
-    const weeks = []; for (const t of back) { const g = last(weeks); if (g && g.mon === monday(t.d)) g.list.push(t); else weeks.push({ mon: monday(t.d), list: [t] }); }
-    let done = 0, error = null;
-    for (let i = 0; i < weeks.length; i++) {
-      undo.progress = `Возвращаю неделю ${i + 1} из ${weeks.length}…`; render();
-      try { await writeTasks(weeks[i].list); done += weeks[i].list.length; } catch (e) { error = e; break; }
-    }
+    const { done, error } = await writeByWeek(back, (i, k) => { undo.progress = `Возвращаю неделю ${i} из ${k}…`; render(); });
     await loadRange(ds[0], last(ds), true).catch(() => {});
     const keptNote = changed.length ? ` ${changed.length} ${plural(changed.length, 'день', 'дня', 'дней')} поменяли после заполнения, ${changed.length === 1 ? 'его' : 'их'} не трогали.` : '';
     if (error) {
@@ -647,7 +652,12 @@
     }
     store.set(`undo.${id}`, null);
     const v = versions.find((x) => x.active && x.undo);
-    if (v) await patchVersion(v.id, { undo: null, filled: u.prevFilled || null }).catch(() => {});
+    if (u.prevActive && versions.some((x) => x.id === u.prevActive)) { // a re-plan: the plan it replaced is the active one again
+      await editVersions((list) => list.map((x) => { const { active, ...rest } = x; const y = x.id === v?.id ? { ...rest, undo: null } : rest; return x.id === u.prevActive ? { ...y, active: true } : y; })).catch(() => {});
+      sel = { src: 'version', id: u.prevActive }; persistSel(); applyVersion(plan());
+      if (u.prevPace) { paceSrc = u.prevPace.src; PACE_OWN = u.prevPace.own; store.set(`paceSrc.${id}`, paceSrc); store.set(`paceOwn.${id}`, PACE_OWN); }
+      reprice();
+    } else if (v) await patchVersion(v.id, { undo: null, filled: u.prevFilled || null }).catch(() => {});
     undo = { confirm: false, where: 'card', busy: false, err: '', progress: '' };
     flash = `${/*<demo>*/!LIVE ? 'Демо: календарь вернули как было' : /*</demo>*/'Календарь вернули как было'}: ${back.length} ${plural(back.length, 'день', 'дня', 'дней')}, ${range(ds[0], last(ds))}.${keptNote}`; flashUndo = '';
     wk = monday(ds[0]);
@@ -675,6 +685,167 @@
       flash = `План готов: ${parsed.weeks.length} ${plural(parsed.weeks.length, 'неделя', 'недели', 'недель')}${parsed.errors.length ? `, строк с ошибками: ${parsed.errors.length}` : ''}. Проверьте его ниже и сохраните версию, чтобы он остался.`;
     } catch (e) { gen.err = `План не получился: ${e.message}.`; }
     gen.busy = false; render();
+  }
+
+  /* ================= re-plan: the rest of the plan from what was run (stages 2 and 3, owner 06.11.2026) ================= */
+  // «Перестроить по правилам» (stage 2) or «с ИИ» (stage 3, calc4's generator with a summary of the training) makes a
+  // proposal for the weeks from next Monday on; the athlete sees it week by week and writes it. Only days the plan
+  // itself put in the diary (still exactly as laid) are rewritten, plus a missed key workout moved within this week;
+  // days changed by the athlete or the coach stay, empty days are left to «Заполнить календарь». The re-planned plan is
+  // saved as a new active version; «Вернуть как было» puts the days and the previous version back.
+  const RP = { look: 14, low: 0.8, high: 1.1, ramp: 1.1, floor: 0.4, up: 1.05, longMin: 0.75, moveBack: 3, paceMin: 3, paceTol: 5, paceMax: 10 };
+  let rp = null; // { by, weeksNew, rows, moves, paces, reasons, opts, busy, err, progress, lines }
+  const nextMonday = () => add(monday(today), 7);
+  const sortedWeeks = (p) => p.plan.weeks.slice().sort((a, b) => a.week - b.week);
+  const shiftPaces = (P, s) => ({ 5: fmtSec(toSec(P[5]) + s), 10: fmtSec(toSec(P[10]) + s), 21: fmtSec(toSec(P[21]) + s), 42: fmtSec(toSec(P[42]) + s), ...(P.easy ? { easy: easyRange(P).map((v) => fmtSec(v + s)).join('-') } : {}) });
+  // the last two weeks: planned km and run km
+  function lastWeeksKm() {
+    let pk = 0, rk = 0;
+    for (let d = add(today, -RP.look); d < today; d = add(d, 1)) { const x = days.get(d); if (isRun(x)) pk += +x.target || 0; rk += runKm(x); }
+    return { pk, rk, r: pk ? rk / pk : 1 };
+  }
+  // stage 2: volume, a missed key workout, paces
+  function replanByRules() {
+    const p = plan(), k = scaleK(p), nm = nextMonday(), fut = sortedWeeks(p).filter((w) => weekMon(w.week) >= nm);
+    const maxweek = +calcBase?.param?.maxweek?.v || 0, maxlong = +calcBase?.param?.maxlong?.v || 0;
+    const reasons = [], weeksNew = p.plan.weeks.map((w) => ({ ...w, slots: w.slots.map((s) => ({ ...s })) })), rows = [];
+    const { pk, rk, r } = lastWeeksKm();
+    // volume: under 80% of the plan for two weeks, the next weeks start from what was run (+10%) and grow 10% a week
+    // back to the plan; over 110%, up to 5% above the plan within the S10 limit; a lower plan week (taper) stays lower;
+    // the race week stays as planned (its volume is mostly the race)
+    const volWeeks = fut.filter((w) => !(race && w.week === -1));
+    if (pk && volWeeks.length && (r < RP.low || r > RP.high)) {
+      let prevT = null, prevP = null;
+      volWeeks.forEach((w, i) => {
+        const P = Math.round(w.km * k);
+        let T = r < RP.low ? Math.min(P, Math.max(Math.round(RP.floor * P), Math.round(rk / 2 * RP.ramp * RP.ramp ** i))) : Math.round(Math.min(P * RP.up, maxweek || Infinity));
+        if (prevT != null && P < prevP) T = Math.min(T, Math.round(prevT * P / prevP));
+        const o = weeksNew.find((x) => x.week === w.week); o.km = Math.round(T / k * 10) / 10;
+        o.slots.forEach((s) => { if (TYPE_BY_NAME[String(s.type).toLowerCase()] !== 5) return; if (T < P) s.km = Math.max(1, Math.round(+s.km * Math.max(RP.longMin, T / P))); if (maxlong && +s.km > maxlong) s.km = maxlong; });
+        if (T !== P) rows.push({ week: w.week, mon: weekMon(w.week), was: P, now: T });
+        prevT = T; prevP = P;
+      });
+      reasons.push(r < RP.low
+        ? `За последние 2 недели пробежано ${n1(rk)} из ${n1(pk)} км (${Math.round(r * 100)}%). Объём следующих недель начнётся от того, что вы бегаете сейчас, и будет расти на 10% в неделю, пока не догонит план; длительные короче.`
+        : `За последние 2 недели пробежано ${n1(rk)} из ${n1(pk)} км (${Math.round(r * 100)}%). Объём следующих недель можно поднять до 5% выше плана${maxweek ? `, не больше ${maxweek} км в неделю` : ''}.`);
+    } else if (pk) reasons.push(`Объём за последние 2 недели: ${n1(rk)} из ${n1(pk)} км (${Math.round(r * 100)}%), в пределах плана: не меняем.`);
+    // a key workout missed in the last 3 days of this week goes to the first free or easy day left in it, with no hard
+    // day right before or after
+    const moves = [], hard = (d) => [2, 3, 4, 5, 6].includes(+days.get(d)?.type) || moves.some((m) => m.d === d), sun = add(monday(today), 6);
+    for (let d = add(today, -RP.moveBack); d < today; d = add(d, 1)) {
+      const x = days.get(d); if (d < monday(today) || !x || ![2, 3, 4].includes(+x.type) || doneDay(x)) continue;
+      for (let c = add(today, 1); c <= sun; c = add(c, 1)) {
+        const y = days.get(c); if ((isRun(y) && +y.type !== 1) || hard(add(c, -1)) || hard(add(c, 1)) || (race && c === race.d)) continue;
+        moves.push({ d: c, typtrain: +x.type, task: String(x.comment || ''), prekm: +x.target || 0, location: '', prediction: '', moved: d }); break;
+      }
+    }
+    if (moves.length) reasons.push(moves.map((m) => `Пропущенная ${TYPES[m.typtrain].toLowerCase()} (${dayLbl(m.moved)}) переносится на ${DNS[dow(m.d)]} ${dayLbl(m.d)}.`).join(' '));
+    // paces: three or more pace-only key workouts in 6 weeks, two thirds of them faster (or slower) than the task by more
+    // than 5 s/km: every pace moves by their median, 3 to 10 s/km
+    let paces = null;
+    if (pacesOk(PACE)) {
+      const dev = [];
+      for (let d = add(today, -READY.days); d < today; d = add(d, 1)) {
+        const x = days.get(d); if (!x || ![2, 3, 4].includes(+x.type) || !isPaceOnly(x.comment) || !doneDay(x)) continue;
+        const p2 = runFact(x)?.pace; if (!p2) continue;
+        const [lo, hi = lo] = x.comment.trim().split(/\s*[-–]\s*/).map(toSec); dev.push(p2 < lo ? p2 - lo : p2 > hi ? p2 - hi : 0);
+      }
+      const fast = dev.filter((v) => v < -RP.paceTol).length, slow = dev.filter((v) => v > RP.paceTol).length;
+      if (dev.length >= 3 && (fast >= dev.length * 2 / 3 || slow >= dev.length * 2 / 3)) {
+        const m = dev.slice().sort((a, b) => a - b)[Math.floor(dev.length / 2)], s = Math.sign(m) * Math.min(RP.paceMax, Math.max(RP.paceMin, Math.round(Math.abs(m))));
+        paces = shiftPaces(PACE, s);
+        reasons.push(`${s < 0 ? fast : slow} из ${dev.length} ключевых с заданным темпом пробежаны ${s < 0 ? 'быстрее' : 'медленнее'} задания, в среднем на ${Math.abs(Math.round(m))} с/км. Темпа ${s < 0 ? 'быстрее' : 'медленнее'} на ${Math.abs(s)} с: T5 ${paces[5]}, T10 ${paces[10]}, T21 ${paces[21]}, T42 ${paces[42]}.`);
+      }
+    }
+    // a goal the S10 forecast is slower than: said, not changed (the race and its goal stay as set)
+    const R = readiness();
+    if (R?.fc && R.fc.f < 1) reasons.push(`Прогноз S10 ${fmtHms(R.fc.sec)} медленнее цели ${fmtHms(R.fc.goal)}. Если и после перестройки не догоните, цель лучше сдвинуть: темпа от прогноза можно взять на вкладке «Мои темпа».`);
+    return { by: 'rules', weeksNew, rows, moves, paces, reasons, opts: { vol: true, move: true, pace: true } };
+  }
+  // stage 3: the generator rewrites the weeks from next Monday, told what was run
+  async function replanByAI() {
+    const p = plan(), k = scaleK(p), nm = nextMonday(), fut = sortedWeeks(p).filter((w) => weekMon(w.week) >= nm);
+    if (!fut.length) { rp = { by: 'ai', err: 'В плане не осталось недель после этой: перестраивать нечего.', reasons: [] }; return render(); }
+    rp = { by: 'ai', busy: true, lines: 0, reasons: [], err: '' }; render();
+    const R = readiness(), { pk, rk } = lastWeeksKm(), maxweek = calcBase?.param?.maxweek?.v, maxlong = calcBase?.param?.maxlong?.v;
+    const prompt = [
+      race ? `Главный старт: ${KM_NAME[+race.prekm] || `${n1(+race.prekm)} км`} ${dayLbl(race.d)}${raceName ? `, ${raceName}` : ''}${race.prediction ? `, цель ${hms(race.prediction)}` : ''}.` : 'Старта нет, план без даты старта.',
+      `Перестрой оставшиеся ${fut.length} ${plural(fut.length, 'неделю', 'недели', 'недель')} плана (недели -${fut.length}…-1) с учётом того, что уже сделано.`,
+      pacesOk(PACE) ? `Мои темпа: T5 ${PACE[5]}, T10 ${PACE[10]}, T21 ${PACE[21]}, T42 ${PACE[42]}.` : '',
+      R ? `За последние 6 недель: ${R.parts.map((q) => `${q.label.toLowerCase()} ${Math.round(q.score * 100)}% (${q.text})`).join('; ')}.` : '',
+      pk ? `За последние 2 недели пробежано ${n1(rk)} из ${n1(pk)} км.` : '',
+      `Объём оставшихся недель в нынешнем плане: ${fut.map((w) => Math.round(w.km * k)).join(', ')} км.`,
+      maxweek || maxlong ? `Лимиты: объём до ${maxweek || '—'} км в неделю, длительная до ${maxlong || '—'} км.` : '',
+    ].filter(Boolean).join(' ').replace(/ /g, ' ');
+    try {
+      const text = await generatePlanText({ distance: p.distance || gen.distance, weeks: fut.length, prompt }, (t) => { const n = t.split('\n').length; if (n !== rp.lines) { rp.lines = n; const s = root.querySelector('#w-rp-status'); if (s) s.textContent = `Модель пишет план… ${n} ${plural(n, 'строка', 'строки', 'строк')}`; } });
+      const parsed = parsePlanText(text), got = new Map(parsed.weeks.map((w) => [w.week, w]));
+      if (!fut.some((w) => got.has(w.week))) throw new Error('в ответе нет нужных недель');
+      // the generator's km are the athlete's own; the page scales a plan by the first-week volume, so they are divided back
+      const weeksNew = p.plan.weeks.map((w) => { const g = weekMon(w.week) >= nm && got.get(w.week); return g ? { ...g, km: Math.round(g.km / k * 10) / 10 } : w; });
+      const rows = fut.filter((w) => got.has(w.week)).map((w) => ({ week: w.week, mon: weekMon(w.week), was: Math.round(w.km * k), now: Math.round(got.get(w.week).km) }));
+      rp = { by: 'ai', weeksNew, rows, moves: [], paces: null, opts: { vol: true }, prompt,
+        reasons: [`Модель перестроила ${rows.length} ${plural(rows.length, 'неделю', 'недели', 'недель')} с учётом сделанного за 6 недель${parsed.errors.length ? ` (строк с ошибками: ${parsed.errors.length})` : ''}. Проверьте недели: ключевые тренировки в них новые.`] };
+    } catch (e) { rp = { by: 'ai', reasons: [], err: `План не перестроился: ${e.message}. Попробуйте ещё раз или перестройте по правилам.` }; }
+    render();
+  }
+  // what the proposal writes: plan days from next Monday that are still exactly as the current plan laid them (or say
+  // exactly the new thing already), plus the moved workouts; the paces of the proposal when they are chosen
+  function replanPreview(r) {
+    const cur = plan(), lay = (pl) => sortedWeeks(pl).map((w) => layWeek(w, pl));
+    const was = lay(cur), oldDays = new Map(was.flatMap((w) => w.days).map((t) => [t.d, t])), oldTotals = new Map(was.map((w) => [w.mon, w.total]));
+    const base = (cur.name || 'План').replace(/ · перестроен[^·]*$/, '').replace(/ · \d+ нед\.$/, '');
+    const np = { ...cur, id: 'new', name: `${base} · перестроен ${dayLbl(today)}`, plan: { weeks: r.opts.vol ? r.weeksNew : cur.plan.weeks } };
+    const keepP = PACE; if (r.opts.pace && r.paces) PACE = r.paces;
+    try {
+      const weeks = lay(np), nm = nextMonday(), write = [], keep = [];
+      const list = [...(r.opts.move ? r.moves : []), ...weeks.flatMap((w) => w.days).filter((t) => t.d >= nm && (!race || t.d !== race.d))];
+      for (const t of list) {
+        const x = days.get(t.d), o = oldDays.get(t.d);
+        if (sameDay(x, t)) continue;
+        if (t.moved || (isRun(x) && o && sameDay(x, o))) write.push(t); else if (isRun(x)) keep.push(t);
+      }
+      return { weeks, plan: np, oldTotals, write: write.sort((a, b) => a.d.localeCompare(b.d)), keep };
+    } finally { PACE = keepP; }
+  }
+  async function applyReplan() {
+    if (!me.isPremium) { rp.err = 'Ставить задачи можно с премиум-подпиской S10.'; return render(); }
+    rp.busy = true; rp.err = ''; rp.progress = 'Проверяю дневник…'; render();
+    await loadRange(add(today, 1), raceEnd || add(today, 1)).catch(() => {});
+    const f = replanPreview(rp), prev = plan(), prevActive = sel.src === 'version' ? prev.id : null, prevFilled = sel.src === 'version' ? prev.filled || null : null;
+    const before = f.write.map((t) => { const x = days.get(t.d); return [t.d, x ? +x.type || 0 : null, x ? +x.target || 0 : 0, x?.comment || '', x?.location || '', x?.prediction || '', +t.typtrain, +t.prekm, fp(t.task)]; });
+    const res = f.write.length ? await writeByWeek(f.write, (i, n) => { rp.progress = `Записываю неделю ${i} из ${n}…`; render(); }) : { done: 0, error: null };
+    if (f.write.length) await loadRange(f.write[0].d, last(f.write).d, true).catch(() => {});
+    if (res.error && !res.done) { rp.busy = false; rp.err = `Сервер не принял задачи (${res.error.message}). В дневнике ничего не изменилось.`; return render(); }
+    const pacesNew = rp.opts.pace && rp.paces, rec = res.done ? { at: new Date().toISOString(), prevFilled, prevActive, prevPace: pacesNew ? { src: paceSrc, own: PACE_OWN } : null, days: before.slice(0, res.done) } : null;
+    if (rec) store.set(`undo.${id}`, rec);
+    if (pacesNew) { PACE_OWN = rp.paces; paceSrc = 'own'; store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); }
+    rp.progress = 'Сохраняю план в профиль…'; render();
+    const by = rp.by, n = res.done, a = f.write[0]?.d, b = f.write[res.done - 1]?.d;
+    fresh = f.plan; sel = { src: 'new', id: 'new' };
+    let saved = true; try { await storePlan({ asNew: true, name: f.plan.name, filled: prevFilled ? { from: prevFilled.from, to: prevFilled.to } : null, undo: rec }); } catch { saved = false; }
+    rp = null;
+    flash = `${/*<demo>*/!LIVE ? 'Демо: ' : /*</demo>*/''}План перестроен${by === 'ai' ? ' с ИИ' : ''}${n ? `: ${n} ${plural(n, 'день', 'дня', 'дней')} в дневнике переписано, ${range(a, b)}` : ', в дневнике ничего не меняли: новые недели встанут при следующем заполнении'}${res.error ? `. Дальше сервер не принял задачи (${res.error.message})` : ''}.${saved ? ` План сохранён в профиле как «${f.plan.name}».` : ' План в профиль сохранить не удалось.'}`;
+    flashUndo = rec ? flash : '';
+    render();
+  }
+  function replanHTML() {
+    const p = plan(); if (!p || !raceMon) return '';
+    if (!rp) return `<div class="w-rp"><p>План можно подстроить под то, что вы уже пробежали: объём следующих недель, пропущенные тренировки, темпа. Сначала покажем, что изменится, записывать или нет, решите вы.</p><div class="w-acts"><button class="w-btn" data-act="rprules">Перестроить по правилам</button><button class="w-btn" data-act="rpai">Перестроить с ИИ</button></div></div>`;
+    const title = rp.by === 'ai' ? 'Перестройка с ИИ' : 'Перестройка по правилам';
+    if (rp.busy && !rp.weeksNew) return `<div class="w-rp"><h3>${title}</h3><p id="w-rp-status" role="status">Модель пишет план…</p></div>`;
+    if (!rp.weeksNew) return `<div class="w-rp"><h3>${title}</h3>${rp.err ? `<p class="w-err" role="alert">${esc(rp.err)}</p>` : ''}<div class="w-acts"><button class="w-btn" data-act="rpcancel">Закрыть</button></div></div>`;
+    const f = replanPreview(rp), laid = new Map(f.weeks.map((w) => [w.mon, w])), changes = rp.opts.vol && rp.rows.length || rp.opts.move && rp.moves.length || rp.opts.pace && rp.paces;
+    const opt = (k, label) => `<label class="w-chk"><input type="checkbox" data-rp="${k}" ${rp.opts[k] ? 'checked' : ''}> <span>${label}</span></label>`;
+    return `<div class="w-rp"><h3>${title}</h3>
+      <ul class="w-rp-why">${rp.reasons.map((x) => `<li>${esc(x)}</li>`).join('')}${changes || rp.by === 'ai' ? '' : '<li>План идёт как задумано: менять нечего.</li>'}</ul>
+      ${rp.by === 'rules' && [rp.rows.length, rp.moves.length, rp.paces].filter(Boolean).length > 1 ? `<div class="w-rp-opts">${rp.rows.length ? opt('vol', 'Объём следующих недель') : ''}${rp.moves.length ? opt('move', 'Перенести пропущенное') : ''}${rp.paces ? opt('pace', 'Новые темпа') : ''}</div>` : ''}
+      ${rp.opts.vol && rp.rows.length ? `<ol class="w-rp-weeks">${rp.rows.map((w) => `<li><span class="num">${w.week}</span><span class="num">${range(w.mon, add(w.mon, 6))}</span><span class="w-wworks w-rp-w">${(laid.get(w.mon)?.days || []).filter((d) => d.typtrain >= 2).map((d) => `<span>${glyph(LEVEL[d.typtrain], d.typtrain === 6)}${SHORT[d.typtrain]} ${n1(d.prekm)}</span>`).join('')}</span><span class="num">${n1(f.oldTotals.get(w.mon) ?? w.was)} → <b>${n1(laid.get(w.mon)?.total ?? w.now)}</b> км</span></li>`).join('')}</ol>` : ''}
+      <p class="w-muted">${f.write.length ? `Запишется в дневник: ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}, ${range(f.write[0].d, last(f.write).d)}.` : 'В дневнике ничего не поменяется: перестроенные недели встанут, когда вы заполните календарь.'}${f.keep.length ? ` ${f.keep.length} ${plural(f.keep.length, 'день', 'дня', 'дней')} вы или тренер поменяли после заполнения, их не трогаем.` : ''} План сохранится в профиле новой версией, вернуть прежний можно кнопкой «Вернуть как было».</p>
+      ${rp.err ? `<p class="w-err" role="alert">${esc(rp.err)}</p>` : ''}
+      <div class="w-acts"><button class="w-btn" data-act="rpcancel" ${rp.busy ? 'disabled' : ''}>Отмена</button><button class="w-btn primary" data-act="rpapply" ${rp.busy || !changes || !me.isPremium ? 'disabled' : ''}>${rp.busy ? esc(rp.progress || 'Записываю…') : f.write.length ? `Записать ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}` : 'Сохранить план'}</button></div>
+      ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи можно с премиум-подпиской S10.</p>'}
+    </div>`;
   }
 
   /* ================= markup ================= */
@@ -1192,6 +1363,10 @@
   .w-ready-v{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.w-ready-v b{font-size:40px;line-height:1;font-weight:500;letter-spacing:-.01em}.w-ready-v b small{font-size:20px;margin-left:2px}.w-ready-v span{color:var(--muted)}
   .w-ready-p{list-style:none;border-top:1px solid var(--rule)}.w-ready-p li{display:grid;grid-template-columns:200px 56px minmax(0,220px) minmax(0,1fr);gap:8px 16px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--rule)}.w-ready-n{font-weight:500}.w-ready-s{text-align:right}
   .w-ready .w-note{padding:14px 20px 18px}
+  .w-rp{padding:18px 20px 20px;border-top:1px solid var(--rule);display:grid;gap:12px;background:var(--soft);border-radius:0 0 8px 8px}.w-rp h3{font-size:16px;font-weight:500}.w-rp>p{color:var(--muted);max-width:72ch}
+  .w-rp-why{list-style:none;display:grid;gap:6px;max-width:80ch}.w-rp-why li{position:relative;padding-left:14px}.w-rp-why li::before{content:"";position:absolute;left:2px;top:.68em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+  .w-rp-opts{display:flex;flex-wrap:wrap;gap:8px 20px}.w-rp-weeks{list-style:none;display:grid;gap:0;border-top:1px solid var(--rule);max-width:760px}.w-rp-weeks li{display:grid;grid-template-columns:40px 120px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule)}
+  .w-rp .w-acts{justify-content:flex-start}.w-rp-weeks .w-rp-w{grid-area:auto}
   .w-stat .v{font-size:24px;line-height:1.2}
   .w-stat .v small{font-size:13px;color:var(--faint);margin-left:4px}
   .w-stat .s{color:var(--faint);font-size:13px}
@@ -1388,7 +1563,7 @@
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
     .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
     .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
-    .w-ready-p li{grid-template-columns:minmax(0,1fr) auto;padding:12px 16px}.w-ready-p li>.w-ready-t,.w-ready-p li>.w-muted{grid-column:1/-1}.w-ready .w-note{padding:12px 16px 16px}
+    .w-ready-p li{grid-template-columns:minmax(0,1fr) auto;padding:12px 16px}.w-rp{padding:16px}.w-rp .w-acts{flex-wrap:wrap}.w-rp-weeks li{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w"}.w-rp-weeks li>:nth-child(2){grid-area:d}.w-rp-weeks li>:nth-child(3){grid-area:w}.w-rp-weeks li>:nth-child(4){grid-area:k}.w-rp .w-btn{flex:1 1 auto}.w-ready-p li>.w-ready-t,.w-ready-p li>.w-muted{grid-column:1/-1}.w-ready .w-note{padding:12px 16px 16px}
     .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
     .w-paces label{flex-direction:column;align-items:flex-start;gap:8px}.w-paces input{width:100%}.w-ptab th[scope=row] small{display:block}}
   /* a wide screen: the open week of the plan as day cards, four in a row, Sunday across two, instead of short rows
@@ -1442,6 +1617,10 @@
       if (act === 'undoyes') return undoFill();
       if (act === 'fillno') { fill.confirm = false; return render(); }
       if (act === 'fillyes') return fillCalendar();
+      if (act === 'rprules') { rp = replanByRules(); return render(); }
+      if (act === 'rpai') return replanByAI();
+      if (act === 'rpcancel') { rp = null; return render(); }
+      if (act === 'rpapply') return applyReplan();
       if (act === 'pversion') return saveVersion();
       return;
     }
@@ -1476,6 +1655,7 @@
   root.addEventListener('change', (e) => {
     const t = e.target, f = t.dataset.f, pk = t.dataset.p;
     if (pk === 'role') { layout[+t.dataset.i] = t.value; store.set('layout', layout); return render(); }
+    if (t.dataset.rp && rp?.opts) { rp.opts[t.dataset.rp] = t.checked; return render(); }
     if (pk === 'keep') { keepExisting = t.checked; fill.confirm = false; return render(); }
     if (pk === 'pacesrc') { paceSrc = t.value; if (paceSrc === 'own' && !PACE_OWN) PACE_OWN = { ...PACE }; store.set(`paceSrc.${id}`, paceSrc); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render(); }
     if (pk === 'pace') {
