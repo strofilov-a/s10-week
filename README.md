@@ -13,6 +13,9 @@ the long run and the days to the race; under it three tabs (Неделя / Пл�
   undoes the last fill, leaving days that were changed after it.
 - **Готовность к цели**: a percentage in the summary card and a card on «План до старта» with its parts (key workouts,
   volume, long runs, regularity, the S10 forecast against the goal), from the diary of the last 6 weeks. Nothing is written.
+  Under it «Перестроить по правилам» or «с ИИ» proposes the weeks from next Monday from what was run (volume, a missed key
+  workout, paces; or calc4's generator told the same), shows was → now, and on «Записать» rewrites the days the plan put
+  in the diary as a new plan version; «Вернуть как было» puts back the days and the previous plan.
 - **Мои темпа**: T5/T10/T21/T42 from the chosen plan, the S10 forecast, or your own; every workout on the page uses them.
   The four paces are edited at the top; below, the time per 1 km and per 400 m lap for each zone and the easy-run range.
 - Each day shows the fact next to the plan: distance and average pace from the diary tracks, and for pace-only tasks

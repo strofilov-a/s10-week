@@ -109,7 +109,21 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   pace (in-pace share moves the key part between 70% and 100%). The S10 forecast (`planresults` row of the race's
   date, `prehms`) against the race goal (`prediction`): each 1% slower takes 5% off, at most half. Under 7 planned
   days: «мало данных». Shown in the summary card (beside «До старта») and as a card on «План до старта» with each part.
-  Nothing is stored or written. Stage 2 (owner's plan): «Перестроить план с учётом сделанного».
+  Nothing is stored or written.
+- Re-plan (stages 2 and 3, owner 06.11.2026), at the bottom of the readiness card, for the weeks from next Monday:
+  «Перестроить по правилам» (`replanByRules`, numbers in `RP`): under 80% of the planned km run in the last 2 weeks,
+  each next week = the 2-week average +10%, growing 10% a week, never under 40% of the plan nor over it, a lower plan
+  week (taper) kept lower, long runs shortened with the volume (to 75% at least), key workouts unchanged; over 110%, up
+  to 5% above the plan within `maxweek`; the race week stays as planned. A key workout missed in the last 3 days of this
+  week goes to the first free or easy day left in it with no hard day either side. Three or more pace-only key workouts
+  in 6 weeks, two thirds faster (slower) than the task by over 5 s/km: all paces shift by their median, 3–10 s/km. A
+  forecast slower than the goal is only said. «Перестроить с ИИ» (`replanByAI`): calc4's generator rewrites the same
+  weeks from a prompt with the race, paces, readiness parts, the last 2 weeks and the limits (its km are divided by the
+  first-week scale). Either way the proposal shows week totals was → now with the key workouts and what will be written;
+  options can be unticked. Writing (`applyReplan`) rewrites only days still exactly as the current plan laid them,
+  plus moves; empty days are left to «Заполнить календарь», changed days stay. The plan is stored as a new active version
+  «… · перестроен <date>»; the undo record carries `prevActive` and `prevPace`, so «Вернуть как было» restores the days,
+  the previous version and the paces.
 - Start window (new athletes only, own page only, never for a coach with `?id=`): shown when the site has no main race
   and the athlete has not chosen «Отсутствует», and/or when there are no complete paces. «Сохранить старт» writes the
   main race through `writeTasks` (`typtrain 6`, `main6: 1`, like calc3), asking once if that day already has a task;
@@ -163,7 +177,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # demo checks (83), the release build and its checks (12), the promo page (18)
+npm test                                     # demo checks (94), the release build and its checks (12), the promo page (18)
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same on every push and pull request, and fails if the committed
