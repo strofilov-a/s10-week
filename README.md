@@ -11,8 +11,9 @@ the long run and the days to the race; under it three tabs (Неделя / Пл�
   with the first-week volume, the day layout, the paces and the filled range, is stored in the athlete's profile
   (`studentPlans<ID>`, the list calc5 keeps; marked `active`), so every device opens the same plan. «Вернуть как было»
   undoes the last fill, leaving days that were changed after it.
-- **Готовность к цели**: a percentage in the summary card and a card on «План до старта» with its parts (key workouts,
-  volume, long runs, regularity, the S10 forecast against the goal), from the diary of the last 6 weeks. Nothing is written.
+- **Шанс на цель**: the chance to run the goal time on race day, in the summary card and as a card on «План до старта»
+  (form now from the last race, the S10 forecast or the paces; race-day form from the training of the last 6 weeks; the
+  times with a 50% and 80% chance). Nothing is written.
   Under it «Перестроить по правилам» or «с ИИ» proposes the weeks from next Monday from what was run (volume, a missed key
   workout, paces; or calc4's generator told the same), shows was → now, and on «Записать» rewrites the days the plan put
   in the diary as a new plan version; «Вернуть как было» puts back the days and the previous plan.

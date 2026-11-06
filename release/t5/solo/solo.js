@@ -1,4 +1,4 @@
-/* S10 «Моя неделя» · release edcf01936d: everything on one page.
+/* S10 «Моя неделя» · release 80462ecf16: everything on one page.
    Today and this week · the paces · the master plan (your saved versions, the library, or a new one from a prompt) laid
    over the dates to the race · «Заполнить календарь» for the whole plan · «Запланировать неделю» for one week (calc3).
    It reads and writes the logged-in user's data through the site's own API. */
@@ -225,14 +225,20 @@
     };
   }
 
-  /* ================= readiness: how the training so far supports the goal ================= */
-  // stage 1 of the adaptive plan (owner, 06.11.2026), from the diary of the last 6 weeks, the last 2 counted twice:
-  // key workouts (развивающая, интервальная, повторная) 35%, volume 25%, long runs 25%, regularity 15%, the parts with
-  // nothing planned left out and the rest reweighted. A workout is done at 80% of its km; a pace-only task is in its
-  // pace within 5 s/km. Then the S10 forecast against the goal: each 1% slower takes 5% off, at most half.
+  /* ================= the chance to reach the goal ================= */
+  // owner, 06.11.2026: not the plan's completion (S10 shows that on its tasks page) but the chance to run the goal time on
+  // race day, moving with every workout done, missed, fast or slow; meant to say «on track» or «not», not to be precise.
+  //  1. form now at the race distance: the latest race result of the last 12 weeks (`planresults` realhms), else the S10
+  //     forecast for this race, else the paces; another distance by Riegel, k = 1.06 (as the paces)
+  //  2. training of the last 6 weeks, the last 2 counted twice: key workouts 35%, volume 25%, long runs 25%, regularity
+  //     15% (parts with nothing planned left out) → T; pace-only key workouts against their task: half the median
+  //     difference moves the form now, at most 3%
+  //  3. race-day form = form now × (1 − gain), gain = rate × weeks left × (T − 30%) / 70%: at T 30% no gain, under it the
+  //     form drops; rate 0.5% a week for a 4:00+ marathon level down to 0.25% at 3:00, in all at most 10% down to 6%
+  //  4. spread 2% + 0.2% a week left; chance = Φ((goal − race-day form) / (race-day form × spread)), 1…99%
+  const CH = { anchorWeeks: 12, k: 1.06, slow: 14400, fast: 10800, rate: [0.005, 0.0025], cap: [0.10, 0.06], noGain: 0.3, q: 0.5, qMax: 0.03, sd: 0.02, sdWeek: 0.002 };
   const doneDay = (x) => { const km = runKm(x), t = +x?.target || 0; return t ? km >= READY.done * t : km > 0; };
-  const READY_LABEL = () => (race ? 'Готовность к цели' : 'Выполнение плана');
-  function readiness() {
+  function training() {
     const from = add(today, -READY.days), rows = [];
     for (let d = from; d < today; d = add(d, 1)) rows.push({ d, x: days.get(d) || null, k: d >= add(today, -READY.recent) ? 2 : 1 });
     if (runKm(days.get(today)) > 0) rows.push({ d: today, x: days.get(today), k: 2 }); // today counts once it is run
@@ -240,11 +246,16 @@
     if (planned.length < READY.minDays) return null;
     const done = (r) => doneDay(r.x);
     const share = (list) => { const all = list.reduce((a, r) => a + r.k, 0); return all ? list.filter(done).reduce((a, r) => a + r.k, 0) / all : null; };
-    // key workouts, and of those done with a pace-only task, how many were in its pace
+    // key workouts, and of those done with a pace-only task, how far from its pace
     const keys = planned.filter((r) => [2, 3, 4].includes(+r.x.type)), keyDone = keys.filter(done);
-    const checked = keyDone.filter((r) => isPaceOnly(r.x.comment) && runFact(r.x)?.pace);
-    const hits = checked.filter((r) => { const [lo, hi = lo] = r.x.comment.trim().split(/\s*[-–]\s*/).map(toSec), p = runFact(r.x).pace; return p >= lo - 5 && p <= hi + 5; });
+    const checked = keyDone.filter((r) => isPaceOnly(r.x.comment) && runFact(r.x)?.pace).map((r) => {
+      const [lo, hi = lo] = r.x.comment.trim().split(/\s*[-–]\s*/).map(toSec), p = runFact(r.x).pace;
+      return { dev: p < lo ? p - lo : p > hi ? p - hi : 0, ref: (lo + hi) / 2 };
+    });
+    const hits = checked.filter((c) => Math.abs(c.dev) <= 5);
     const keyShare = share(keys), key = keyShare == null ? null : keyShare * (checked.length ? 0.7 + 0.3 * hits.length / checked.length : 1);
+    const med = checked.length >= 2 ? checked.map((c) => c.dev / c.ref).sort((a, b) => a - b)[Math.floor(checked.length / 2)] : 0;
+    const q = Math.max(-CH.qMax, Math.min(CH.qMax, med * CH.q)); // > 0: slower than the tasks
     // volume: everything run (unplanned runs too) against everything planned, at most 100%
     const planKm = planned.reduce((a, r) => a + r.k * (+r.x.target || 0), 0), runAll = rows.reduce((a, r) => a + r.k * runKm(r.x), 0);
     const vol = planKm ? Math.min(1, runAll / planKm) : null;
@@ -262,27 +273,54 @@
       { id: 'long', score: long, label: 'Длительные', text: longs.length ? `${longs.filter(done).length} из ${longs.length}, самая длинная пробежка ${n1(maxRun)} км` : '' },
       { id: 'reg', score: reg, label: 'Регулярность', text: gap > READY.gap ? `перерыв ${gap} ${plural(gap, 'день', 'дня', 'дней')} без бега` : `перерывов больше ${READY.gap} дней не было` },
     ].filter((p) => p.score != null);
-    const wsum = parts.reduce((a, p) => a + READY.w[p.id], 0);
-    let pct = parts.reduce((a, p) => a + READY.w[p.id] * p.score, 0) / wsum;
-    // the S10 forecast for the main race against its goal
-    let fc = null;
-    const fr = race && results.find((r) => r.d === race.d && +r.prehms), goal = race?.prediction ? hmsSec(race.prediction) : 0;
-    if (fr && goal) { const f = Math.max(0.5, 1 - 5 * Math.max(0, (+fr.prehms - goal) / goal)); fc = { sec: +fr.prehms, goal, f }; pct *= f; }
-    return { pct: Math.round(pct * 100), parts, fc, from: start };
+    const wsum = parts.reduce((a, p) => a + READY.w[p.id], 0), score = parts.reduce((a, p) => a + READY.w[p.id] * p.score, 0) / wsum;
+    return { score, pct: Math.round(score * 100), parts, q, checked: checked.length, from: start };
   }
   const fmtHms = (s) => { const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = Math.round(s % 60); return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(x).padStart(2, '0')}`; };
-  const readyLevel = (p) => (p >= 80 ? 'высокая' : p >= 60 ? 'средняя' : 'низкая');
-  const readyBar = (p, cls = '') => `<div class="w-track w-ready-t ${cls}" data-l="${p >= 80 ? 3 : p >= 60 ? 2 : 1}" role="img" aria-label="${p}%"><i style="width:${p}%"></i></div>`;
-  function readyCard(R) {
-    const head = `<div class="w-ch"><h2 id="w-ready-h">${READY_LABEL()}</h2><span class="w-muted num">${R ? `по дневнику с ${dayLbl(R.from)}` : 'по дневнику за 6 недель'}</span></div>`;
-    if (!R) return `<section class="w-card w-ready" aria-labelledby="w-ready-h">${head}<p class="w-note">Пока мало данных: нужно хотя бы ${READY.minDays} тренировок в дневнике за последние 6 недель. Шкала появится, когда наберётся.</p></section>`;
-    return `<section class="w-card w-ready" aria-labelledby="w-ready-h">${head}
-      <div class="w-step"><div class="w-ready-v"><b class="num">${R.pct}<small>%</small></b><span>${race ? `Цель${race.prediction ? ` ${esc(hms(race.prediction))}` : ''}${raceName ? `, ${esc(raceName)}` : ''}: готовность ${readyLevel(R.pct)}` : `Выполнение ${readyLevel(R.pct)}`}</span></div>${readyBar(R.pct)}</div>
-      <ul class="w-ready-p">${R.parts.map((p) => `<li><span class="w-ready-n">${p.label}</span><span class="num w-ready-s">${Math.round(p.score * 100)}%</span>${readyBar(Math.round(p.score * 100), 'sm')}<span class="w-muted">${esc(p.text)}</span></li>`).join('')}
-        ${R.fc ? `<li><span class="w-ready-n">Прогноз S10</span><span class="num w-ready-s">${R.fc.f < 1 ? `−${Math.round((1 - R.fc.f) * 100)}%` : '—'}</span><span aria-hidden="true"></span><span class="w-muted">${fmtHms(R.fc.sec)} при цели ${fmtHms(R.fc.goal)}${R.fc.f < 1 ? ', прогноз медленнее цели' : ', не медленнее цели'}</span></li>` : ''}</ul>
-      <p class="w-note">Считается по вашему дневнику за последние 6 недель, последние две недели весят вдвое больше. Тренировка выполнена, если пробежано не меньше 80% её километров; темп проверяется у заданий, где задан только темп. Это оценка по правилам, а не вероятность.</p>
-      ${replanHTML()}
-    </section>`;
+  const KM_OF = (d) => ({ 42: 42.195, 42.2: 42.195, 21: 21.0975, 21.1: 21.0975 }[+d] || +d);
+  const riegel = (sec, from, to) => sec * (to / from) ** CH.k;
+  // the normal distribution's Φ (Abramowitz–Stegun 7.1.26)
+  const phi = (z) => { const t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2), e = 1 - t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429)))) * Math.exp(-z * z / 2); return z >= 0 ? (1 + e) / 2 : (1 - e) / 2; };
+  function chance(T = training()) {
+    if (!race) return null;
+    const D = KM_OF(race.prekm), goal = race.prediction ? hmsSec(race.prediction) : 0;
+    let f0 = 0, src = '';
+    const past = results.filter((r) => +r.realhms && +r.distance && r.d <= today && r.d >= add(today, -CH.anchorWeeks * 7)).sort((a, b) => b.d.localeCompare(a.d))[0];
+    const fr = results.find((r) => r.d === race.d && +r.prehms);
+    if (past) { f0 = riegel(+past.realhms, KM_OF(past.distance), D); src = `по старту ${nameOf(past) || ''} ${dayLbl(past.d)}: ${fmtTime(+past.realhms, KM_OF(past.distance))} на ${n1(+past.distance)} км`.replace('  ', ' '); }
+    else if (fr) { f0 = +fr.prehms; src = 'по прогнозу S10'; }
+    else if (pacesOk(PACE)) { const k = D >= 30 ? 42 : D >= 15 ? 21 : D >= 7.5 ? 10 : 5; f0 = paceSec(PACE[k]) * D; src = `по вашему темпу T${k}`; }
+    if (!f0) return { goal, D, none: true };
+    const q = T?.q || 0, fNow = f0 * (1 + q);
+    const lvl = Math.max(0, Math.min(1, (riegel(fNow, D, 42.195) - CH.fast) / (CH.slow - CH.fast)));
+    const rate = CH.rate[1] + (CH.rate[0] - CH.rate[1]) * lvl, cap = CH.cap[1] + (CH.cap[0] - CH.cap[1]) * lvl;
+    const weeks = Math.max(0, (d8(race.d) - d8(today)) / 6048e5), score = T ? T.score : 1;
+    const gain = Math.max(-cap, Math.min(cap, rate * weeks * Math.max(-0.5, Math.min(1, (score - CH.noGain) / (1 - CH.noGain)))));
+    const fRace = fNow * (1 - gain), sd = CH.sd + CH.sdWeek * weeks;
+    const pct = goal ? Math.max(1, Math.min(99, Math.round(100 * phi((goal - fRace) / (fRace * sd))))) : null;
+    return { pct, goal, D, f0, fNow, q, src, fRace, gain, weeks, t50: fRace, t80: fRace * (1 + 0.8416 * sd), T };
+  }
+  // a race time: h:mm for a half or a marathon, m:ss or h:mm:ss for 10 km and shorter
+  const fmtTime = (s, D) => { s = Math.round(s); if (D >= 15) { const m = Math.round(s / 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; } const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(x).padStart(2, '0')}`; };
+  const chanceLevel = (p) => (p >= 70 ? 'высокий' : p >= 40 ? 'средний' : 'низкий');
+  const readyBar = (p, cls = '', l = p >= 80 ? 3 : p >= 60 ? 2 : 1) => `<div class="w-track w-ready-t ${cls}" data-l="${l}" role="img" aria-label="${p}%"><i style="width:${p}%"></i></div>`;
+  const chanceBar = (p) => readyBar(p, '', p >= 70 ? 3 : p >= 40 ? 2 : 1);
+  function chanceCard(C) {
+    const head = `<div class="w-ch"><h2 id="w-ready-h">Шанс на цель</h2>${race ? `<span class="w-muted num">${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}</span>` : ''}</div>`;
+    const wrap = (body) => `<section class="w-card w-ready" aria-labelledby="w-ready-h">${head}${body}${replanHTML()}</section>`;
+    if (!race) return wrap(`<p class="w-note">Шанс считается к главному старту и его цели. ${isSelf ? '<button class="w-link" data-act="onbopen">Укажите старт и цель</button>, и он появится здесь.' : 'Старт не выбран.'}</p>`);
+    if (C.none) return wrap(`<p class="w-note">Не от чего посчитать форму: нет ни результата старта за последние 12 недель, ни прогноза S10, ни темпов. Задайте темпа на вкладке «Мои темпа».</p>`);
+    const D = C.D, T = C.T, t = (s) => fmtTime(s, D), weeks = Math.round(C.weeks);
+    const rows = [
+      ['Форма сейчас', t(C.fNow), `${C.src}${C.q ? `; ключевые ${C.q < 0 ? 'быстрее' : 'медленнее'} задания: ${C.q < 0 ? '−' : '+'}${fmtHms(Math.abs(C.fNow - C.f0))}` : ''}`],
+      ['К старту', t(C.fRace), T ? `если тренироваться как последние 6 недель, ${weeks} ${plural(weeks, 'неделя', 'недели', 'недель')} до старта` : `если тренироваться по плану (тренировок пока мало), ${weeks} ${plural(weeks, 'неделя', 'недели', 'недель')} до старта`],
+      ['Реалистично', t(C.t50), `шанс 50%; на ${t(C.t80)} шанс 80%`],
+    ];
+    return wrap(`
+      <div class="w-step"><div class="w-ready-v"><b class="num">${C.pct != null ? `${C.pct}<small>%</small>` : '—'}</b><span>${C.goal ? `пробежать за ${t(C.goal)}: шанс ${chanceLevel(C.pct)}` : 'у старта не задана цель: укажите её на странице «Настройка плана»'}</span></div>${C.pct != null ? chanceBar(C.pct) : ''}</div>
+      <ul class="w-ready-p">${rows.map(([n, v, s]) => `<li><span class="w-ready-n">${n}</span><span class="num w-ready-s">${v}</span><span aria-hidden="true"></span><span class="w-muted">${esc(s)}</span></li>`).join('')}</ul>
+      ${T ? `<h3 class="w-ready-h3">Тренировки за 6 недель: ${T.pct}%</h3><ul class="w-ready-p">${T.parts.map((p) => `<li><span class="w-ready-n">${p.label}</span><span class="num w-ready-s">${Math.round(p.score * 100)}%</span>${readyBar(Math.round(p.score * 100), 'sm')}<span class="w-muted">${esc(p.text)}</span></li>`).join('')}</ul>` : ''}
+      <p class="w-note">Оценка, а не точный расчёт. Форма сейчас — по последнему старту, прогнозу S10 или темпам; к старту она растёт, если тренироваться: чем лучше выполнены тренировки последних 6 недель, тем больше. Пропущенные тренировки и перерывы шанс снижают, ключевые быстрее задания — повышают.</p>`);
   }
 
   /* ================= the plan laid over the dates ================= */
@@ -700,8 +738,8 @@
       }
     }
     // a goal the S10 forecast is slower than: said, not changed (the race and its goal stay as set)
-    const R = readiness();
-    if (R?.fc && R.fc.f < 1) reasons.push(`Прогноз S10 ${fmtHms(R.fc.sec)} медленнее цели ${fmtHms(R.fc.goal)}. Если и после перестройки не догоните, цель лучше сдвинуть: темпа от прогноза можно взять на вкладке «Мои темпа».`);
+    const C = chance();
+    if (C?.pct != null && C.pct < 40) reasons.push(`Шанс на цель ${C.pct}%: к старту ожидается около ${fmtTime(C.fRace, C.D)} при цели ${fmtTime(C.goal, C.D)}. Перестройка его не поднимет, если не выполнять тренировки; реалистичная цель — около ${fmtTime(C.t50, C.D)}.`);
     return { by: 'rules', weeksNew, rows, moves, paces, reasons, opts: { vol: true, move: true, pace: true } };
   }
   // stage 3: the generator rewrites the weeks from next Monday, told what was run
@@ -709,13 +747,14 @@
     const p = plan(), k = scaleK(p), nm = nextMonday(), fut = sortedWeeks(p).filter((w) => weekMon(w.week) >= nm);
     if (!fut.length) { rp = { by: 'ai', err: 'В плане не осталось недель после этой: перестраивать нечего.', reasons: [] }; return render(); }
     rp = { by: 'ai', busy: true, lines: 0, reasons: [], err: '' }; render();
-    const R = readiness(), { pk, rk } = lastWeeksKm(), maxweek = calcBase?.param?.maxweek?.v, maxlong = calcBase?.param?.maxlong?.v;
+    const R = training(), C = chance(R), { pk, rk } = lastWeeksKm(), maxweek = calcBase?.param?.maxweek?.v, maxlong = calcBase?.param?.maxlong?.v;
     const prompt = [
       race ? `Главный старт: ${KM_NAME[+race.prekm] || `${n1(+race.prekm)} км`} ${dayLbl(race.d)}${raceName ? `, ${raceName}` : ''}${race.prediction ? `, цель ${hms(race.prediction)}` : ''}.` : 'Старта нет, план без даты старта.',
       `Перестрой оставшиеся ${fut.length} ${plural(fut.length, 'неделю', 'недели', 'недель')} плана (недели -${fut.length}…-1) с учётом того, что уже сделано.`,
       pacesOk(PACE) ? `Мои темпа: T5 ${PACE[5]}, T10 ${PACE[10]}, T21 ${PACE[21]}, T42 ${PACE[42]}.` : '',
       R ? `За последние 6 недель: ${R.parts.map((q) => `${q.label.toLowerCase()} ${Math.round(q.score * 100)}% (${q.text})`).join('; ')}.` : '',
       pk ? `За последние 2 недели пробежано ${n1(rk)} из ${n1(pk)} км.` : '',
+      C?.fNow ? `Текущая форма: около ${fmtTime(C.fNow, C.D)}${C.goal ? `, цель ${fmtTime(C.goal, C.D)}` : ''}.` : '',
       `Объём оставшихся недель в нынешнем плане: ${fut.map((w) => Math.round(w.km * k)).join(', ')} км.`,
       maxweek || maxlong ? `Лимиты: объём до ${maxweek || '—'} км в неделю, длительная до ${maxlong || '—'} км.` : '',
     ].filter(Boolean).join(' ').replace(/ /g, ' ');
@@ -1178,7 +1217,7 @@
     syncRace();
     // the diary to the plan's end, for «Не трогать…» and the counts (the first load covered 6 weeks or the race)
     if (raceEnd && raceEnd > today && !loadedWeeks.has(monday(raceEnd))) loadRange(add(today, 1), raceEnd).then(render, () => {});
-    const W = week(wk), cur = wk === monday(today), R = readiness();
+    const W = week(wk), cur = wk === monday(today), C = chance();
     const daysToRace = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
     const pct = W.plan ? Math.min(100, (W.done / W.plan) * 100) : 0;
     root.innerHTML = `
@@ -1195,8 +1234,8 @@
         <div class="w-stats">
           <div class="w-stat w-stat-wide"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span>
             ${W.plan ? `<div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${pct}%"></i></div><div class="w-track-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)} км</span></div>` : '<span class="s">на этой неделе ничего не запланировано</span>'}</div>
-          <div class="w-stat"><span class="w-lb">${daysToRace != null ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${daysToRace != null ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : noRace ? 'нет, план без даты старта' : 'не выбран'}${daysToRace == null && isSelf ? ` · <button class="w-link" data-act="onbopen">указать</button>` : ''}</span></div>
-          <div class="w-stat w-stat-r"><span class="w-lb">${READY_LABEL()}</span><span class="v num">${R ? `${R.pct}<small>%</small>` : '—'}</span>${R ? readyBar(R.pct) : ''}<span class="s">${R ? `${readyLevel(R.pct)} · ` : 'мало данных · '}<button class="w-link" data-act="ready">подробнее</button></span></div>
+          <div class="w-stat"><span class="w-lb">${daysToRace != null ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${daysToRace != null ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, цель ${hms(race.prediction)}` : ''}` : noRace ? 'нет, план без даты старта' : 'не выбран'}${daysToRace == null && isSelf ? ` · <button class="w-link" data-act="onbopen">указать</button>` : ''}</span></div>
+          <div class="w-stat w-stat-r"><span class="w-lb">Шанс на цель</span><span class="v num">${C?.pct != null ? `${C.pct}<small>%</small>` : '—'}</span>${C?.pct != null ? chanceBar(C.pct) : ''}<span class="s">${!race ? 'нет старта' : C.none ? 'не от чего считать' : C.pct == null ? 'нет цели' : `${esc(fmtTime(C.goal, C.D))}, ${chanceLevel(C.pct)}`} · <button class="w-link" data-act="ready">подробнее</button></span></div>
         </div>
       </section>
       ${calHTML()}
@@ -1206,7 +1245,7 @@
       <div class="w-tabbar" role="tablist" aria-label="Разделы">
         ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпа']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
       </div>
-      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? readyCard(R) + planCard() : pacesCard()}</div>
+      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? chanceCard(C) + planCard() : pacesCard()}</div>
       <p class="w-foot">${`Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.`} <a href="https://t.me/+wP4aOZ4910I2MTk6" target="_blank" rel="noopener">Чат «Моя неделя» в Telegram: вопросы и отзывы</a></p>
     </main>${onb ? onbHTML() : ''}${menuOpen ? `<div class="w-navwrap" role="dialog" aria-modal="true" aria-label="Меню S10"><header class="w-top">${topBar(true)}</header><nav class="w-sitemenu" aria-label="Меню S10"><ul>${menuLinks()}</ul></nav></div>` : ''}`;
     if (onb && !onb.focused) { onb.focused = true; root.querySelector('.w-dlg input, .w-dlg select')?.focus(); }
@@ -1303,7 +1342,7 @@
   .w-ready-t[data-l="1"] i{background:var(--key)}.w-ready-t.sm{height:6px;margin-top:0}
   .w-ready-v{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.w-ready-v b{font-size:40px;line-height:1;font-weight:500;letter-spacing:-.01em}.w-ready-v b small{font-size:20px;margin-left:2px}.w-ready-v span{color:var(--muted)}
   .w-ready-p{list-style:none;border-top:1px solid var(--rule)}.w-ready-p li{display:grid;grid-template-columns:200px 56px minmax(0,220px) minmax(0,1fr);gap:8px 16px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--rule)}.w-ready-n{font-weight:500}.w-ready-s{text-align:right}
-  .w-ready .w-note{padding:14px 20px 18px}
+  .w-ready .w-note{padding:14px 20px 18px}.w-ready-h3{font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:16px 20px 8px}
   .w-rp{padding:18px 20px 20px;border-top:1px solid var(--rule);display:grid;gap:12px;background:var(--soft);border-radius:0 0 8px 8px}.w-rp h3{font-size:16px;font-weight:500}.w-rp>p{color:var(--muted);max-width:72ch}
   .w-rp-why{list-style:none;display:grid;gap:6px;max-width:80ch}.w-rp-why li{position:relative;padding-left:14px}.w-rp-why li::before{content:"";position:absolute;left:2px;top:.68em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
   .w-rp-opts{display:flex;flex-wrap:wrap;gap:8px 20px}.w-rp-weeks{list-style:none;display:grid;gap:0;border-top:1px solid var(--rule);max-width:760px}.w-rp-weeks li{display:grid;grid-template-columns:40px 120px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule)}
