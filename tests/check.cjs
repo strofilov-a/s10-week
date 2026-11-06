@@ -59,7 +59,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // 1. the week view
   { const p = await open();
     check('page loads without errors', !p.errors.length, p.errors.join('; '));
-    check('summary: volume and days to race', (await p.$$eval('.w-stat .w-lb', (l) => l.map((x) => x.textContent))).join('|') === 'Объём недели|До старта');
+    check('summary: volume, days to race, readiness', (await p.$$eval('.w-stat .w-lb', (l) => l.map((x) => x.textContent))).join('|') === 'Объём недели|До старта|Готовность к цели');
     check('calendar: race is a red disc', !!(await p.$('.w-cd.race')));
     check('site header with the logo', !!(await p.$('.w-top .w-wm svg')));
     await p.click('.w-cd[data-d="2026-10-21"]'); await wait(200);
@@ -304,6 +304,31 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     check(`planner cards stay inside at ${w}px with a long template`, r.opt > 90 && !r.bad.length && r.page <= 0, JSON.stringify(r));
     await p.close();
   }
+
+  // 7e. readiness: six made-up weeks before 31 Oct (Tue easy, Wed intervals, Thu easy, Fri a pace-only tempo, Sun long)
+  const HISTORY = (run, tempo = '4:32') => `{
+    const add = (s, n) => { const d = new Date(s + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    const W = { 1: [1, '5:40-6:00', 10], 2: [3, '3 км разминка 5×1000 м 3:50-3:55 отдых 400 м 2 км заминка', 12], 3: [1, '5:40-6:00', 8], 4: [2, '4:30-4:35', 10], 6: [5, '5:20', 25] };
+    const L = x.diary.diaryTasksInfo.filter((r) => r.date >= '2026-10-31');
+    for (let d = '2026-09-19'; d < '2026-10-31'; d = add(d, 1)) { const w = (new Date(d + 'T12:00:00Z').getUTCDay() + 6) % 7, p = W[w];
+      if (p) L.push({ date: d, type: p[0], comment: p[1], target: p[2], tracks: ${run} ? [{ type: 'run', km: p[2], pace: p[0] === 2 ? '${tempo}' : '5:00', time: '1:00:00', json: { subtype: 'RUNNING' } }] : [] }); }
+    x.diary.diaryTasksInfo = L;
+  }`;
+  const ready = async (mod) => { const p = await open({ init: hook(mod) }); await wait(400);
+    const r = { pct: await p.$eval('.w-stat-r .v', (x) => x.innerText.replace(/\s/g, '')), s: await p.$eval('.w-stat-r .s', (x) => x.innerText) };
+    await p.click('[data-act=ready]'); await wait(300); r.card = await p.$eval('.w-ready', (x) => x.innerText).catch(() => ''); r.tab = p.url().includes('tab=plan'); r.errors = p.errors.join('; '); await p.close(); return r; };
+  { const r = await ready(HISTORY(true));
+    check('readiness: every workout done in its pace, forecast = goal: 100%', r.pct === '100%' && r.card.includes('12 из 12 выполнено, 6 из 6 в заданном темпе') && r.card.includes('6 из 6, самая длинная пробежка 25 км') && r.card.includes('перерывов больше 4 дней не было'), `${r.pct} ${r.card.slice(0, 160)}`);
+    check('readiness: «подробнее» opens the plan tab at the card', r.tab && r.card.startsWith('Готовность к цели') && !r.errors, r.errors); }
+  { const r = await ready(HISTORY(false));
+    check('readiness: nothing run: 0%, the break shown', r.pct === '0%' && r.s.includes('низкая') && r.card.includes('0 из 12 выполнено') && r.card.includes('без бега'), `${r.pct} ${r.s}`); }
+  { const r = await ready(HISTORY(true, '4:50'));
+    check('readiness: tempos 15 s too slow lower the key workouts', r.card.includes('0 из 6 в заданном темпе') && +r.pct.replace('%', '') >= 85 && +r.pct.replace('%', '') <= 92, r.pct); }
+  { const r = await ready(HISTORY(true) + `; x.results[0].prehms = Math.round(11999 * 1.04)`);
+    check('readiness: S10 forecast 4% slower than the goal takes 20% off', r.pct === '80%' && r.card.includes('прогноз медленнее цели'), `${r.pct} ${(r.card.match(/Прогноз S10.*/) || [''])[0]}`); }
+  { const p = await open({ path: '?newbie', init: hook() }); await p.click('[data-act=onbnone]'); await wait(300);
+    check('readiness: a new athlete gets «мало данных», not a figure', (await p.$eval('.w-stat-r', (x) => x.innerText)).includes('мало данных') && (await p.$eval('.w-stat-r .w-lb', (x) => x.innerText)) === 'Выполнение плана');
+    await p.close(); }
 
   // 8. no sideways scroll
   for (const w of [360, 390, 768, 1024, 1440]) {

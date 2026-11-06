@@ -11,6 +11,8 @@ the long run and the days to the race; under it three tabs (Неделя / Пл�
   with the first-week volume, the day layout, the paces and the filled range, is stored in the athlete's profile
   (`studentPlans<ID>`, the list calc5 keeps; marked `active`), so every device opens the same plan. «Вернуть как было»
   undoes the last fill, leaving days that were changed after it.
+- **Готовность к цели**: a percentage in the summary card and a card on «План до старта» with its parts (key workouts,
+  volume, long runs, regularity, the S10 forecast against the goal), from the diary of the last 6 weeks. Nothing is written.
 - **Мои темпа**: T5/T10/T21/T42 from the chosen plan, the S10 forecast, or your own; every workout on the page uses them.
   The four paces are edited at the top; below, the time per 1 km and per 400 m lap for each zone and the easy-run range.
 - Each day shows the fact next to the plan: distance and average pace from the diary tracks, and for pace-only tasks

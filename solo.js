@@ -152,6 +152,8 @@
   // S10 plans in running weeks; calc.php gives their start days (dselect), on s10.run usually Wednesdays
   const runStart = (() => { const ds = Object.values(calcBase?.dselect || {}).map((v) => v.date).filter(Boolean).sort(); let d = ds.find((x) => x > today); if (!d && ds.length) { d = last(ds); while (d <= today) d = add(d, 7); } return d || add(today, 1); })();
   const days = new Map();
+  // readiness rules (see «readiness» below); the first diary load reaches READY.days back
+  const READY = { days: 42, recent: 14, done: 0.8, gap: 4, minDays: 7, w: { key: 0.35, vol: 0.25, long: 0.25, reg: 0.15 } };
   const loadedWeeks = new Set(); // Mondays of the weeks whose every diary day is in `days`
   // the diary API gives up to `limit` days with date <= last_date, newest first, and diaryTasksisMoreExist = the
   // last_date for the next page (0 when nothing older is left); so a long plan to the race takes several pages
@@ -172,7 +174,7 @@
   }
   let wk = monday(today);
   const horizon = () => { const a = add(wk, 13); return raceEnd && raceEnd > a ? raceEnd : a; };
-  { const h = horizon(), c = add(monday(today), 41); await loadRange(add(monday(today), -7), h > c ? h : c); } // last week, this week, every day to the race (or 6 weeks)
+  { const h = horizon(), c = add(monday(today), 41); await loadRange(add(monday(today), -READY.days), h > c ? h : c); } // 6 weeks back (readiness), this week, every day to the race (or 6 weeks)
 
   /* ================= the chosen plan and the paces ================= */
   // sel: { src: 'version' | 'library' | 'new', id } ; the newly generated plan lives in memory until it is saved
@@ -279,6 +281,64 @@
       left: list.filter((r) => r.d >= today && isRun(r.x) && !(r.d === today && runKm(r.x) > 0)).length,
       long: list.filter((r) => r.x?.type === 5).sort((a, b) => b.x.target - a.x.target)[0] || null,
     };
+  }
+
+  /* ================= readiness: how the training so far supports the goal ================= */
+  // stage 1 of the adaptive plan (owner, 06.11.2026), from the diary of the last 6 weeks, the last 2 counted twice:
+  // key workouts (развивающая, интервальная, повторная) 35%, volume 25%, long runs 25%, regularity 15%, the parts with
+  // nothing planned left out and the rest reweighted. A workout is done at 80% of its km; a pace-only task is in its
+  // pace within 5 s/km. Then the S10 forecast against the goal: each 1% slower takes 5% off, at most half.
+  const READY_LABEL = () => (race ? 'Готовность к цели' : 'Выполнение плана');
+  function readiness() {
+    const from = add(today, -READY.days), rows = [];
+    for (let d = from; d < today; d = add(d, 1)) rows.push({ d, x: days.get(d) || null, k: d >= add(today, -READY.recent) ? 2 : 1 });
+    if (runKm(days.get(today)) > 0) rows.push({ d: today, x: days.get(today), k: 2 }); // today counts once it is run
+    const planned = rows.filter((r) => isRun(r.x));
+    if (planned.length < READY.minDays) return null;
+    const done = (r) => { const km = runKm(r.x), t = +r.x.target || 0; return t ? km >= READY.done * t : km > 0; };
+    const share = (list) => { const all = list.reduce((a, r) => a + r.k, 0); return all ? list.filter(done).reduce((a, r) => a + r.k, 0) / all : null; };
+    // key workouts, and of those done with a pace-only task, how many were in its pace
+    const keys = planned.filter((r) => [2, 3, 4].includes(+r.x.type)), keyDone = keys.filter(done);
+    const checked = keyDone.filter((r) => isPaceOnly(r.x.comment) && runFact(r.x)?.pace);
+    const hits = checked.filter((r) => { const [lo, hi = lo] = r.x.comment.trim().split(/\s*[-–]\s*/).map(toSec), p = runFact(r.x).pace; return p >= lo - 5 && p <= hi + 5; });
+    const keyShare = share(keys), key = keyShare == null ? null : keyShare * (checked.length ? 0.7 + 0.3 * hits.length / checked.length : 1);
+    // volume: everything run (unplanned runs too) against everything planned, at most 100%
+    const planKm = planned.reduce((a, r) => a + r.k * (+r.x.target || 0), 0), runAll = rows.reduce((a, r) => a + r.k * runKm(r.x), 0);
+    const vol = planKm ? Math.min(1, runAll / planKm) : null;
+    const longs = planned.filter((r) => +r.x.type === 5), long = share(longs);
+    const maxRun = Math.max(0, ...rows.map((r) => runKm(r.x)));
+    // regularity: the longest stretch without a run, from the first planned day in the window (a plan begun later is
+    // not a break) to today
+    const start = planned[0].d, ran = rows.filter((r) => r.d >= start && runKm(r.x) > 0).map((r) => r.d);
+    let gap = 0, prev = add(start, -1);
+    for (const d of [...ran, today]) { gap = Math.max(gap, Math.round((d8(d) - d8(prev)) / 864e5) - 1); prev = d; }
+    const reg = Math.max(0, 1 - Math.max(0, gap - READY.gap) / 7);
+    const parts = [
+      { id: 'key', score: key, label: 'Ключевые тренировки', text: keys.length ? `${keyDone.length} из ${keys.length} выполнено${checked.length ? `, ${hits.length} из ${checked.length} в заданном темпе` : ''}` : '' },
+      { id: 'vol', score: vol, label: 'Объём', text: `${n1(rows.reduce((a, r) => a + runKm(r.x), 0))} из ${n1(planned.reduce((a, r) => a + (+r.x.target || 0), 0))} км` },
+      { id: 'long', score: long, label: 'Длительные', text: longs.length ? `${longs.filter(done).length} из ${longs.length}, самая длинная пробежка ${n1(maxRun)} км` : '' },
+      { id: 'reg', score: reg, label: 'Регулярность', text: gap > READY.gap ? `перерыв ${gap} ${plural(gap, 'день', 'дня', 'дней')} без бега` : `перерывов больше ${READY.gap} дней не было` },
+    ].filter((p) => p.score != null);
+    const wsum = parts.reduce((a, p) => a + READY.w[p.id], 0);
+    let pct = parts.reduce((a, p) => a + READY.w[p.id] * p.score, 0) / wsum;
+    // the S10 forecast for the main race against its goal
+    let fc = null;
+    const fr = race && results.find((r) => r.d === race.d && +r.prehms), goal = race?.prediction ? hmsSec(race.prediction) : 0;
+    if (fr && goal) { const f = Math.max(0.5, 1 - 5 * Math.max(0, (+fr.prehms - goal) / goal)); fc = { sec: +fr.prehms, goal, f }; pct *= f; }
+    return { pct: Math.round(pct * 100), parts, fc, from: start };
+  }
+  const fmtHms = (s) => { const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = Math.round(s % 60); return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(x).padStart(2, '0')}`; };
+  const readyLevel = (p) => (p >= 80 ? 'высокая' : p >= 60 ? 'средняя' : 'низкая');
+  const readyBar = (p, cls = '') => `<div class="w-track w-ready-t ${cls}" data-l="${p >= 80 ? 3 : p >= 60 ? 2 : 1}" role="img" aria-label="${p}%"><i style="width:${p}%"></i></div>`;
+  function readyCard(R) {
+    const head = `<div class="w-ch"><h2 id="w-ready-h">${READY_LABEL()}</h2><span class="w-muted num">${R ? `по дневнику с ${dayLbl(R.from)}` : 'по дневнику за 6 недель'}</span></div>`;
+    if (!R) return `<section class="w-card w-ready" aria-labelledby="w-ready-h">${head}<p class="w-note">Пока мало данных: нужно хотя бы ${READY.minDays} тренировок в дневнике за последние 6 недель. Шкала появится, когда наберётся.</p></section>`;
+    return `<section class="w-card w-ready" aria-labelledby="w-ready-h">${head}
+      <div class="w-step"><div class="w-ready-v"><b class="num">${R.pct}<small>%</small></b><span>${race ? `Цель${race.prediction ? ` ${esc(hms(race.prediction))}` : ''}${raceName ? `, ${esc(raceName)}` : ''}: готовность ${readyLevel(R.pct)}` : `Выполнение ${readyLevel(R.pct)}`}</span></div>${readyBar(R.pct)}</div>
+      <ul class="w-ready-p">${R.parts.map((p) => `<li><span class="w-ready-n">${p.label}</span><span class="num w-ready-s">${Math.round(p.score * 100)}%</span>${readyBar(Math.round(p.score * 100), 'sm')}<span class="w-muted">${esc(p.text)}</span></li>`).join('')}
+        ${R.fc ? `<li><span class="w-ready-n">Прогноз S10</span><span class="num w-ready-s">${R.fc.f < 1 ? `−${Math.round((1 - R.fc.f) * 100)}%` : '—'}</span><span aria-hidden="true"></span><span class="w-muted">${fmtHms(R.fc.sec)} при цели ${fmtHms(R.fc.goal)}${R.fc.f < 1 ? ', прогноз медленнее цели' : ', не медленнее цели'}</span></li>` : ''}</ul>
+      <p class="w-note">Считается по вашему дневнику за последние 6 недель, последние две недели весят вдвое больше. Тренировка выполнена, если пробежано не меньше 80% её километров; темп проверяется у заданий, где задан только темп. Это оценка по правилам, а не вероятность.</p>
+    </section>`;
   }
 
   /* ================= the plan laid over the dates ================= */
@@ -1005,7 +1065,7 @@
     syncRace();
     // the diary to the plan's end, for «Не трогать…» and the counts (the first load covered 6 weeks or the race)
     if (raceEnd && raceEnd > today && !loadedWeeks.has(monday(raceEnd))) loadRange(add(today, 1), raceEnd).then(render, () => {});
-    const W = week(wk), cur = wk === monday(today);
+    const W = week(wk), cur = wk === monday(today), R = readiness();
     const daysToRace = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
     const pct = W.plan ? Math.min(100, (W.done / W.plan) * 100) : 0;
     root.innerHTML = `
@@ -1022,7 +1082,8 @@
         <div class="w-stats">
           <div class="w-stat w-stat-wide"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span>
             ${W.plan ? `<div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${pct}%"></i></div><div class="w-track-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)} км</span></div>` : '<span class="s">на этой неделе ничего не запланировано</span>'}</div>
-          <div class="w-stat w-stat-full"><span class="w-lb">${daysToRace != null ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${daysToRace != null ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : noRace ? 'нет, план без даты старта' : 'не выбран'}${daysToRace == null && isSelf ? ` · <button class="w-link" data-act="onbopen">указать</button>` : ''}</span></div>
+          <div class="w-stat"><span class="w-lb">${daysToRace != null ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${daysToRace != null ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, прогноз ${hms(race.prediction)}` : ''}` : noRace ? 'нет, план без даты старта' : 'не выбран'}${daysToRace == null && isSelf ? ` · <button class="w-link" data-act="onbopen">указать</button>` : ''}</span></div>
+          <div class="w-stat w-stat-r"><span class="w-lb">${READY_LABEL()}</span><span class="v num">${R ? `${R.pct}<small>%</small>` : '—'}</span>${R ? readyBar(R.pct) : ''}<span class="s">${R ? `${readyLevel(R.pct)} · ` : 'мало данных · '}<button class="w-link" data-act="ready">подробнее</button></span></div>
         </div>
       </section>
       ${calHTML()}
@@ -1032,7 +1093,7 @@
       <div class="w-tabbar" role="tablist" aria-label="Разделы">
         ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпа']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
       </div>
-      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? planCard() : pacesCard()}</div>
+      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? readyCard(R) + planCard() : pacesCard()}</div>
       <p class="w-foot">${/*<demo>*/!LIVE ? 'Демо-версия страницы «Моя неделя» для S10.run.' : /*</demo>*/`Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.`} <a href="https://t.me/+wP4aOZ4910I2MTk6" target="_blank" rel="noopener">Чат «Моя неделя» в Telegram: вопросы и отзывы</a></p>
     </main>${onb ? onbHTML() : ''}${menuOpen ? `<div class="w-navwrap" role="dialog" aria-modal="true" aria-label="Меню S10"><header class="w-top">${topBar(true)}</header><nav class="w-sitemenu" aria-label="Меню S10"><ul>${menuLinks()}</ul></nav></div>` : ''}`;
     if (onb && !onb.focused) { onb.focused = true; root.querySelector('.w-dlg input, .w-dlg select')?.focus(); }
@@ -1126,7 +1187,11 @@
   .w-today .w-tx{font-size:16px;max-width:56ch;text-wrap:pretty}
   .w-stats{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;border-left:1px solid var(--rule)}
   .w-stat{padding:20px 24px;display:grid;gap:4px;align-content:start;border-top:1px solid var(--rule)}
-  .w-stat-wide{grid-column:1/-1;border-top:0}.w-stat-full{grid-column:1/-1}
+  .w-stat-wide{grid-column:1/-1;border-top:0}.w-stat-full{grid-column:1/-1}.w-stat-r{border-left:1px solid var(--rule)}
+  .w-ready-t[data-l="1"] i{background:var(--key)}.w-ready-t.sm{height:6px;margin-top:0}
+  .w-ready-v{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.w-ready-v b{font-size:40px;line-height:1;font-weight:500;letter-spacing:-.01em}.w-ready-v b small{font-size:20px;margin-left:2px}.w-ready-v span{color:var(--muted)}
+  .w-ready-p{list-style:none;border-top:1px solid var(--rule)}.w-ready-p li{display:grid;grid-template-columns:200px 56px minmax(0,220px) minmax(0,1fr);gap:8px 16px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--rule)}.w-ready-n{font-weight:500}.w-ready-s{text-align:right}
+  .w-ready .w-note{padding:14px 20px 18px}
   .w-stat .v{font-size:24px;line-height:1.2}
   .w-stat .v small{font-size:13px;color:var(--faint);margin-left:4px}
   .w-stat .s{color:var(--faint);font-size:13px}
@@ -1323,6 +1388,7 @@
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
     .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
     .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
+    .w-ready-p li{grid-template-columns:minmax(0,1fr) auto;padding:12px 16px}.w-ready-p li>.w-ready-t,.w-ready-p li>.w-muted{grid-column:1/-1}.w-ready .w-note{padding:12px 16px 16px}
     .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
     .w-paces label{flex-direction:column;align-items:flex-start;gap:8px}.w-paces input{width:100%}.w-ptab th[scope=row] small{display:block}}
   /* a wide screen: the open week of the plan as day cards, four in a row, Sunday across two, instead of short rows
@@ -1360,6 +1426,7 @@
       if (act === 'today') { wk = monday(today); syncURL(true); return render(); }
       if (act === 'cal') { const d = a.dataset.d; wk = monday(d); tab = 'week'; store.set('tab', tab); mode = 'view'; PL = null; syncURL(true); render(); root.querySelector(`[data-act=cal][data-d="${d}"]`)?.focus({ preventScroll: true }); return; }
       if (act === 'calback') { const from = calRange()[0]; calFrom = add(from, -28); a.disabled = true; await loadRange(calFrom, add(from, -1)).catch(() => {}); render(); root.querySelector('[data-act=calback]')?.focus({ preventScroll: true }); return; }
+      if (act === 'ready') { tab = 'plan'; store.set('tab', tab); mode = 'view'; PL = null; syncURL(true); render(); root.querySelector('#w-ready-h')?.scrollIntoView({ block: 'start' }); return; }
       if (act === 'calall') { calAll = true; return render(); }
       if (act === 'span') { fillSpan = a.dataset.k; store.set('fillSpan', fillSpan); fill.confirm = false; return render(); }
       if (act === 'colors') { colorsOpen = !colorsOpen; return render(); }
