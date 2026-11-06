@@ -10,9 +10,23 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 ## Who does what
 
 - The S10 developer only embeds the page into the site once: `solo.html` served at `/solo/plan` the way `/calc3` is
-  served, `solo.js` at `/t5/solo/solo.js`, a menu item. We hand him the `release/` folder (`npm run build`): the
-  production `t5/solo/solo.js` with the demo cut out, `solo.html` with a fresh `?v=`, and the brief. For each release he
-  replaces both files. Everything else (logic, texts, design, checks) is ours. Brief for him: `deploy/ЗАДАНИЕ.md`.
+  served, `solo.js` at `/t5/solo/solo.js`, a menu item. We hand him the `release/` folder as a zip (`npm run zip`): the
+  production `t5/solo/solo.js` with the demo cut out, `solo.html` with a fresh `?v=`, `solo-start.html`, and the brief.
+  For each release he replaces the files the brief marks as changed (overwriting all three is also safe). Everything
+  else (logic, texts, design, checks) is ours. Brief for him: `deploy/ЗАДАНИЕ.md`. Owner's choice 06.11.2026: a zip by
+  hand, no auto-update from GitHub; keep each release as little work for the developer as possible.
+- Installed on s10.run 06.11.2026 (release `4a45d50219`): all three served as static files by Angie, byte for byte
+  `release/`. `/t5/solo/solo.js` has `max-age=3600`; `/solo/plan` and `/solo/start` had no `Cache-Control` (the brief
+  asks once for `no-cache`).
+
+## Releasing
+
+1. `npm run zip`: every check, the build, then `dist/solo_release_<id>.zip` (refuses when nothing differs from the live
+   site). The README inside opens with a table of the three files, «изменился» / «без изменений» against
+   `deploy/live.json`.
+2. The owner sends the zip to the developer.
+3. When he says it is up: `npm run live` (three read-only GETs of s10.run). If the site serves `release/` exactly, it
+   records that in `deploy/live.json` and rebuilds; commit both. Otherwise it says which file is not there yet.
 - No backend changes: the page uses only the site's existing endpoints with the session cookie, like calc3/calc4/calc5.
 
 ## Files
@@ -30,6 +44,8 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 | `deploy/ЗАДАНИЕ.md` | The one-page brief for the S10 developer (copied into `release/` as `README.md`). |
 | `deploy/build.cjs` | `npm run build`: cuts every demo-marked block (`/*<demo>*/…/*</demo>*/`) out of `solo.js` into `release/`, stamps `?v=` with a hash of the code, checks no demo is left and that it parses. Mark any new demo-only code so. Also builds `release/solo-start.html` from `landing-v2/` with its stage, GSAP and Lenis inlined from node_modules (no CDN: jsDelivr is unreliable from Russia). |
 | `release/` | What goes to the S10 developer, committed; CI fails if it differs from a fresh build. |
+| `deploy/live.json`, `deploy/live.cjs` | What s10.run serves (hash of each file, release id); `npm run live` checks the site and records a new release once it is up. |
+| `deploy/zip.cjs`, `deploy/files.cjs` | `npm run zip` → `dist/solo_release_<id>.zip` (git-ignored); the file list, hashes and release id shared by build, live and zip. |
 | `tests/release.cjs` | Runs the release build at `/solo/plan` against a stand-in of the site's API (the demo snapshot), writes recorded. |
 | `tests/landing.cjs` | Runs `release/solo-start.html` at `/solo/start` with every outside request blocked: scenes live, the circle lands, actions go to the login, paces follow the goal. |
 | `tests/check.cjs` | Browser checks against the demo (see Testing). |
@@ -139,6 +155,5 @@ Never write to the owner's real diary or profile without his explicit yes in the
 
 - Race week: with the race on Sunday the plan leaves Thu–Sat as rest (its volume already includes the marathon). Ask the
   owner whether easy runs should replace that.
-- Where the site loads `solo.js` from: the S10 server (the developer copies each release) or this repo.
 - Ideas: a reminder on the week view when the filled weeks run out; a race-week sanity check; adapting volume to the
   fact; a coach view of athletes' plans; calendar export (ICS); analytics.
