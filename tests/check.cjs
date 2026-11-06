@@ -59,7 +59,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // 1. the week view
   { const p = await open();
     check('page loads without errors', !p.errors.length, p.errors.join('; '));
-    check('summary: volume, days to race, readiness', (await p.$$eval('.w-stat .w-lb', (l) => l.map((x) => x.textContent))).join('|') === 'Объём недели|До старта|Готовность к цели');
+    check('summary: volume, days to race, readiness', (await p.$$eval('.w-stat .w-lb', (l) => l.map((x) => x.textContent))).join('|') === 'Объём недели|До старта|Шанс на цель');
     check('calendar: race is a red disc', !!(await p.$('.w-cd.race')));
     check('site header with the logo', !!(await p.$('.w-top .w-wm svg')));
     await p.click('.w-cd[data-d="2026-10-21"]'); await wait(200);
@@ -317,17 +317,16 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const ready = async (mod) => { const p = await open({ init: hook(mod) }); await wait(400);
     const r = { pct: await p.$eval('.w-stat-r .v', (x) => x.innerText.replace(/\s/g, '')), s: await p.$eval('.w-stat-r .s', (x) => x.innerText) };
     await p.click('[data-act=ready]'); await wait(300); r.card = await p.$eval('.w-ready', (x) => x.innerText).catch(() => ''); r.tab = p.url().includes('tab=plan'); r.errors = p.errors.join('; '); await p.close(); return r; };
-  { const r = await ready(HISTORY(true));
-    check('readiness: every workout done in its pace, forecast = goal: 100%', r.pct === '100%' && r.card.includes('12 из 12 выполнено, 6 из 6 в заданном темпе') && r.card.includes('6 из 6, самая длинная пробежка 25 км') && r.card.includes('перерывов больше 4 дней не было'), `${r.pct} ${r.card.slice(0, 160)}`);
-    check('readiness: «подробнее» opens the plan tab at the card', r.tab && r.card.startsWith('Готовность к цели') && !r.errors, r.errors); }
-  { const r = await ready(HISTORY(false));
-    check('readiness: nothing run: 0%, the break shown', r.pct === '0%' && r.s.includes('низкая') && r.card.includes('0 из 12 выполнено') && r.card.includes('без бега'), `${r.pct} ${r.s}`); }
-  { const r = await ready(HISTORY(true, '4:50'));
-    check('readiness: tempos 15 s too slow lower the key workouts', r.card.includes('0 из 6 в заданном темпе') && +r.pct.replace('%', '') >= 85 && +r.pct.replace('%', '') <= 92, r.pct); }
-  { const r = await ready(HISTORY(true) + `; x.results[0].prehms = Math.round(11999 * 1.04)`);
-    check('readiness: S10 forecast 4% slower than the goal takes 20% off', r.pct === '80%' && r.card.includes('прогноз медленнее цели'), `${r.pct} ${(r.card.match(/Прогноз S10.*/) || [''])[0]}`); }
+  const num = (r) => +r.pct.replace('%', '');
+  const full = await ready(HISTORY(true)), none = await ready(HISTORY(false)), slow = await ready(HISTORY(true, '4:50')), quick = await ready(HISTORY(true, '4:15'));
+  const better = await ready(HISTORY(true) + `; x.results[1].realhms = 5600`);
+  check('chance: every workout done, form from the last race (Lisbon half 1:38 → 3:25), goal 3:20 in 5 weeks: about 40%', num(full) >= 30 && num(full) <= 60 && full.card.includes('по старту Lisbon') && full.card.replace(/\s+/g, ' ').includes('Форма сейчас 3:25') && full.card.includes('12 из 12 выполнено, 6 из 6 в заданном темпе'), `${full.pct} ${full.card.replace(/\s+/g, ' ').slice(0, 220)}`);
+  check('chance: «подробнее» opens the plan tab at the card', full.tab && full.card.startsWith('Шанс на цель') && !full.errors, full.errors);
+  check('chance: nothing run lowers it, the break shown', num(none) < num(full) - 15 && none.card.includes('без бега'), `${none.pct} vs ${full.pct}`);
+  check('chance: key workouts slower than the task lower it, faster raise it', num(slow) < num(full) && num(quick) > num(full) && slow.card.includes('медленнее задания') && quick.card.includes('быстрее задания'), `${slow.pct} < ${full.pct} < ${quick.pct}`);
+  check('chance: a faster last race raises it', num(better) > num(full) + 15, `${better.pct} vs ${full.pct}`);
   { const p = await open({ path: '?newbie', init: hook() }); await p.click('[data-act=onbnone]'); await wait(300);
-    check('readiness: a new athlete gets «мало данных», not a figure', (await p.$eval('.w-stat-r', (x) => x.innerText)).includes('мало данных') && (await p.$eval('.w-stat-r .w-lb', (x) => x.innerText)) === 'Выполнение плана');
+    check('chance: no race, no figure («нет старта»)', (await p.$eval('.w-stat-r', (x) => x.innerText)).includes('нет старта'));
     await p.close(); }
 
   // 7f. re-plan (stages 2 and 3): proposals from what was run, written with undo, the previous plan back on undo

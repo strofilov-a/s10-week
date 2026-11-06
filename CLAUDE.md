@@ -101,15 +101,17 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   afterType, afterKm, afterTextHash]]}` (also mirrored in localStorage). A day changed after the fill is skipped; an
   empty-before day is cleared with `{typtrain:0, task:'', prekm:0}`.
 - Without premium the write buttons are disabled with a note (calc3's rule).
-- Readiness («Готовность к цели», «Выполнение плана» without a race; stage 1 of the adaptive plan, owner 06.11.2026):
-  `readiness()` reads the diary of the last 6 weeks (`READY`), from the first planned day in it; the last 2 weeks count
-  twice. Key workouts (typtrain 2, 3, 4) 35%, volume (all runs against all planned km, at most 100%) 25%, long runs
-  (5) 25%, regularity (longest break without a run; over 4 days takes 1/7 a day) 15%; parts with nothing planned are
-  left out and the rest reweighted. Done = 80% of the planned km; a pace-only key task done within 5 s/km counts in
-  pace (in-pace share moves the key part between 70% and 100%). The S10 forecast (`planresults` row of the race's
-  date, `prehms`) against the race goal (`prediction`): each 1% slower takes 5% off, at most half. Under 7 planned
-  days: «мало данных». Shown in the summary card (beside «До старта») and as a card on «План до старта» with each part.
-  Nothing is stored or written.
+- Chance to reach the goal («Шанс на цель», owner 06.11.2026: not the plan's completion, S10 shows that on its tasks page,
+  but whether the goal time is reachable on race day; moves with every workout; meant to be indicative, not precise).
+  `chance()` with the numbers in `CH`: form now at the race distance = the latest race result of the last 12 weeks
+  (`planresults` realhms, by Riegel k = 1.06), else the S10 forecast for this race, else the paces; pace-only key
+  workouts move it by half their median difference from the task (at most 3%). `training()` scores the last 6 weeks of
+  the diary (`READY`, the last 2 count twice): key workouts (typtrain 2–4) 35%, volume 25%, long runs 25%, regularity
+  15%, done = 80% of the km. Race-day form = form now × (1 − rate × weeks left × (T − 30%)/70%), rate 0.5%/week for a
+  4:00+ marathon level to 0.25% at 3:00, in all at most 10%…6% (under 30% the form drops). Spread 2% + 0.2%/week; chance
+  = Φ((goal − race-day form)/(race-day form × spread)), 1…99%. Shown beside «До старта» and as a card on «План до
+  старта»: form now (and from what), race-day form, the times with 50% and 80%, the training parts. Without a race or
+  goal: no figure. Nothing is stored or written. Coefficients are guesses until calibrated on S10's prehms/realhms.
 - Re-plan (stages 2 and 3, owner 06.11.2026), at the bottom of the readiness card, for the weeks from next Monday:
   «Перестроить по правилам» (`replanByRules`, numbers in `RP`): under 80% of the planned km run in the last 2 weeks,
   each next week = the 2-week average +10%, growing 10% a week, never under 40% of the plan nor over it, a lower plan
