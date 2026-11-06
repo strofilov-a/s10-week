@@ -120,6 +120,13 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ## Design decisions (from the owner; keep them)
 
+- Header as on the site (owner, 06.11.2026): the menu button on the left opens the site's own menu over the page (the
+  same links as the site's header: trainer, «Задачи», «Премиум» without premium, challenges, answers, payments, profile,
+  logout; `role`, `currentTrainerId`, `isPremium` from `student/self/info`), the avatar on the right links to
+  `/profile?ID` (`avatarUrl`; initials when there is none or it does not load).
+- Every grid that holds text or a select has `grid-template-columns:minmax(0,1fr)`: an implicit `auto` column grows to
+  a select's longest option (Safari sizes selects that way), which pushed the planner's work cards off the phone
+  screen on s10.run (the site's template names are far longer than the demo's).
 - Layout «A»: site header (blue #004aad, 48 px, the S10.run logo in the middle — simplified SVG in `LOGO`), h1
   «Моя неделя, dates», the summary card (today + «Объём недели» + «До старта») and the small calendar beside it, one
   height; tabs Неделя / План до старта / Мои темпа under them.
