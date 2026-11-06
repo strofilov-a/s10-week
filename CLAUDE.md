@@ -101,7 +101,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   afterType, afterKm, afterTextHash]]}` (also mirrored in localStorage). A day changed after the fill is skipped; an
   empty-before day is cleared with `{typtrain:0, task:'', prekm:0}`.
 - Without premium the write buttons are disabled with a note (calc3's rule).
-- Chance to reach the goal («Шанс на цель», owner 06.11.2026: not the plan's completion, S10 shows that on its tasks page,
+- Chance to reach the goal («Вероятность достижения цели», owner 06.11.2026: not the plan's completion, S10 shows that on its tasks page,
   but whether the goal time is reachable on race day; moves with every workout; meant to be indicative, not precise).
   `chance()` with the numbers in `CH`: form now at the race distance = the latest race result of the last 12 weeks
   (`planresults` realhms, by Riegel k = 1.06), else the S10 forecast for this race, else the paces; pace-only key

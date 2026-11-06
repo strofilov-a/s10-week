@@ -360,25 +360,25 @@
   }
   // a race time: h:mm for a half or a marathon, m:ss or h:mm:ss for 10 km and shorter
   const fmtTime = (s, D) => { s = Math.round(s); if (D >= 15) { const m = Math.round(s / 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; } const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(x).padStart(2, '0')}`; };
-  const chanceLevel = (p) => (p >= 70 ? 'высокий' : p >= 40 ? 'средний' : 'низкий');
+  const chanceLevel = (p) => (p >= 70 ? 'высокая' : p >= 40 ? 'средняя' : 'низкая');
   const readyBar = (p, cls = '', l = p >= 80 ? 3 : p >= 60 ? 2 : 1) => `<div class="w-track w-ready-t ${cls}" data-l="${l}" role="img" aria-label="${p}%"><i style="width:${p}%"></i></div>`;
   const chanceBar = (p) => readyBar(p, '', p >= 70 ? 3 : p >= 40 ? 2 : 1);
   function chanceCard(C) {
-    const head = `<div class="w-ch"><h2 id="w-ready-h">Шанс на цель</h2>${race ? `<span class="w-muted num">${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}</span>` : ''}</div>`;
+    const head = `<div class="w-ch"><h2 id="w-ready-h">Вероятность достижения цели</h2>${race ? `<span class="w-muted num">${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}</span>` : ''}</div>`;
     const wrap = (body) => `<section class="w-card w-ready" aria-labelledby="w-ready-h">${head}${body}${replanHTML()}</section>`;
-    if (!race) return wrap(`<p class="w-note">Шанс считается к главному старту и его цели. ${isSelf ? '<button class="w-link" data-act="onbopen">Укажите старт и цель</button>, и он появится здесь.' : 'Старт не выбран.'}</p>`);
+    if (!race) return wrap(`<p class="w-note">Вероятность считается к главному старту и его цели. ${isSelf ? '<button class="w-link" data-act="onbopen">Укажите старт и цель</button>, и он появится здесь.' : 'Старт не выбран.'}</p>`);
     if (C.none) return wrap(`<p class="w-note">Не от чего посчитать форму: нет ни результата старта за последние 12 недель, ни прогноза S10, ни темпов. Задайте темпа на вкладке «Мои темпа».</p>`);
     const D = C.D, T = C.T, t = (s) => fmtTime(s, D), weeks = Math.round(C.weeks);
     const rows = [
       ['Форма сейчас', t(C.fNow), `${C.src}${C.q ? `; ключевые ${C.q < 0 ? 'быстрее' : 'медленнее'} задания: ${C.q < 0 ? '−' : '+'}${fmtHms(Math.abs(C.fNow - C.f0))}` : ''}`],
       ['К старту', t(C.fRace), T ? `если тренироваться как последние 6 недель, ${weeks} ${plural(weeks, 'неделя', 'недели', 'недель')} до старта` : `если тренироваться по плану (тренировок пока мало), ${weeks} ${plural(weeks, 'неделя', 'недели', 'недель')} до старта`],
-      ['Реалистично', t(C.t50), `шанс 50%; на ${t(C.t80)} шанс 80%`],
+      ['Реалистично', t(C.t50), `вероятность 50%; на ${t(C.t80)} — 80%`],
     ];
     return wrap(`
-      <div class="w-step"><div class="w-ready-v"><b class="num">${C.pct != null ? `${C.pct}<small>%</small>` : '—'}</b><span>${C.goal ? `пробежать за ${t(C.goal)}: шанс ${chanceLevel(C.pct)}` : 'у старта не задана цель: укажите её на странице «Настройка плана»'}</span></div>${C.pct != null ? chanceBar(C.pct) : ''}</div>
+      <div class="w-step"><div class="w-ready-v"><b class="num">${C.pct != null ? `${C.pct}<small>%</small>` : '—'}</b><span>${C.goal ? `пробежать за ${t(C.goal)}: вероятность ${chanceLevel(C.pct)}` : 'у старта не задана цель: укажите её на странице «Настройка плана»'}</span></div>${C.pct != null ? chanceBar(C.pct) : ''}</div>
       <ul class="w-ready-p">${rows.map(([n, v, s]) => `<li><span class="w-ready-n">${n}</span><span class="num w-ready-s">${v}</span><span aria-hidden="true"></span><span class="w-muted">${esc(s)}</span></li>`).join('')}</ul>
       ${T ? `<h3 class="w-ready-h3">Тренировки за 6 недель: ${T.pct}%</h3><ul class="w-ready-p">${T.parts.map((p) => `<li><span class="w-ready-n">${p.label}</span><span class="num w-ready-s">${Math.round(p.score * 100)}%</span>${readyBar(Math.round(p.score * 100), 'sm')}<span class="w-muted">${esc(p.text)}</span></li>`).join('')}</ul>` : ''}
-      <p class="w-note">Оценка, а не точный расчёт. Форма сейчас — по последнему старту, прогнозу S10 или темпам; к старту она растёт, если тренироваться: чем лучше выполнены тренировки последних 6 недель, тем больше. Пропущенные тренировки и перерывы шанс снижают, ключевые быстрее задания — повышают.</p>`);
+      <p class="w-note">Оценка, а не точный расчёт. Форма сейчас — по последнему старту, прогнозу S10 или темпам; к старту она растёт, если тренироваться: чем лучше выполнены тренировки последних 6 недель, тем больше. Пропущенные тренировки и перерывы вероятность снижают, ключевые быстрее задания — повышают.</p>`);
   }
 
   /* ================= the plan laid over the dates ================= */
@@ -797,7 +797,7 @@
     }
     // a goal the S10 forecast is slower than: said, not changed (the race and its goal stay as set)
     const C = chance();
-    if (C?.pct != null && C.pct < 40) reasons.push(`Шанс на цель ${C.pct}%: к старту ожидается около ${fmtTime(C.fRace, C.D)} при цели ${fmtTime(C.goal, C.D)}. Перестройка его не поднимет, если не выполнять тренировки; реалистичная цель — около ${fmtTime(C.t50, C.D)}.`);
+    if (C?.pct != null && C.pct < 40) reasons.push(`Вероятность достижения цели ${C.pct}%: к старту ожидается около ${fmtTime(C.fRace, C.D)} при цели ${fmtTime(C.goal, C.D)}. Перестройка его не поднимет, если не выполнять тренировки; реалистичная цель — около ${fmtTime(C.t50, C.D)}.`);
     return { by: 'rules', weeksNew, rows, moves, paces, reasons, opts: { vol: true, move: true, pace: true } };
   }
   // stage 3: the generator rewrites the weeks from next Monday, told what was run
@@ -1293,7 +1293,7 @@
           <div class="w-stat w-stat-wide"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span>
             ${W.plan ? `<div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${pct}%"></i></div><div class="w-track-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)} км</span></div>` : '<span class="s">на этой неделе ничего не запланировано</span>'}</div>
           <div class="w-stat"><span class="w-lb">${daysToRace != null ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${daysToRace != null ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, цель ${hms(race.prediction)}` : ''}` : noRace ? 'нет, план без даты старта' : 'не выбран'}${daysToRace == null && isSelf ? ` · <button class="w-link" data-act="onbopen">указать</button>` : ''}</span></div>
-          <div class="w-stat w-stat-r"><span class="w-lb">Шанс на цель</span><span class="v num">${C?.pct != null ? `${C.pct}<small>%</small>` : '—'}</span>${C?.pct != null ? chanceBar(C.pct) : ''}<span class="s">${!race ? 'нет старта' : C.none ? 'не от чего считать' : C.pct == null ? 'нет цели' : `${esc(fmtTime(C.goal, C.D))}, ${chanceLevel(C.pct)}`} · <button class="w-link" data-act="ready">подробнее</button></span></div>
+          <div class="w-stat w-stat-r"><span class="w-lb">Вероятность достижения цели</span><span class="v num">${C?.pct != null ? `${C.pct}<small>%</small>` : '—'}</span>${C?.pct != null ? chanceBar(C.pct) : ''}<span class="s">${!race ? 'нет старта' : C.none ? 'не от чего считать' : C.pct == null ? 'нет цели' : `${esc(fmtTime(C.goal, C.D))}, ${chanceLevel(C.pct)}`} · <button class="w-link" data-act="ready">подробнее</button></span></div>
         </div>
       </section>
       ${calHTML()}
