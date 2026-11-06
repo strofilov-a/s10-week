@@ -127,6 +127,13 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 - Every grid that holds text or a select has `grid-template-columns:minmax(0,1fr)`: an implicit `auto` column grows to
   a select's longest option (Safari sizes selects that way), which pushed the planner's work cards off the phone
   screen on s10.run (the site's template names are far longer than the demo's).
+- taste-skill review (06.11.2026; taste 2.5 has no app mode, so its marketing-page checks were left out): muted text
+  #595959 (7:1 on white; was #6b6b6b), past days in the plan in muted ink instead of a faded row, h1 32/24 px as the
+  largest type with the «сегодня» figure 32/24, h2 17 everywhere, planner step titles 13 px caps, hover on every
+  control, no line ending on one short word, and on screens ≥1200 px the open week of the plan as day cards (four in a
+  row, Sunday across two). Judged false for an app screen and left: KPI figures larger than h2, the calendar's month
+  column («stagger»), the calendar as the right column («off-grid»), day cards without pictures («card-visual»), and
+  the findings behind the start window's backdrop.
 - Layout «A»: site header (blue #004aad, 48 px, the S10.run logo in the middle — simplified SVG in `LOGO`), h1
   «Моя неделя, dates», the summary card (today + «Объём недели» + «До старта») and the small calendar beside it, one
   height; tabs Неделя / План до старта / Мои темпа under them.

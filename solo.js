@@ -262,7 +262,8 @@
     if (!String(t || '').trim()) return '';
     if (isPaceOnly(t)) return `<p class="w-tx">Темп <span class="w-nw"><b>${esc(t.trim().replace(/\s*-\s*/, '–'))}</b>\u00a0мин/км</span></p>`;
     const parts = structure(plain(t));
-    const line = (p) => nb(esc(p.charAt(0).toUpperCase() + p.slice(1))).replace(new RegExp(`(${PACE_RX})`, 'g'), (m) => `<b>${m.replace(/\s*-\s*/, '–')}</b>`);
+    // a line never ends on one short word alone ("…лёгкий" / "бег")
+    const line = (p) => nb(esc(p.charAt(0).toUpperCase() + p.slice(1))).replace(/ ([^\s<>]{1,4})$/, '\u00a0$1').replace(new RegExp(`(${PACE_RX})`, 'g'), (m) => `<b>${m.replace(/\s*-\s*/, '–')}</b>`);
     return parts.length > 1 ? `<ul class="w-tx">${parts.map((p) => `<li>${line(p)}</li>`).join('')}</ul>` : `<p class="w-tx">${line(parts[0])}</p>`;
   }
   const isRun = (x) => x && (+x.target > 0 || !!(x.comment || '').trim() && !/^отдых\.?$/i.test((x.comment || '').trim()));
@@ -346,7 +347,7 @@
   }
 
   /* ================= colours: 20 palettes from the taste-skill library ================= */
-  const PALETTES = [{"id": "s10", "name": "S10 как сейчас", "rec": false, "bg": "#f4f5f7", "surface": "#ffffff", "ink": "#14161a", "muted": "#565b66", "accent": "#2449c6", "accentInk": "#ffffff", "dark": false, "key": "#2f5d50", "keyInk": "#ffffff"}, {"id": "cool-white-slate", "name": "Иней и сланец", "rec": true, "bg": "#f7f9fa", "surface": "#ecf0f2", "ink": "#1f3038", "muted": "#5d6b72", "accent": "#0d7480", "accentInk": "#ffffff", "dark": false, "key": "#b84a32", "keyInk": "#ffffff"}, {"id": "white-link-blue", "name": "Лист, синяя и красная ручка", "rec": true, "bg": "#ffffff", "surface": "#f4f4f4", "ink": "#111111", "muted": "#6b6b6b", "accent": "#1a4be0", "accentInk": "#ffffff", "dark": false, "key": "#d62b1f", "keyInk": "#ffffff"}, {"id": "graphite-safety-orange", "name": "Графит, оранжевый, лёд", "rec": true, "bg": "#18191b", "surface": "#222427", "ink": "#eff0f1", "muted": "#9c9ea3", "accent": "#ff4a1f", "accentInk": "#18191b", "dark": true, "key": "#4cc3d9", "keyInk": "#111111"}, {"id": "cool-grey-cobalt", "name": "Серый, кобальт, киноварь", "rec": false, "bg": "#eef0f3", "surface": "#e2e5ea", "ink": "#0b0c0e", "muted": "#5d6470", "accent": "#1f2de6", "accentInk": "#ffffff", "dark": false, "key": "#c43a0a", "keyInk": "#ffffff"}, {"id": "blue-red-black", "name": "Белый, ультрасиний, жёлтый", "rec": false, "bg": "#ffffff", "surface": "#f3f3f3", "ink": "#0a0a0a", "muted": "#6b6b6b", "accent": "#2436ff", "accentInk": "#ffffff", "dark": false, "key": "#f2c200", "keyInk": "#111111", "keyData": "#2436ff"}, {"id": "stone-blueprint", "name": "Камень, чертёж, красный маркер", "rec": false, "bg": "#dfdedb", "surface": "#d3d2ce", "ink": "#26251e", "muted": "#5f5d55", "accent": "#2456d6", "accentInk": "#ffffff", "dark": false, "key": "#c8341f", "keyInk": "#ffffff"}, {"id": "mint-pink-accounts", "name": "Белый, бутылочный, розовый", "rec": false, "bg": "#f8f8f8", "surface": "#eeeeee", "ink": "#0a0a0a", "muted": "#6a6a6a", "accent": "#1f6b3a", "accentInk": "#ffffff", "dark": false, "key": "#d6336c", "keyInk": "#ffffff"}, {"id": "teal-on-paper", "name": "Бирюза и коралл на бумаге", "rec": false, "bg": "#f7f9f8", "surface": "#ebf0ee", "ink": "#06525c", "muted": "#2f737d", "accent": "#06525c", "accentInk": "#f7f9f8", "dark": false, "key": "#c2410c", "keyInk": "#ffffff"}, {"id": "three-stones", "name": "Три камня и глина", "rec": false, "bg": "#eeecea", "surface": "#e4e1dd", "ink": "#333231", "muted": "#6b6763", "accent": "#5c6b54", "accentInk": "#ffffff", "dark": false, "key": "#8a5a44", "keyInk": "#ffffff"}, {"id": "olive-on-bone", "name": "Олива и кирпич на кости", "rec": false, "bg": "#ecebe7", "surface": "#e1dfd9", "ink": "#38450f", "muted": "#5d683a", "accent": "#38450f", "accentInk": "#ecebe7", "dark": false, "key": "#b5452b", "keyInk": "#ffffff"}, {"id": "moss-sand", "name": "Песок, мох, сумерки", "rec": false, "bg": "#ddd6c6", "surface": "#d2cab8", "ink": "#2a2a26", "muted": "#59574e", "accent": "#4f6238", "accentInk": "#ffffff", "dark": false, "key": "#2f4a6d", "keyInk": "#ffffff"}, {"id": "green-mat-chocolate", "name": "Кость, зелень, шоколад", "rec": false, "bg": "#e5e1d8", "surface": "#dad5ca", "ink": "#2a1d17", "muted": "#6b5b51", "accent": "#456f3a", "accentInk": "#ffffff", "dark": false, "key": "#5a3a2a", "keyInk": "#ffffff"}, {"id": "card-pastels", "name": "Светлый, малиновый, бирюза", "rec": false, "bg": "#f7f7f5", "surface": "#ebebe8", "ink": "#000000", "muted": "#666662", "accent": "#d0106f", "accentInk": "#ffffff", "dark": false, "key": "#0f7b6c", "keyInk": "#ffffff"}, {"id": "cobalt-on-sand", "name": "Кобальт и терракота на песке", "rec": false, "bg": "#e6dbc7", "surface": "#ddd0b9", "ink": "#062b8a", "muted": "#3a5aa8", "accent": "#062b8a", "accentInk": "#e6dbc7", "dark": false, "key": "#a8321e", "keyInk": "#ffffff"}, {"id": "oxblood-grey", "name": "Бордо, серый, петроль", "rec": false, "bg": "#e2e2e2", "surface": "#d6d6d6", "ink": "#7d0c14", "muted": "#7a4a4e", "accent": "#7d0c14", "accentInk": "#e2e2e2", "dark": false, "key": "#2b4c5e", "keyInk": "#ffffff"}, {"id": "blue-black-cornflower", "name": "Ночь, васильковый, янтарь", "rec": false, "bg": "#0a0d14", "surface": "#131824", "ink": "#e9edf3", "muted": "#8891a1", "accent": "#5a9bfc", "accentInk": "#0a0d14", "dark": true, "key": "#f5b942", "keyInk": "#111111"}, {"id": "green-black-bone", "name": "Тёмно-зелёный, кость, персик", "rec": false, "bg": "#161c1a", "surface": "#1f2725", "ink": "#e3e2da", "muted": "#8e948d", "accent": "#9fc7b8", "accentInk": "#161c1a", "dark": true, "key": "#e8a87c", "keyInk": "#111111"}, {"id": "charcoal-room-sage", "name": "Уголь, шалфей, охра", "rec": false, "bg": "#1c1c1c", "surface": "#262626", "ink": "#f1f1ef", "muted": "#9a9b96", "accent": "#8fa68e", "accentInk": "#1c1c1c", "dark": true, "key": "#d9a96a", "keyInk": "#111111"}, {"id": "warm-black-gold", "name": "Чёрный, золото, терракота", "rec": false, "bg": "#0c0a08", "surface": "#181512", "ink": "#ffffff", "muted": "#8f8a84", "accent": "#c9a45a", "accentInk": "#0c0a08", "dark": true, "key": "#d9765f", "keyInk": "#111111"}];
+  const PALETTES = [{"id": "s10", "name": "S10 как сейчас", "rec": false, "bg": "#f4f5f7", "surface": "#ffffff", "ink": "#14161a", "muted": "#565b66", "accent": "#2449c6", "accentInk": "#ffffff", "dark": false, "key": "#2f5d50", "keyInk": "#ffffff"}, {"id": "cool-white-slate", "name": "Иней и сланец", "rec": true, "bg": "#f7f9fa", "surface": "#ecf0f2", "ink": "#1f3038", "muted": "#5d6b72", "accent": "#0d7480", "accentInk": "#ffffff", "dark": false, "key": "#b84a32", "keyInk": "#ffffff"}, {"id": "white-link-blue", "name": "Лист, синяя и красная ручка", "rec": true, "bg": "#ffffff", "surface": "#f4f4f4", "ink": "#111111", "muted": "#595959", "accent": "#1a4be0", "accentInk": "#ffffff", "dark": false, "key": "#d62b1f", "keyInk": "#ffffff"}, {"id": "graphite-safety-orange", "name": "Графит, оранжевый, лёд", "rec": true, "bg": "#18191b", "surface": "#222427", "ink": "#eff0f1", "muted": "#9c9ea3", "accent": "#ff4a1f", "accentInk": "#18191b", "dark": true, "key": "#4cc3d9", "keyInk": "#111111"}, {"id": "cool-grey-cobalt", "name": "Серый, кобальт, киноварь", "rec": false, "bg": "#eef0f3", "surface": "#e2e5ea", "ink": "#0b0c0e", "muted": "#5d6470", "accent": "#1f2de6", "accentInk": "#ffffff", "dark": false, "key": "#c43a0a", "keyInk": "#ffffff"}, {"id": "blue-red-black", "name": "Белый, ультрасиний, жёлтый", "rec": false, "bg": "#ffffff", "surface": "#f3f3f3", "ink": "#0a0a0a", "muted": "#6b6b6b", "accent": "#2436ff", "accentInk": "#ffffff", "dark": false, "key": "#f2c200", "keyInk": "#111111", "keyData": "#2436ff"}, {"id": "stone-blueprint", "name": "Камень, чертёж, красный маркер", "rec": false, "bg": "#dfdedb", "surface": "#d3d2ce", "ink": "#26251e", "muted": "#5f5d55", "accent": "#2456d6", "accentInk": "#ffffff", "dark": false, "key": "#c8341f", "keyInk": "#ffffff"}, {"id": "mint-pink-accounts", "name": "Белый, бутылочный, розовый", "rec": false, "bg": "#f8f8f8", "surface": "#eeeeee", "ink": "#0a0a0a", "muted": "#6a6a6a", "accent": "#1f6b3a", "accentInk": "#ffffff", "dark": false, "key": "#d6336c", "keyInk": "#ffffff"}, {"id": "teal-on-paper", "name": "Бирюза и коралл на бумаге", "rec": false, "bg": "#f7f9f8", "surface": "#ebf0ee", "ink": "#06525c", "muted": "#2f737d", "accent": "#06525c", "accentInk": "#f7f9f8", "dark": false, "key": "#c2410c", "keyInk": "#ffffff"}, {"id": "three-stones", "name": "Три камня и глина", "rec": false, "bg": "#eeecea", "surface": "#e4e1dd", "ink": "#333231", "muted": "#6b6763", "accent": "#5c6b54", "accentInk": "#ffffff", "dark": false, "key": "#8a5a44", "keyInk": "#ffffff"}, {"id": "olive-on-bone", "name": "Олива и кирпич на кости", "rec": false, "bg": "#ecebe7", "surface": "#e1dfd9", "ink": "#38450f", "muted": "#5d683a", "accent": "#38450f", "accentInk": "#ecebe7", "dark": false, "key": "#b5452b", "keyInk": "#ffffff"}, {"id": "moss-sand", "name": "Песок, мох, сумерки", "rec": false, "bg": "#ddd6c6", "surface": "#d2cab8", "ink": "#2a2a26", "muted": "#59574e", "accent": "#4f6238", "accentInk": "#ffffff", "dark": false, "key": "#2f4a6d", "keyInk": "#ffffff"}, {"id": "green-mat-chocolate", "name": "Кость, зелень, шоколад", "rec": false, "bg": "#e5e1d8", "surface": "#dad5ca", "ink": "#2a1d17", "muted": "#6b5b51", "accent": "#456f3a", "accentInk": "#ffffff", "dark": false, "key": "#5a3a2a", "keyInk": "#ffffff"}, {"id": "card-pastels", "name": "Светлый, малиновый, бирюза", "rec": false, "bg": "#f7f7f5", "surface": "#ebebe8", "ink": "#000000", "muted": "#666662", "accent": "#d0106f", "accentInk": "#ffffff", "dark": false, "key": "#0f7b6c", "keyInk": "#ffffff"}, {"id": "cobalt-on-sand", "name": "Кобальт и терракота на песке", "rec": false, "bg": "#e6dbc7", "surface": "#ddd0b9", "ink": "#062b8a", "muted": "#3a5aa8", "accent": "#062b8a", "accentInk": "#e6dbc7", "dark": false, "key": "#a8321e", "keyInk": "#ffffff"}, {"id": "oxblood-grey", "name": "Бордо, серый, петроль", "rec": false, "bg": "#e2e2e2", "surface": "#d6d6d6", "ink": "#7d0c14", "muted": "#7a4a4e", "accent": "#7d0c14", "accentInk": "#e2e2e2", "dark": false, "key": "#2b4c5e", "keyInk": "#ffffff"}, {"id": "blue-black-cornflower", "name": "Ночь, васильковый, янтарь", "rec": false, "bg": "#0a0d14", "surface": "#131824", "ink": "#e9edf3", "muted": "#8891a1", "accent": "#5a9bfc", "accentInk": "#0a0d14", "dark": true, "key": "#f5b942", "keyInk": "#111111"}, {"id": "green-black-bone", "name": "Тёмно-зелёный, кость, персик", "rec": false, "bg": "#161c1a", "surface": "#1f2725", "ink": "#e3e2da", "muted": "#8e948d", "accent": "#9fc7b8", "accentInk": "#161c1a", "dark": true, "key": "#e8a87c", "keyInk": "#111111"}, {"id": "charcoal-room-sage", "name": "Уголь, шалфей, охра", "rec": false, "bg": "#1c1c1c", "surface": "#262626", "ink": "#f1f1ef", "muted": "#9a9b96", "accent": "#8fa68e", "accentInk": "#1c1c1c", "dark": true, "key": "#d9a96a", "keyInk": "#111111"}, {"id": "warm-black-gold", "name": "Чёрный, золото, терракота", "rec": false, "bg": "#0c0a08", "surface": "#181512", "ink": "#ffffff", "muted": "#8f8a84", "accent": "#c9a45a", "accentInk": "#0c0a08", "dark": true, "key": "#d9765f", "keyInk": "#111111"}];
   // palette chosen 31.10.2026: №3 «Лист, синяя и красная ручка». ?colors brings the picker back.
   const DEFAULT_PAL = 'white-link-blue';
   const SHOW_COLORS = new URLSearchParams(location.search).has('colors');
@@ -1043,7 +1044,7 @@
 
   /* ================= styles: light S10 brand on the taste-skill app-screen rules ================= */
   const css = `
-  .w-app{--ground:#f4f4f4;--surface:#fff;--border:#e1e1e1;--rule:#eeeeee;--control:#c8c8c8;--text:#111111;--muted:#6b6b6b;--faint:#6b6b6b;--accent:#1a4be0;--accent-bg:#e4eafc;--glyph-off:#d6d6d6;--primary:#d62b1f;--primary-hover:#b8251b;--primary-ink:#fff;--key:#d62b1f;--field:#fff;--soft:#f9f9f9;--accent-soft:#f4f6fe;--warn-bg:#fffbeb;
+  .w-app{--ground:#f4f4f4;--surface:#fff;--border:#e1e1e1;--rule:#eeeeee;--control:#c8c8c8;--text:#111111;--muted:#595959;--faint:#6b6b6b;--accent:#1a4be0;--accent-bg:#e4eafc;--glyph-off:#d6d6d6;--primary:#d62b1f;--primary-hover:#b8251b;--primary-ink:#fff;--key:#d62b1f;--field:#fff;--soft:#f9f9f9;--accent-soft:#f4f6fe;--warn-bg:#fffbeb;
     --ok-bg:#dcfae5;--ok:#04250e;--bad-bg:#ffedea;--bad:#831c1e;--neutral-bg:#eceef2;--neutral:#3d424b;
     min-height:100vh;background:var(--ground);color:var(--text);font:15px/1.5 Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;text-align:left}
   .w-app.w-over{position:fixed;inset:0;overflow:auto;z-index:2147483000;scrollbar-gutter:stable}
@@ -1053,13 +1054,14 @@
   .w-app button,.w-app select,.w-app input,.w-app textarea{font:inherit;color:inherit}
   .w-app :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .w-app a{color:var(--accent)}
-  /*<demo>*/.w-demo{background:var(--accent-bg);color:var(--accent);font-size:13px;padding:8px max(24px,env(safe-area-inset-left));text-align:center}/*</demo>*/
+  /*<demo>*/.w-demo{background:var(--accent-bg);color:#123598;font-size:14px;padding:8px max(24px,env(safe-area-inset-left));text-align:center}/*</demo>*/
   .w-top{background:#004aad;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
   .w-topin{margin:0 auto;height:48px;display:flex;align-items:center;gap:20px;position:relative}
   .w-wm{position:absolute;left:50%;top:8px;transform:translateX(-50%);display:block;height:32px;line-height:0}
   .w-wm svg{height:32px;width:auto}
+  .w-menub{position:relative}.w-menub::before{content:"";position:absolute;inset:0 0 0 -9px;border-radius:6px;transition:background .15s}.w-menub:hover::before{background:rgba(255,255,255,.14)}.w-menub i{position:relative}.w-wm:hover{opacity:.85}.w-top .w-ava:hover{box-shadow:0 0 0 2px rgba(255,255,255,.7)}
   .w-top :focus-visible{outline-color:#fff}
-  .w-menub{width:40px;height:40px;margin-left:-9px;display:grid;place-content:center;gap:5px;border:0;background:none;border-radius:6px;cursor:pointer}
+  .w-menub{width:40px;height:40px;display:grid;place-content:center start;gap:5px;border:0;background:none;border-radius:6px;cursor:pointer}
   .w-menub i{display:block;width:22px;height:2.5px;border-radius:1px;background:#fff;transition:transform .2s ease-out,opacity .2s ease-out}
   .w-menub[aria-expanded="true"] i:nth-child(1){transform:translateY(7.5px) rotate(45deg)}
   .w-menub[aria-expanded="true"] i:nth-child(2){opacity:0}
@@ -1076,10 +1078,10 @@
   .w-main{max-width:1160px;margin:0 auto;padding:28px max(24px,env(safe-area-inset-right)) 48px max(24px,env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr);gap:24px}
   .w-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:12px 16px}
   .w-head h1{padding-top:3px}
-  .w-head h1{font-size:26px;line-height:1.2;font-weight:500;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .w-head h1{font-size:32px;line-height:1.2;font-weight:500;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* the calendar: a small card beside the week's summary; dots for workouts, a red disc for a race */
   .w-duo{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:16px;align-items:stretch}
-  .w-calc .w-ch{padding:14px 16px 6px}.w-calc .w-ch h2{font-size:15px}
+  .w-calc .w-ch{padding:14px 16px 6px}.w-calc .w-ch h2{font-size:17px}
   .w-calc .w-link{font-size:13px;padding:2px 0}
   .w-cal{display:grid;gap:2px;padding:0 10px}
   .w-cwh,.w-cw{display:grid;grid-template-columns:30px repeat(7,minmax(0,1fr));gap:2px;align-items:center}
@@ -1121,7 +1123,7 @@
   .w-today .w-type{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:500}
   .w-big{font-size:32px;line-height:1.1;font-weight:500;letter-spacing:-.01em}
   .w-big small{font-size:15px;color:var(--faint);font-weight:400;margin-left:6px;letter-spacing:0}
-  .w-today .w-tx{font-size:16px;max-width:56ch}
+  .w-today .w-tx{font-size:16px;max-width:56ch;text-wrap:pretty}
   .w-stats{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;border-left:1px solid var(--rule)}
   .w-stat{padding:20px 24px;display:grid;gap:4px;align-content:start;border-top:1px solid var(--rule)}
   .w-stat-wide{grid-column:1/-1;border-top:0}.w-stat-full{grid-column:1/-1}
@@ -1162,7 +1164,7 @@
   @media (max-width:480px){.w-onb-g{grid-template-columns:1fr}.w-onb-p{grid-template-columns:repeat(2,minmax(0,1fr))}.w-dlg .w-btn{flex:1}}
   .w-err{color:var(--bad)!important;font-size:14px}
   .w-sum .w-prem{flex-basis:100%;padding:0;text-align:right}
-  .w-foot{color:var(--faint);font-size:12px}
+  .w-foot{color:var(--faint);font-size:12px}.w-foot a{text-underline-offset:2px}.w-foot a:hover{color:var(--text);text-decoration-thickness:2px}
   .w-btn{height:38px;padding:0 16px;border-radius:6px;border:1px solid var(--control);background:var(--surface);font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,transform .12s}
   .w-btn:hover:not(:disabled){background:var(--rule)}
   .w-btn:active:not(:disabled){transform:translateY(1px)}
@@ -1182,11 +1184,12 @@
   .w-step{padding:18px 20px;border-top:1px solid var(--rule);display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
   .w-step-list{padding-bottom:12px}
   .w-steph{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
-  .w-steph h3{font-size:16px;font-weight:500}.w-steph span{color:var(--faint);font-size:13px}
+  .w-steph h3{font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}.w-steph span{color:var(--faint);font-size:13px}
   .w-seg,.w-tabs{display:inline-flex;flex-wrap:wrap;border:1px solid var(--control);border-radius:6px;overflow:hidden;justify-self:start}
   .w-seg button,.w-tabs button{height:36px;padding:0 16px;border:0;background:var(--field);cursor:pointer;color:var(--muted);font-size:14px}
   .w-seg button+button,.w-tabs button+button{border-left:1px solid var(--control)}
   .w-seg button[aria-checked="true"],.w-tabs button[aria-selected="true"]{background:var(--accent-bg);color:var(--accent);font-weight:500}
+  .w-seg button:not([aria-checked="true"]):hover,.w-tabs button:not([aria-selected="true"]):hover{background:var(--soft);color:var(--text)}
   .w-works{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
   .w-work{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--soft);min-width:0}
   .w-wh,.w-ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
@@ -1275,7 +1278,7 @@
   .w-wkh .w-pill,.w-pill-sp{justify-self:end}
   .w-wdays{padding:0 20px 12px 76px}
   .w-wdays>li{display:grid;grid-template-columns:70px minmax(0,1fr) 64px;gap:12px;padding:10px 0;border-top:1px solid var(--rule)}
-  .w-wdays>li.gone{opacity:.55}
+  .w-wdays>li.gone :is(.w-name,.w-wdd b,.w-wdk){color:var(--muted)}.w-wdays>li.gone .w-ig{opacity:.45}
   .w-wdb{display:grid;gap:2px;min-width:0}
   .w-wdk{text-align:right;white-space:nowrap}
   .w-confirm{margin:0 20px 18px;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--warn-bg);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
@@ -1313,7 +1316,7 @@
     .w-wkh{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w" "n p s"}.w-wkh>span:nth-child(2){grid-area:d}
     .w-gen{grid-template-columns:1fr}}
   @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-topin{gap:14px}/*<demo>*/.w-demo{padding:8px 16px}/*</demo>*/
-    .w-head h1{font-size:22px}.w-today{padding:20px}.w-stat{padding:16px}
+    .w-head h1{font-size:24px}.w-big{font-size:24px}.w-today{padding:20px}.w-stat{padding:16px}
     .w-cal{padding:0 6px}.w-cwh,.w-cw{grid-template-columns:26px repeat(7,minmax(0,1fr))}.w-cm{padding-left:4px}
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
@@ -1322,6 +1325,12 @@
     .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
     .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
     .w-paces label{flex-direction:column;align-items:flex-start;gap:8px}.w-paces input{width:100%}.w-ptab th[scope=row] small{display:block}}
+  /* a wide screen: the open week of the plan as day cards, four in a row, Sunday across two, instead of short rows
+     with an empty middle */
+  @media (min-width:1200px){.w-wdays{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:4px 20px 20px 76px}
+    .w-wdays>li{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"d k" "b b";align-content:start;gap:6px 12px;padding:12px 14px;border:1px solid var(--rule);border-radius:8px}
+    .w-wdays>li:last-child{grid-column:span 2}.w-wdays>li.gone{background:var(--soft)}
+    .w-wdd{grid-area:d;display:flex;gap:6px;align-items:baseline}.w-wdb{grid-area:b}.w-wdk{grid-area:k}}
   @media (prefers-reduced-motion:reduce){.w-app *{transition:none!important}}
   `;
 
