@@ -1,4 +1,4 @@
-/* S10 «Моя неделя» · release 6f8a9b9a4a: everything on one page.
+/* S10 «Моя неделя» · release 73bbb424e0: everything on one page.
    Today and this week · the paces · the master plan (your saved versions, the library, or a new one from a prompt) laid
    over the dates to the race · «Заполнить календарь» for the whole plan · «Запланировать неделю» for one week (calc3).
    It reads and writes the logged-in user's data through the site's own API. */
@@ -319,8 +319,7 @@
     return wrap(`
       <div class="w-step"><div class="w-ready-v"><b class="num">${C.pct != null ? `${C.pct}<small>%</small>` : '—'}</b><span>${C.goal ? `пробежать за ${t(C.goal)}: вероятность ${chanceLevel(C.pct)}` : 'у старта не задана цель: укажите её на странице «Настройка плана»'}</span></div>${C.pct != null ? chanceBar(C.pct) : ''}</div>
       <ul class="w-ready-p">${rows.map(([n, v, s]) => `<li><span class="w-ready-n">${n}</span><span class="num w-ready-s">${v}</span><span aria-hidden="true"></span><span class="w-muted">${esc(s)}</span></li>`).join('')}</ul>
-      ${T ? `<h3 class="w-ready-h3">Тренировки за 6 недель: ${T.pct}%</h3><ul class="w-ready-p">${T.parts.map((p) => `<li><span class="w-ready-n">${p.label}</span><span class="num w-ready-s">${Math.round(p.score * 100)}%</span>${readyBar(Math.round(p.score * 100), 'sm')}<span class="w-muted">${esc(p.text)}</span></li>`).join('')}</ul>` : ''}
-      <p class="w-note">Оценка, а не точный расчёт. Форма сейчас — по последнему старту, прогнозу S10 или темпам; к старту она растёт, если тренироваться: чем лучше выполнены тренировки последних 6 недель, тем больше. Пропущенные тренировки и перерывы вероятность снижают, ключевые быстрее задания — повышают.</p>`);
+      ${T ? `<h3 class="w-ready-h3">Тренировки за 6 недель: ${T.pct}%</h3><ul class="w-ready-p">${T.parts.map((p) => `<li><span class="w-ready-n">${p.label}</span><span class="num w-ready-s">${Math.round(p.score * 100)}%</span>${readyBar(Math.round(p.score * 100), 'sm')}<span class="w-muted">${esc(p.text)}</span></li>`).join('')}</ul>` : ''}`);
   }
 
   /* ================= the plan laid over the dates ================= */
@@ -812,7 +811,7 @@
   }
   function replanHTML() {
     const p = plan(); if (!p || !raceMon) return '';
-    if (!rp) return `<div class="w-rp"><p>План можно подстроить под то, что вы уже пробежали: объём следующих недель, пропущенные тренировки, темпа. Сначала покажем, что изменится, записывать или нет, решите вы.</p><div class="w-acts"><button class="w-btn" data-act="rprules">Перестроить по правилам</button><button class="w-btn" data-act="rpai">Перестроить с ИИ</button></div></div>`;
+    if (!rp) return `<div class="w-rp"><div class="w-acts"><button class="w-btn" data-act="rprules">Перестроить по правилам</button><button class="w-btn" data-act="rpai">Перестроить с ИИ</button></div></div>`;
     const title = rp.by === 'ai' ? 'Перестройка с ИИ' : 'Перестройка по правилам';
     if (rp.busy && !rp.weeksNew) return `<div class="w-rp"><h3>${title}</h3><p id="w-rp-status" role="status">Модель пишет план…</p></div>`;
     if (!rp.weeksNew) return `<div class="w-rp"><h3>${title}</h3>${rp.err ? `<p class="w-err" role="alert">${esc(rp.err)}</p>` : ''}<div class="w-acts"><button class="w-btn" data-act="rpcancel">Закрыть</button></div></div>`;
