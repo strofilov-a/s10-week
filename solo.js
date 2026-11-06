@@ -978,6 +978,28 @@
     render();
     if (tab === 'plan' && chooser && chooserTab === 'new') focusAsk();
   }
+  // the site's own header: the S10 menu on the left (the same links as the site's header), the logo, the profile with
+  // the avatar on the right; the menu opens over the page, so nothing under it moves
+  const SITE = /*<demo>*/!LIVE ? 'https://s10.run' : /*</demo>*/'', CHALLENGES = 'https://challenges.s10.run';
+  let menuOpen = false;
+  const fullName = `${me.firstName || ''} ${me.lastName || ''}`.trim();
+  const initials = (fullName.split(/\s+/).map((w) => w.charAt(0)).join('').slice(0, 2) || 'S').toUpperCase();
+  const avatar = () => `<a class="w-ava" href="${SITE}/profile?${esc(me.id)}" aria-label="Мой профиль${fullName ? `, ${esc(fullName)}` : ''}" title="${esc(fullName)}"><span aria-hidden="true">${esc(initials)}</span>${me.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : ''}</a>`;
+  function menuLinks() {
+    const athlete = me.role !== 'trainer', L = [];
+    if (me.currentTrainerId) L.push([`${SITE}/profile?${me.currentTrainerId}`, 'Мой тренер']);
+    else if (athlete) L.push([`${SITE}/trainerlist`, 'Выбрать тренера']);
+    if (athlete) L.push([`${SITE}/student?${me.id}&v2=1`, 'Задачи']); else L.push([`${SITE}/students`, 'Студенты']);
+    if (!me.isPremium) L.push([`${SITE}/premium`, 'Премиум']);
+    L.push(null, [`${CHALLENGES}/tournament/?utm_source=s10header&utm_campaign=tournament&utm_content=btn`, 'Турнир'], [`${CHALLENGES}/newrace`, 'Ближайший челендж'], [`${CHALLENGES}/rating`, 'Рейтинг'], [`https://s10.run/answers`, 'Вопросы и ответы']);
+    L.push(null, [`${SITE}/money`, 'Платежи'], [`${SITE}/profile?${me.id}`, 'Мой профиль'], [`${SITE}/logout`, 'Выйти']);
+    return L.map((l) => (l ? `<li><a href="${esc(l[0])}">${l[1]}</a></li>` : '<li class="sep" aria-hidden="true"></li>')).join('');
+  }
+  const topBar = (open) => `<div class="w-topin">
+      <button class="w-menub" data-act="menu" aria-expanded="${open}" aria-label="${open ? 'Закрыть меню' : 'Меню S10'}"><i></i><i></i><i></i></button>
+      <a class="w-wm" href="${SITE}/" aria-label="S10.run, главная">${LOGO}</a>
+      <span class="w-topr">${SHOW_COLORS && !open ? `<button class="w-btn sm" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}${avatar()}</span>
+    </div>`;
   function render() {
     syncRace();
     // the diary to the plan's end, for «Не трогать…» and the counts (the first load covered 6 weeks or the race)
@@ -987,11 +1009,8 @@
     const pct = W.plan ? Math.min(100, (W.done / W.plan) * 100) : 0;
     root.innerHTML = `
     ${/*<demo>*/!LIVE ? '<div class="w-demo" role="note">Демо на данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</div>' : /*</demo>*/''}
-    <header class="w-top" ${onb ? 'inert' : ''}><div class="w-topin">
-      <a class="w-wm" href="${/*<demo>*/!LIVE ? 'https://s10.run/' : /*</demo>*/'/'}" aria-label="S10.run, главная">${LOGO}</a>
-      <span class="w-who">${esc(me.firstName)} ${esc(me.lastName)}</span>${SHOW_COLORS ? `<button class="w-btn sm" data-act="colors" aria-expanded="${colorsOpen}">Цвета</button>` : ''}
-    </div></header>
-    <main class="w-main" ${onb ? 'inert' : ''}>
+    <header class="w-top" ${onb || menuOpen ? 'inert' : ''}>${topBar(false)}</header>
+    <main class="w-main" ${onb || menuOpen ? 'inert' : ''}>
       ${colorsOpen ? colorsPanel() : ''}
       <div class="w-head">
         <h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
@@ -1014,7 +1033,7 @@
       </div>
       <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? planCard() : pacesCard()}</div>
       <p class="w-foot">${/*<demo>*/!LIVE ? 'Демо-версия страницы «Моя неделя» для S10.run.' : /*</demo>*/`Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.`} <a href="https://t.me/+wP4aOZ4910I2MTk6" target="_blank" rel="noopener">Чат «Моя неделя» в Telegram: вопросы и отзывы</a></p>
-    </main>${onb ? onbHTML() : ''}`;
+    </main>${onb ? onbHTML() : ''}${menuOpen ? `<div class="w-navwrap" role="dialog" aria-modal="true" aria-label="Меню S10"><header class="w-top">${topBar(true)}</header><nav class="w-sitemenu" aria-label="Меню S10"><ul>${menuLinks()}</ul></nav></div>` : ''}`;
     if (onb && !onb.focused) { onb.focused = true; root.querySelector('.w-dlg input, .w-dlg select')?.focus(); }
     root.querySelectorAll('textarea').forEach(fit);
     syncURL(false);
@@ -1039,8 +1058,22 @@
   .w-topin{margin:0 auto;height:48px;display:flex;align-items:center;gap:20px;position:relative}
   .w-wm{position:absolute;left:50%;top:8px;transform:translateX(-50%);display:block;height:32px;line-height:0}
   .w-wm svg{height:32px;width:auto}
-  .w-who{margin-left:auto;color:#fff;font-size:14px;opacity:.92;max-width:calc(50% - 70px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .w-main{max-width:1160px;margin:0 auto;padding:28px max(24px,env(safe-area-inset-right)) 48px max(24px,env(safe-area-inset-left));display:grid;gap:24px}
+  .w-top :focus-visible{outline-color:#fff}
+  .w-menub{width:40px;height:40px;margin-left:-9px;display:grid;place-content:center;gap:5px;border:0;background:none;border-radius:6px;cursor:pointer}
+  .w-menub i{display:block;width:22px;height:2.5px;border-radius:1px;background:#fff;transition:transform .2s ease-out,opacity .2s ease-out}
+  .w-menub[aria-expanded="true"] i:nth-child(1){transform:translateY(7.5px) rotate(45deg)}
+  .w-menub[aria-expanded="true"] i:nth-child(2){opacity:0}
+  .w-menub[aria-expanded="true"] i:nth-child(3){transform:translateY(-7.5px) rotate(-45deg)}
+  .w-topr{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .w-top .w-ava{position:relative;flex:none;display:block;width:32px;height:32px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,.22);color:#fff;text-decoration:none}
+  .w-ava span{display:grid;place-items:center;width:100%;height:100%;font-size:13px;font-weight:500;letter-spacing:.02em}
+  .w-ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .w-navwrap{position:fixed;inset:0;z-index:2147483001;background:#004aad;overflow:auto;overscroll-behavior:contain}
+  .w-sitemenu ul{list-style:none;max-width:1160px;margin:0 auto;padding:8px 0 40px}
+  .w-sitemenu a{display:block;padding:12px max(20px,env(safe-area-inset-left));color:#fff;font-size:16px;text-decoration:none}
+  .w-sitemenu a:hover{text-decoration:underline}
+  .w-sitemenu .sep{height:1px;margin:8px 0;background:rgba(255,255,255,.5)}
+  .w-main{max-width:1160px;margin:0 auto;padding:28px max(24px,env(safe-area-inset-right)) 48px max(24px,env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr);gap:24px}
   .w-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:12px 16px}
   .w-head h1{padding-top:3px}
   .w-head h1{font-size:26px;line-height:1.2;font-weight:500;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1146,7 +1179,7 @@
   .w-app input[type=checkbox],.w-app input[type=radio]{height:16px;width:16px;accent-color:var(--accent)}
   .w-app textarea{width:100%;padding:8px 10px;line-height:1.5;resize:vertical}
   .w-inl{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
-  .w-step{padding:18px 20px;border-top:1px solid var(--rule);display:grid;gap:14px}
+  .w-step{padding:18px 20px;border-top:1px solid var(--rule);display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
   .w-step-list{padding-bottom:12px}
   .w-steph{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
   .w-steph h3{font-size:16px;font-weight:500}.w-steph span{color:var(--faint);font-size:13px}
@@ -1154,8 +1187,8 @@
   .w-seg button,.w-tabs button{height:36px;padding:0 16px;border:0;background:var(--field);cursor:pointer;color:var(--muted);font-size:14px}
   .w-seg button+button,.w-tabs button+button{border-left:1px solid var(--control)}
   .w-seg button[aria-checked="true"],.w-tabs button[aria-selected="true"]{background:var(--accent-bg);color:var(--accent);font-weight:500}
-  .w-works{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .w-work{display:grid;gap:10px;align-content:start;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--soft);min-width:0}
+  .w-works{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .w-work{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--soft);min-width:0}
   .w-wh,.w-ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
   .w-wh .num,.w-pkm{font-size:16px;white-space:nowrap}
   .w-wa{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -1257,7 +1290,7 @@
   .w-tabbar button{border:0;background:none;padding:10px 4px;margin-right:20px;font-size:16px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
   .w-tabbar button:hover{color:var(--text)}
   .w-tabbar button[aria-selected="true"]{color:var(--text);font-weight:500;border-bottom-color:var(--accent)}
-  .w-panel{display:grid;gap:24px}
+  .w-panel{display:grid;grid-template-columns:minmax(0,1fr);gap:24px}
   .w-pals{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;padding:0 20px 20px}
   .w-pal{width:100%;display:grid;gap:6px;text-align:left;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:8px 8px 10px;cursor:pointer}
   .w-pal:hover{border-color:var(--control)}
@@ -1272,14 +1305,14 @@
   @media (max-width:1000px){.w-duo{grid-template-columns:minmax(0,1fr)}.w-duo>.w-calc{order:-1}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}.w-hero{grid-template-columns:1fr}.w-stats{border-left:0;border-top:1px solid var(--rule)}
     .w-wkh{grid-template-columns:40px 110px minmax(0,1fr) 64px;grid-template-areas:"n d w k" "n p w s"}.w-wn{grid-area:n}.w-per{grid-area:p}.w-wworks{grid-area:w}.w-wkm{grid-area:k}.w-wkh>.w-pill,.w-wkh>.w-pill-sp{grid-area:s}
     .w-wdays{padding-left:20px}}
-  @media (max-width:760px){.w-works{grid-template-columns:1fr}
+  @media (max-width:760px){.w-works{grid-template-columns:minmax(0,1fr)}
     .w-head{grid-template-columns:minmax(0,1fr)}.w-head h1{padding-top:0}.w-navs{order:-1}.w-tonow{order:0}
     .w-pday{grid-template-columns:minmax(0,1fr);gap:8px}.w-pd{display:flex;gap:8px;align-items:baseline}.w-pa{grid-template-columns:minmax(0,1fr) auto;align-items:center}
     .w-paces{grid-template-columns:1fr 1fr}.w-paces label:nth-child(3){border-left:0}.w-paces label:nth-child(n+3){border-top:1px solid var(--rule)}
     .w-pset{grid-template-columns:1fr}.w-roles{grid-template-columns:repeat(4,minmax(0,1fr))}
     .w-wkh{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w" "n p s"}.w-wkh>span:nth-child(2){grid-area:d}
     .w-gen{grid-template-columns:1fr}}
-  @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-topin{gap:14px}.w-who{display:none}/*<demo>*/.w-demo{padding:8px 16px}/*</demo>*/
+  @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-topin{gap:14px}/*<demo>*/.w-demo{padding:8px 16px}/*</demo>*/
     .w-head h1{font-size:22px}.w-today{padding:20px}.w-stat{padding:16px}
     .w-cal{padding:0 6px}.w-cwh,.w-cw{grid-template-columns:26px repeat(7,minmax(0,1fr))}.w-cm{padding-left:4px}
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
@@ -1302,6 +1335,7 @@
     const a = e.target.closest('[data-act]');
     if (a) {
       const act = a.dataset.act;
+      if (act === 'menu') return toggleMenu(!menuOpen);
       if (act === 'plan') { tab = 'week'; return openPlanner(); }
       if (act === 'close') { mode = 'view'; PL = null; return render(); }
       if (act === 'flash') { flash = ''; return render(); }
@@ -1340,7 +1374,15 @@
     await loadRange(wk, add(wk, 6)).catch(() => {});
     syncURL(true); render();
   });
+  // the menu covers the page: the page under it does not scroll, focus goes to its button and back
+  function toggleMenu(open) {
+    menuOpen = open; document.documentElement.style.overflow = open ? 'hidden' : ''; render();
+    root.querySelector(open ? '.w-navwrap .w-menub' : '.w-top .w-menub')?.focus({ preventScroll: true });
+  }
+  // an avatar that does not load leaves the initials under it
+  root.addEventListener('error', (e) => { if (e.target.matches?.('.w-ava img')) e.target.remove(); }, true);
   root.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menuOpen) return toggleMenu(false);
     if (e.key === 'Escape' && onb?.manual) { onb = null; return render(); }
     const c = e.target.closest('.w-cd');
     if (c && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {

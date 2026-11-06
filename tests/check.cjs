@@ -258,7 +258,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   { const p = await open({ path: '?newbie' });
     const once = !!(await p.$('.w-dlg')); await p.click('[data-act=onbnone]'); await wait(200);
     await p.reload(); await wait(900);
-    check('demo ?newbie: a new athlete, afresh on every visit', once && !!(await p.$('.w-dlg')) && (await p.innerText('.w-who')).includes('Новый'));
+    check('demo ?newbie: a new athlete, afresh on every visit', once && !!(await p.$('.w-dlg')) && (await p.getAttribute('.w-top .w-ava', 'aria-label')).includes('Новый'));
     await p.close(); }
   { const p = await open();
     const tg = await p.$eval('.w-foot a[href^="https://t.me/"]', (a) => ({ href: a.href, text: a.innerText, blank: a.target === '_blank' && a.rel.includes('noopener') })).catch(() => null);
@@ -267,6 +267,43 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   { const p = await open({ path: '?tab=plan' });
     check('athlete with a race and paces: no start window', !(await p.$('.w-dlg')));
     await p.close(); }
+
+  // 7c. the header: the S10 menu on the left, the profile with the avatar on the right
+  { const p = await open({ w: 390 });
+    const ava = await p.$eval('.w-top .w-ava', (a) => ({ href: a.getAttribute('href'), text: a.innerText, img: !!a.querySelector('img') }));
+    check('header: avatar links to the profile, initials without a photo', ava.href === 'https://s10.run/profile?1000000001' && ava.text === 'С' && !ava.img, JSON.stringify(ava));
+    const before = await box(p, '.w-tabbar');
+    await p.click('.w-top .w-menub'); await wait(250);
+    const links = await p.$$eval('.w-sitemenu a', (l) => l.map((a) => `${a.innerText} ${a.getAttribute('href')}`));
+    check('header: the menu opens with the site\'s links', links.includes('Задачи https://s10.run/student?1000000001&v2=1') && links.includes('Мой профиль https://s10.run/profile?1000000001') && links.includes('Выйти https://s10.run/logout') && !links.some((l) => l.startsWith('Премиум')), links.join(' | '));
+    check('header: the menu covers the page, focus on its button', await p.evaluate(() => document.activeElement?.matches('.w-navwrap .w-menub') && document.querySelector('main').inert));
+    await p.keyboard.press('Escape'); await wait(250);
+    check('header: Escape closes the menu, focus back, nothing moved', !(await p.$('.w-navwrap')) && await p.evaluate(() => document.activeElement?.matches('.w-top .w-menub') && !document.documentElement.style.overflow) && (await box(p, '.w-tabbar')) === before);
+    check('no errors in the header', !p.errors.length, p.errors.join('; '));
+    await p.close(); }
+  { const p = await browser.newPage({ viewport: { width: 1280, height: 900 } }); p.errors = []; p.on('pageerror', (x) => p.errors.push(x.message));
+    const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYPj/HwAEAQH/7yMK/QAAAABJRU5ErkJggg==', 'base64'); // 1×1
+    await p.route(/avatar-ok/, (r) => r.fulfill({ status: 200, contentType: 'image/png', body: PNG })); await p.addInitScript(hook(`x.me.avatarUrl = 'https://s10.run/avatar-ok.png'; x.me.isPremium = false`));
+    await p.goto(BASE); await wait(1000);
+    check('header: the avatar photo when the profile has one', !!(await p.$('.w-top .w-ava img[src="https://s10.run/avatar-ok.png"]')));
+    await p.click('.w-top .w-menub'); await wait(250);
+    check('header: «Премиум» in the menu without premium', (await p.$$eval('.w-sitemenu a', (l) => l.map((a) => a.innerText))).includes('Премиум'));
+    await p.close(); }
+  { const p = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await p.route(/avatar-broken/, (r) => r.fulfill({ status: 404, body: '' })); await p.addInitScript(hook(`x.me.avatarUrl = 'https://s10.run/avatar-broken.jpg'`));
+    await p.goto(BASE); await wait(1000);
+    check('header: a broken avatar leaves the initials', !(await p.$('.w-top .w-ava img')) && (await p.innerText('.w-top .w-ava')) === 'С');
+    await p.close(); }
+  // 7d. the weekly planner on a phone: a long template name in «Заменить на…» must not push the cards off the screen
+  // (on s10.run the site's templates have names far longer than the demo's; Safari sizes a select by its longest option)
+  for (const w of [360, 390]) {
+    const LONGTPL = `x.templates[0].items.push('5 по 1 км по Т21-5 через 60 секунд трусцой, разминка и заминка по 3 км лёгким бегом, после работы 6 ускорений по 100 м [14,3,] Километровые отрезки по Т21-5 с ускорениями после основной работы для подготовки к полумарафону')`;
+    const p = await open({ w, path: '?open=plan', init: hook(LONGTPL) }); await wait(1200);
+    const r = await p.evaluate(() => { const vw = document.documentElement.clientWidth, bad = [...document.querySelectorAll('#s10-week .w-work, #s10-week .w-work *')].filter((e) => { const b = e.getBoundingClientRect(); return b.width && b.right > Math.min(vw, e.closest('.w-work').getBoundingClientRect().right) + 0.5; });
+      return { opt: Math.max(...[...document.querySelectorAll('.w-work select option')].map((o) => o.textContent.length)), bad: bad.map((e) => e.className || e.tagName).slice(0, 4), page: document.documentElement.scrollWidth - vw }; });
+    check(`planner cards stay inside at ${w}px with a long template`, r.opt > 90 && !r.bad.length && r.page <= 0, JSON.stringify(r));
+    await p.close();
+  }
 
   // 8. no sideways scroll
   for (const w of [360, 390, 768, 1024, 1440]) {
