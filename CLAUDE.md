@@ -101,6 +101,15 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   afterType, afterKm, afterTextHash]]}` (also mirrored in localStorage). A day changed after the fill is skipped; an
   empty-before day is cleared with `{typtrain:0, task:'', prekm:0}`.
 - Without premium the write buttons are disabled with a note (calc3's rule).
+- Readiness («Готовность к цели», «Выполнение плана» without a race; stage 1 of the adaptive plan, owner 06.11.2026):
+  `readiness()` reads the diary of the last 6 weeks (`READY`), from the first planned day in it; the last 2 weeks count
+  twice. Key workouts (typtrain 2, 3, 4) 35%, volume (all runs against all planned km, at most 100%) 25%, long runs
+  (5) 25%, regularity (longest break without a run; over 4 days takes 1/7 a day) 15%; parts with nothing planned are
+  left out and the rest reweighted. Done = 80% of the planned km; a pace-only key task done within 5 s/km counts in
+  pace (in-pace share moves the key part between 70% and 100%). The S10 forecast (`planresults` row of the race's
+  date, `prehms`) against the race goal (`prediction`): each 1% slower takes 5% off, at most half. Under 7 planned
+  days: «мало данных». Shown in the summary card (beside «До старта») and as a card on «План до старта» with each part.
+  Nothing is stored or written. Stage 2 (owner's plan): «Перестроить план с учётом сделанного».
 - Start window (new athletes only, own page only, never for a coach with `?id=`): shown when the site has no main race
   and the athlete has not chosen «Отсутствует», and/or when there are no complete paces. «Сохранить старт» writes the
   main race through `writeTasks` (`typtrain 6`, `main6: 1`, like calc3), asking once if that day already has a task;
@@ -154,7 +163,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # demo checks (67), the release build and its checks (12), the promo page (18)
+npm test                                     # demo checks (83), the release build and its checks (12), the promo page (18)
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same on every push and pull request, and fails if the committed
