@@ -145,7 +145,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // 7. special cases
   { const p = await open({ path: '?tab=plan', init: hook('x.me.isPremium = false') });
-    check('no premium: «Попробовать Premium бесплатно» to /money instead of the fill button, 3 free days said', !(await p.$('[data-act=fillask]')) && (await p.getAttribute('.w-fill [data-act=buy]', 'href')) === 'https://s10.run/money' && (await p.innerText('.w-fill .w-prem')).includes('3 дня бесплатно'));
+    check('no premium: «Оформить Premium» to /money instead of the fill button, the price said, no free promise', !(await p.$('[data-act=fillask]')) && (await p.getAttribute('.w-fill [data-act=buy]', 'href')) === 'https://s10.run/money' && (await p.innerText('.w-fill [data-act=buy]')) === 'Оформить Premium' && (await p.innerText('.w-fill .w-prem')).includes('750 ₽') && !(await p.innerText('#s10-week')).includes('бесплатно'));
     await p.close(); }
   { const p = await open({ path: '?tab=plan', init: hook('x.library = []') });
     await p.click('[data-act=pchoose]'); await wait(200);
