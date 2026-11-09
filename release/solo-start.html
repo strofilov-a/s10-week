@@ -115,7 +115,7 @@ h2 { font-size: var(--step-head); }
 .rail-act .btn { font-size: var(--step-small); min-height: 40px; padding: 0 18px; }
 
 /* ---------- hero: the race-day circle at full scale ---------- */
-.hero { position: relative; min-height: calc(100svh - 64px); display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding-block: 48px; }
+.hero { position: relative; overflow-x: clip; /* a circle past the right edge never widens a touch screen's page */ min-height: calc(100svh - 64px); display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding-block: 48px; }
 .hero-text { grid-column: 1 / 8; position: relative; z-index: 2; }
 .hero h1 { font-size: var(--step-display); max-width: 11ch; }
 .hero-sent { margin-top: 32px; max-width: 38ch; font-size: var(--step-lead); line-height: 1.35; }
@@ -131,10 +131,13 @@ h2 { font-size: var(--step-head); }
   font: 500 calc(var(--D) * .61) / 1 var(--font); letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
   pointer-events: none; transform-origin: 50% 50%; will-change: transform;
 }
-.orb span { display: block; transform: translateY(-.02em); }
+.orb span { display: block; transform: translateY(-.03em); } /* the 6's ink sits .03em under its line box's middle in Golos Text */
 .orb.flying { position: fixed; }
-.orb.flying.paged { position: absolute; } /* touch: carried by the page itself, see flight() */
-.orb-layer { position: absolute; left: 0; top: 0; width: 100%; overflow: hidden; pointer-events: none; z-index: 1; } /* holds it, cut at the screen's sides */
+/* touch: 6 December pops in on a timer as the calendar comes into view (see flight) */
+.cal-sec.pop .d.race::before { animation: race-pop .7s cubic-bezier(.2, .8, .2, 1) both; }
+.cal-sec.pop .d.race { animation: race-num .7s ease-out both; }
+@keyframes race-pop { from { transform: scale(2.6); opacity: 0; } 50% { opacity: 1; } to { transform: scale(1); opacity: 1; } }
+@keyframes race-num { from { opacity: 0; } 60% { opacity: 0; } to { opacity: 1; } }
 .orb.gone { visibility: hidden; }
 
 /* ---------- scene: the calendar, the race already marked, fills up to it ---------- */
@@ -419,27 +422,33 @@ html.js [data-rise].in { opacity: 1; transform: none; }
 /* ---------- phone ---------- */
 @media (max-width: 767px) {
   .rail { padding: 0 20px; }
-  .hero { display: block; padding: 28px 20px 0; min-height: calc(100svh - 64px); overflow-x: clip; } /* the circle's part past the edge stays cut, no sideways scroll */
+  .hero { display: block; padding: 28px 20px 0; min-height: calc(100svh - 64px); }
   .hero h1 { font-size: 2.75rem; }
   .hero-sent { margin-top: 18px; font-size: 1.125rem; }
   .hero .row { margin-top: 24px; }
   .hero .btn { width: 100%; }
   .hero-note { margin-top: 16px; }
-  /* the phone: a smaller circle under the text with the whole 6 readable, a sixth of it past the right edge (owner,
-     09.11.2026: the cropped 6 read as nothing) */
-  .orb { --D: 52vw; position: relative; left: auto; top: auto; bottom: auto; margin: 8px calc(-20px - .16 * var(--D)) 0 auto; }
+  /* the phone: the whole circle under the text at the right edge of the text, the 6 in its middle (owner, 09.11.2026) */
+  .orb { --D: 56vw; position: relative; left: auto; top: auto; bottom: auto; margin: 12px 0 0 auto; }
 
-  .cal-stage { grid-template-columns: 1fr; padding: 72px 20px 16px; align-content: center; row-gap: 16px; }
+  /* the pinned calendar fits one phone screen under the top bar (owner, 09.11.2026: its heading went under the bar and
+     the legend off the bottom): heading on one line, tighter text and figures, shorter rows */
+  .cal-stage { grid-template-columns: 1fr; padding: 76px 20px 12px; align-content: start; row-gap: 10px; }
   .cal-text, .cal { grid-column: 1; }
-  .cal-text h2 { font-size: 2.25rem; max-width: none; }
-  .cal-says { margin-top: 10px; min-height: 2.6em; font-size: 1.0625rem; }
-  .cal-figs { margin-top: 8px; }
-  .cal-figs b { font-size: 1.75rem; }
-  .cal { padding: 16px 12px; border-radius: 22px; }
+  .cal-text h2 { font-size: 1.75rem; line-height: 1.05; max-width: none; }
+  .cal-says { margin-top: 6px; min-height: 2.6em; font-size: 1rem; }
+  .cal-figs { margin-top: 6px; }
+  .cal-figs b { font-size: 1.5rem; margin-bottom: 2px; }
+  .cal { padding: 12px 12px 10px; border-radius: 22px; }
   .cal-grid { grid-template-columns: 2.2em repeat(7, 1fr) 3.4em; font-size: 14px; }
   .cal-grid .wd, .cal-grid .mo, .cal-grid .wk-km { font-size: 13px; }
+  .cal-grid .wd { padding-bottom: 4px; }
+  .cal-grid .d { padding: 1px 0 clamp(7px, 1.4svh, 12px); } /* taller phones get roomier rows */
+  .cal-grid .d::after { bottom: 1px; }
+  .cal-grid .d.race::before { top: calc(1px + .625em); }
   .cal-grid .d.race::before { width: 1.55em; height: 1.55em; margin: -.775em 0 0 -.775em; }
-  .cal-key { font-size: 13px; margin-top: 12px; gap: 8px 16px; }
+  .cal-key { font-size: 13px; margin-top: 8px; gap: 6px 16px; }
+
 
   .show { min-height: 0; padding: 0 20px; display: flex; flex-direction: column; gap: 24px; }
   .show-disc, .show-frag, .show-list, .show-fact { position: relative; left: auto; top: auto; right: auto; bottom: auto; translate: none; }
@@ -512,6 +521,15 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   .foot-links { grid-template-columns: 1fr; padding: 32px 20px 20px; }
   .foot-links nav, .foot-links .contact { grid-column: 1; }
   .foot-last { padding: 0 20px 24px; }
+}
+
+/* a short phone (iPhone SE): the week figures go, the rows get shorter still */
+@media (max-width: 767px) and (max-height: 620px) {
+  .cal-figs { display: none; }
+  .cal-says { min-height: 0; }
+  .cal-grid { font-size: 13px; }
+  .cal-grid .d { padding: 1px 0 5px; }
+  .cal-grid .d::after { width: 5px; height: 5px; margin-left: -2.5px; bottom: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -978,6 +996,7 @@ html.js [data-rise].in { opacity: 1; transform: none; }
 (() => {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const touch = matchMedia('(pointer: coarse)').matches; // a finger scrolls: nothing may follow the scroll by script (see flight)
   const fmt = (s) => { const r = Math.round(s); return Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); };
   const hms = (s) => { const r = Math.round(s), h = Math.floor(r / 3600), m = Math.floor(r % 3600 / 60), x = r % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
 
@@ -1040,47 +1059,42 @@ html.js [data-rise].in { opacity: 1; transform: none; }
     rest() { showUpTo(days.length); },
   });
 
-  /* the orb: the hero's race circle shrinks and lands on 6 December as the calendar arrives */
-  const orb = $('#orb'), calSec = $('#plan'), raceCell = $('.d.race', grid), home = orb.parentNode;
-  // On a touch screen the browser scrolls the page itself, ahead of any script: an orb fixed to the screen and moved back
-  // by the scroll handler lags a frame and shakes (owner, 09.11.2026). There the orb lives in the page instead and heads
-  // for where 6 December stands on the page, so the scroll carries it and the script only eases it along; the mouse
-  // keeps the screen-fixed flight, smoothed by Lenis.
-  const paged = window.Stage ? Stage.touch : matchMedia('(pointer: coarse)').matches, layer = document.createElement('div');
-  layer.className = 'orb-layer'; layer.setAttribute('aria-hidden', 'true');
+  /* the orb: the hero's race circle shrinks and lands on 6 December as the calendar arrives (with a mouse) */
+  const orb = $('#orb'), calSec = $('#plan'), raceCell = $('.d.race', grid);
   const flight = () => {
     if (reduced) return;
+    // A touch screen scrolls the page on its own, ahead of any script, so whatever a script moves along with the scroll
+    // shakes there however it is done (owner, 09.11.2026, twice). On touch nothing follows the scroll: the circle stays in
+    // the hero and goes up with the page, and 6 December pops in by itself, on a timer, as the calendar comes into view.
+    if (touch) {
+      calSec.classList.add('waiting');
+      const io = new IntersectionObserver((es) => { if (!es.some((e) => e.isIntersecting)) return; calSec.classList.remove('waiting'); calSec.classList.add('pop'); io.disconnect(); }, { threshold: 0.6 });
+      io.observe(raceCell);
+      return;
+    }
     let S, T, calTop;
     // S: the orb's centre and size in the hero (page coordinates); T: the race circle's centre and size when the calendar is pinned (viewport)
     const measure = () => {
-      if (orb.parentNode !== home) home.appendChild(orb);
-      orb.classList.remove('flying', 'paged', 'gone'); orb.style.cssText = '';
+      orb.classList.remove('flying', 'gone'); orb.style.cssText = '';
       const r = orb.getBoundingClientRect();
       S = { x: r.left + r.width / 2, y: r.top + scrollY + r.height / 2, d: r.width };
       const sr = $('.cal-stage').getBoundingClientRect(), cr = raceCell.getBoundingClientRect(), cs = getComputedStyle(raceCell, '::before');
       T = { x: cr.left + cr.width / 2, y: cr.top - sr.top + parseFloat(cs.top), d: parseFloat(cs.width) };
       calTop = calSec.getBoundingClientRect().top + scrollY;
       orb.classList.add('flying');
-      // page coordinates, top 0 the top of the page, inside a layer as wide as the screen that cuts what passes its sides
-      if (paged) { orb.classList.add('paged'); layer.style.height = document.documentElement.scrollHeight + 'px'; if (!layer.isConnected) document.body.appendChild(layer); layer.appendChild(orb); }
       orb.style.left = (S.x - S.d / 2) + 'px'; orb.style.top = '0px';
     };
     const place = () => {
       const p = Math.min(1, Math.max(0, scrollY / calTop)), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      const cx = S.x + (T.x - S.x) * e, s = 1 - (1 - T.d / S.d) * e;
-      // screen: from the hero to where the circle stands once the calendar is pinned; page: from the hero to 6 December's
-      // place on the page (calTop + T.y), which reaches that same screen spot exactly when the calendar pins
-      const cy = paged ? S.y + (calTop + T.y - S.y) * e : (S.y - scrollY) + (T.y - (S.y - scrollY)) * e;
+      const cx = S.x + (T.x - S.x) * e, cy = (S.y - scrollY) + (T.y - (S.y - scrollY)) * e, s = 1 - (1 - T.d / S.d) * e;
       orb.style.transform = `translate(${cx - S.x}px, ${cy - S.d / 2}px) scale(${s})`;
       const landed = p >= 1;
       orb.classList.toggle('gone', landed);
       calSec.classList.toggle('waiting', !landed);
     };
     measure(); place();
-    let raf = 0;
-    addEventListener('scroll', paged ? () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; place(); }); } : place, { passive: true });
-    // a phone's address bar showing or hiding changes only the height: nothing to measure again for that
-    let rt, w0 = innerWidth; addEventListener('resize', () => { if (paged && innerWidth === w0) return; w0 = innerWidth; clearTimeout(rt); rt = setTimeout(() => { measure(); place(); }, 150); });
+    addEventListener('scroll', place, { passive: true });
+    let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { measure(); place(); }, 150); });
     if (window.ScrollTrigger) ScrollTrigger.addEventListener('refresh', () => { measure(); place(); });
   };
 
@@ -1194,8 +1208,8 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   $$('[data-rise]').forEach((el) => (io && !reduced ? io.observe(el) : el.classList.add('in')));
 
   /* the disc and its fragment settle as the section arrives */
-  if (window.gsap && window.ScrollTrigger && !reduced) {
-    gsap.registerPlugin(ScrollTrigger);
+  if (window.gsap && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger); // the scenes need it on every screen
+  if (window.gsap && window.ScrollTrigger && !reduced && !touch) { // the showcase and footer drift: not under a finger
     gsap.fromTo('#show-disc', { scale: 0.6 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: '.show', start: 'top bottom', end: 'top 20%', scrub: 0.4 } });
     gsap.fromTo('.show-frag', { yPercent: 18 }, { yPercent: 0, ease: 'none', scrollTrigger: { trigger: '.show', start: 'top bottom', end: 'top 20%', scrub: 0.4 } });
     gsap.fromTo('.foot-mark span', { yPercent: 40 }, { yPercent: 0, stagger: 0.08, ease: 'none', scrollTrigger: { trigger: '.foot-mark', start: 'top bottom', end: 'bottom bottom', scrub: 0.4 } });

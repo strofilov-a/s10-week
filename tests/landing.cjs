@@ -33,24 +33,32 @@ const srv = http.createServer((q, r) => {
     const hrefs = await page.evaluate(() => [...document.querySelectorAll('a.btn, a.cta')].map((a) => a.href));
     check(`${name}: every action goes to the login and back to /solo/plan`, hrefs.length >= 5 && hrefs.every((x) => x === LOGIN), `${hrefs.length} actions`);
 
-    // the race circle lands on 6 December when the calendar pins
+    // with a mouse the race circle flies into 6 December as the calendar pins; on touch nothing follows the scroll: the
+    // circle stays in the hero and 6 December pops in on a timer as the calendar comes into view (owner, 09.11.2026)
     await page.evaluate(() => scrollTo(0, document.getElementById('plan').getBoundingClientRect().top + scrollY));
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(1200);
     const landed = await page.evaluate(() => {
-      const orb = document.getElementById('orb'), cell = document.querySelector('.d.race');
-      return { orbGone: orb.classList.contains('gone'), cellShown: getComputedStyle(cell).visibility === 'visible' };
+      const orb = document.getElementById('orb'), cal = document.getElementById('plan'), cell = document.querySelector('.d.race');
+      return { flying: orb.classList.contains('flying'), orbGone: orb.classList.contains('gone'), pop: cal.classList.contains('pop'), cellShown: getComputedStyle(cell).visibility === 'visible' };
     });
-    check(`${name}: the race circle lands on 6 December`, landed.orbGone && landed.cellShown, JSON.stringify(landed));
-    // on the way down the circle moves steadily toward the calendar: its distance to 6 December shrinks at every step and
-    // it never jumps back (touch: carried by the page, the script only eases it along)
-    const path = [];
-    for (let i = 0; i <= 10; i++) {
-      await page.evaluate((f) => scrollTo(0, document.getElementById('plan').getBoundingClientRect().top * 0 + (document.getElementById('plan').offsetTop) * f), i / 10);
-      await page.waitForTimeout(120);
-      path.push(await page.evaluate(() => { const o = document.getElementById('orb').getBoundingClientRect(), c = document.querySelector('.d.race').getBoundingClientRect(); return Math.hypot(o.left + o.width / 2 - (c.left + c.width / 2), o.top + o.height / 2 - (c.top + c.height / 2)); }));
+    check(`${name}: 6 December ${touch ? 'pops in, the circle stays in the hero' : 'gets the flying circle'}`, landed.cellShown && (touch ? !landed.flying && landed.pop : landed.orbGone), JSON.stringify(landed));
+    if (!touch) { // the flight closes in on 6 December steadily
+      const path = [];
+      for (let i = 0; i <= 10; i++) {
+        await page.evaluate((f) => scrollTo(0, document.getElementById('plan').offsetTop * f), i / 10);
+        await page.waitForTimeout(120);
+        path.push(await page.evaluate(() => { const o = document.getElementById('orb').getBoundingClientRect(), c = document.querySelector('.d.race').getBoundingClientRect(); return Math.hypot(o.left + o.width / 2 - (c.left + c.width / 2), o.top + o.height / 2 - (c.top + c.height / 2)); }));
+      }
+      check(`${name}: the circle closes in on 6 December steadily`, path.slice(0, -1).every((d, i) => path[i + 1] <= d + 2), path.map((d) => Math.round(d)).join(' '));
+    } else if (w < 768) { // a phone: the whole circle on the first screen, the 6 in its middle
+      await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(200);
+      const o = await page.evaluate(() => { const c = document.getElementById('orb').getBoundingClientRect(), d = document.querySelector('#orb span').getBoundingClientRect(); return { inside: c.left >= 0 && c.right <= innerWidth, dx: Math.round(Math.abs(c.left + c.width / 2 - (d.left + d.width / 2))) }; });
+      check(`${name}: the whole circle on screen, the 6 in its middle`, o.inside && o.dx <= 2, JSON.stringify(o));
     }
-    const steady = path.slice(0, -1).every((d, i) => path[i + 1] <= d + 2);
-    check(`${name}: the circle closes in on 6 December steadily (paged: ${touch})`, steady && (await page.evaluate(() => document.getElementById('orb').classList.contains('paged'))) === touch, path.map((d) => Math.round(d)).join(' '));
+    // the pinned calendar fits under the top bar and above the screen's bottom
+    await page.evaluate(() => scrollTo(0, document.getElementById('plan').offsetTop + innerHeight)); await page.waitForTimeout(400);
+    const fit = await page.evaluate(() => { const R = (s) => document.querySelector(s).getBoundingClientRect(); return { bar: Math.round(R('.rail').bottom), head: Math.round(R('.cal-text h2').top), key: Math.round(R('.cal-key').bottom), h: innerHeight }; });
+    check(`${name}: the pinned calendar fits between the top bar and the bottom`, fit.head >= fit.bar && fit.key <= fit.h, JSON.stringify(fit));
 
     // the features scene steps through all six
     const steps = [];
