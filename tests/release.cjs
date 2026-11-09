@@ -70,7 +70,7 @@ srv.listen(0, '127.0.0.1', async () => {
 
   { const [p] = await open((x) => { NEWBIE(x); x.me.isPremium = false; return x; });
     await p.click('[data-act=onbnone]'); await wait(300); await p.click('[data-act=gen]'); await wait(1500);
-    check('new athlete without premium: fill disabled', await p.$eval('[data-act=fillask]', (x) => x.disabled)); await p.close(); }
+    check('new athlete without premium: the Premium button to /money', !(await p.$('[data-act=fillask]')) && (await p.getAttribute('[data-act=buy]', 'href')) === '/money'); await p.close(); }
 
   { const p = await b.newPage(); await site(p, (x) => { x.me = null; return x; }); await p.goto(URL0); await wait(800);
     check('logged out: «войдите в S10»', (await p.innerText('body')).includes('войдите в S10')); await p.close(); }

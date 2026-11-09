@@ -159,6 +159,9 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   row, Sunday across two). Judged false for an app screen and left: KPI figures larger than h2, the calendar's month
   column («stagger»), the calendar as the right column («off-grid»), day cards without pictures («card-visual»), and
   the findings behind the start window's backdrop.
+- Summary card (owner, 09.11.2026): the race and its goal under today's workout, at the bottom of that column, 19 px
+  medium («Valencia, 6 дек, 42 км, цель 3:19:59», each part kept whole on a line), «До старта 36 дней» small above it;
+  on the right «Объём недели» and «Вероятность достижения цели», each across the column.
 - Layout «A»: site header (blue #004aad, 48 px, the S10.run logo in the middle — simplified SVG in `LOGO`), h1
   «Моя неделя, dates», the summary card (today + «Объём недели» + «До старта») and the small calendar beside it, one
   height; tabs Неделя / План до старта / Мои темпа under them.
@@ -168,7 +171,18 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 - Write «темпа», never «темпы». No ↑↓ arrows. Workout text must not be cramped.
 - NOTHING may jump on click: the calendar, the week switch, the fill buttons when switching «2 беговые недели» /
   «До старта». `tests/check.cjs` measures positions — keep it green.
-- Fill buttons sit at the bottom of their box; the hint under the count is two lines.
+- Fill buttons sit at the bottom of their box; the hint under the count is two lines. «Сохранить версию» stands at the top
+  right beside the «2 беговые недели / До старта» switch (on a phone above it), «Заполнить календарь» at the bottom
+  (owner, 09.11.2026). «Заполнить календарь» saves the plan to the profile itself.
+- Paywall (owner, 09.11.2026): without premium «Заполнить календарь» is replaced by «Попробовать Premium бесплатно» to
+  `/money` (it saves a new or library plan to the profile first, so it is there after paying), with «первые 3 дня
+  бесплатно»; the other write buttons stay disabled with a «первые 3 дня бесплатно» link to `/money`.
+- A saved version is named by the race and its goal, «Valencia 3:20» (`planName()`; the distance when the race has no
+  name; a re-plan adds «· перестроен <date>»); a coach's version keeps its name.
+- The goal field asks for a keyboard with punctuation (`inputmode="text"`), the easy-run range too (it needs «-»);
+  a goal typed as digits reads «130» → 1:30 for a half/marathon, «2230» → 22:30 for 10 km and shorter, 5–6 digits h:mm:ss.
+- Landing: «Попробовать 3 дня бесплатно» on both buttons, the 3 free days in the Premium card and the price answer. The
+  Valencia example with its fixed dates stays as is (owner, 09.11.2026).
 - Footer: a link to the Telegram chat for questions and feedback, https://t.me/+wP4aOZ4910I2MTk6 (owner, 01.11.2026).
 - Plan generator: the «Расскажите о себе и цели» box comes first, 16/500 label in ink, 2px accent border and an accent
   hint under it (`aria-describedby`); it takes the focus with its text selected. Prefilled: «заполни как есть, там
@@ -179,7 +193,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # demo checks (94), the release build and its checks (12), the promo page (18)
+npm test                                     # demo checks (97), the release build and its checks (12), the promo page (18)
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same on every push and pull request, and fails if the committed

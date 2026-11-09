@@ -646,7 +646,7 @@
     const f0 = old?.filled, f = filled ? { at: new Date().toISOString(), from: f0?.from && f0.from < filled.from ? f0.from : filled.from, to: f0?.to && f0.to > filled.to ? f0.to : filled.to } : f0 || null;
     const v = {
       ...(old || {}), id: keepId || Math.random().toString(36).slice(2, 16),
-      name: name || old?.name || `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${p.plan.weeks.length} нед.`, savedAt: new Date().toISOString(),
+      name: name || old?.name || planName() || `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${p.plan.weeks.length} нед.`, savedAt: new Date().toISOString(),
       templateId: old?.templateId || (sel.src === 'library' ? p.id : p.templateId || null), distance: p.distance || null, plan: { weeks: p.plan.weeks },
       student: { ...(old?.student || {}), raceDate: race?.d || null, noRace: !race && noRace ? true : undefined, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], easy: PACE?.easy, volume: String(volume || firstKm(p)), layout: layout.slice() },
       active: true, filled: f, undo: undoRec === undefined ? old?.undo || null : undoRec,
@@ -832,7 +832,7 @@
   function replanPreview(r) {
     const cur = plan(), lay = (pl) => sortedWeeks(pl).map((w) => layWeek(w, pl));
     const was = lay(cur), oldDays = new Map(was.flatMap((w) => w.days).map((t) => [t.d, t])), oldTotals = new Map(was.map((w) => [w.mon, w.total]));
-    const base = (cur.name || 'План').replace(/ · перестроен[^·]*$/, '').replace(/ · \d+ нед\.$/, '');
+    const base = planName() || (cur.name || 'План').replace(/ · перестроен[^·]*$/, '').replace(/ · \d+ нед\.$/, '');
     const np = { ...cur, id: 'new', name: `${base} · перестроен ${dayLbl(today)}`, plan: { weeks: r.opts.vol ? r.weeksNew : cur.plan.weeks } };
     const keepP = PACE; if (r.opts.pace && r.paces) PACE = r.paces;
     try {
@@ -882,7 +882,7 @@
       <p class="w-muted">${f.write.length ? `Запишется в дневник: ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}, ${range(f.write[0].d, last(f.write).d)}.` : 'В дневнике ничего не поменяется: перестроенные недели встанут, когда вы заполните календарь.'}${f.keep.length ? ` ${f.keep.length} ${plural(f.keep.length, 'день', 'дня', 'дней')} вы или тренер поменяли после заполнения, их не трогаем.` : ''} План сохранится в профиле новой версией, вернуть прежний можно кнопкой «Вернуть как было».</p>
       ${rp.err ? `<p class="w-err" role="alert">${esc(rp.err)}</p>` : ''}
       <div class="w-acts"><button class="w-btn" data-act="rpcancel" ${rp.busy ? 'disabled' : ''}>Отмена</button><button class="w-btn primary" data-act="rpapply" ${rp.busy || !changes || !me.isPremium ? 'disabled' : ''}>${rp.busy ? esc(rp.progress || 'Записываю…') : f.write.length ? `Записать ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}` : 'Сохранить план'}</button></div>
-      ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи можно с премиум-подпиской S10.</p>'}
+      ${me.isPremium ? '' : premNote()}
     </div>`;
   }
 
@@ -959,13 +959,14 @@
               <span class="num w-wdk">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`; }).join('')}</ol>` : ''}
         </li>`;
       }).join('')}</ol>
-      <div class="w-sum">
-        <div><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${Object.keys(SPANS).map((k) => [k, spanLabel(k)]).map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
+      <div class="w-sum w-fill">
+        <div class="w-fmain"><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${Object.keys(SPANS).map((k) => [k, spanLabel(k)]).map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
           ${fillModes(f)}
           ${(() => { const u = lastUndo(); if (!u?.days?.length) return ''; const ds = u.days.map((r) => r[0]).sort(); return `<span class="w-undo">Последнее заполнение: ${range(ds[0], last(ds))} · <button class="w-link" data-act="undoask" data-where="card">Вернуть как было</button></span>`; })()}</div>
-        <div class="w-acts"><button class="w-btn" data-act="pversion">Сохранить версию</button><button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && me.isPremium && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button></div>
+        <button class="w-btn w-fsave" data-act="pversion">Сохранить версию</button>
+        <div class="w-acts w-fgo">${me.isPremium ? `<button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button>` : `<a class="w-btn primary" data-act="buy" href="${SITE}/money">Попробовать Premium бесплатно</a>`}</div>
         ${pacesOk(PACE) ? '' : '<p class="w-note w-prem">Задайте темпа на вкладке «Мои темпа»: без них в задания встанут T5…T42 вместо минут на километр.</p>'}
-        ${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи в календарь можно с премиум-подпиской S10, как на странице «Настройка плана».</p>'}
+        ${me.isPremium ? '' : `<p class="w-note w-prem">Заполнять календарь можно с Premium, первые 3 дня бесплатно. План сохранится в вашем профиле: после оплаты вернитесь сюда и нажмите «Заполнить календарь».</p>`}
       </div>
       ${fill.confirm && (fill.snap || f.write.length) ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${(fill.snap || f.write).length} ${plural((fill.snap || f.write).length, 'день', 'дня', 'дней')} в дневник?</b> ${range((fill.snap || f.write)[0].d, last(fill.snap || f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'} План и настройки сохранятся в вашем профиле.</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}
       ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}
@@ -1047,7 +1048,7 @@
         </ol>
         <div class="w-sum">
           <div><span class="w-lb">Итого за ${PL.rows.length} ${plural(PL.rows.length, 'день', 'дня', 'дней')}</span><b class="num" id="w-total">${n1(planTotal())} км</b>${PL.sum?.['за последние 7 дней'] ? `<span class="w-muted num">Последние 7 дней: пробежано ${PL.sum['за последние 7 дней'].km0} из ${PL.sum['за последние 7 дней'].km1} км</span>` : ''}</div>
-          <button class="w-btn primary" data-act="wsave" ${PL.busy || PL.stale || !me.isPremium ? 'disabled' : ''}>${PL.busy ? 'Ставлю задачи…' : 'Поставить задачи'}</button>${me.isPremium ? '' : '<p class="w-note w-prem">Записывать задачи можно с премиум-подпиской S10.</p>'}
+          <button class="w-btn primary" data-act="wsave" ${PL.busy || PL.stale || !me.isPremium ? 'disabled' : ''}>${PL.busy ? 'Ставлю задачи…' : 'Поставить задачи'}</button>${me.isPremium ? '' : premNote()}
         </div>` : ''}
     </section>`;
   }
@@ -1191,17 +1192,25 @@
         <label class="w-f"><span>Дата</span><input type="date" data-o="d" min="${add(today, 1)}" value="${o.d}"></label>
         <label class="w-f"><span>Дистанция</span><select data-o="dist">${DISTANCES.map((d) => `<option ${d === o.dist ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
         ${f('name', 'Название', 'placeholder="Например, Valencia"')}
-        ${f('goal', 'Цель, необязательно', 'class="num" inputmode="numeric" placeholder="3:20 или 22:30"')}
+        ${f('goal', 'Цель, необязательно', 'class="num" inputmode="text" autocomplete="off" placeholder="3:20 или 22:30"')}
       </div>` : ''}
       ${o.pace ? `${o.race ? '<h3>Темпа</h3>' : ''}<p class="w-muted">По ним в задания встанут минуты на километр вместо T5…T42. <span id="w-onb-pn">${onbPaceNote(o)}</span> Поменять можно потом на вкладке «Мои темпа».</p>
-      <label class="w-f"><span>Лёгкий бег, мин/км</span><input data-o="easy" class="num" inputmode="numeric" value="${esc(o.P.easy)}"></label>
+      <label class="w-f"><span>Лёгкий бег, мин/км</span><input data-o="easy" class="num" inputmode="text" autocomplete="off" value="${esc(o.P.easy)}"></label>
       <div class="w-onb-p">${[5, 10, 21, 42].map((k) => `<label class="w-f"><span>T${k}</span><input data-o="t${k}" class="num" inputmode="numeric" value="${esc(o.P[k])}"></label>`).join('')}</div>` : ''}
       ${o.err ? `<p class="w-err" role="alert">${esc(o.err)}</p>` : ''}
       <div class="w-acts">${o.manual ? `<button class="w-btn" data-act="onbcancel">Отмена</button>` : ''}${o.race ? `<button class="w-btn" data-act="onbnone" ${o.busy ? 'disabled' : ''}>Отсутствует</button>` : ''}<button class="w-btn primary" data-act="onbok" ${o.busy ? 'disabled' : ''}>${o.busy ? 'Сохраняю…' : o.race ? 'Сохранить старт' : 'Готово'}</button></div>
     </section></div>`;
   }
   // a goal time as hh:mm:ss: «3:20» is hours for a half or a marathon, «22:30» is minutes for 10 km and shorter
+  // typed without a colon (a phone's digit pad): «130» is 1:30 for a half or a marathon, «2230» is 22:30 for 10 km and
+  // shorter, five or six digits are h:mm:ss
   const goalOf = (g, km) => {
+    g = String(g).trim().replace(/\s+/g, ':');
+    if (/^\d{3,6}$/.test(g)) {
+      const n = g.length;
+      g = n >= 5 ? `${g.slice(0, n - 4)}:${g.slice(n - 4, n - 2)}:${g.slice(n - 2)}` : km <= 10 || n === 3 || g[0] === '0' ? `${g.slice(0, n - 2)}:${g.slice(n - 2)}` : '';
+      if (!g) return null;
+    }
     const t = g.split(':').map(Number);
     if (t.length < 2 || t.length > 3 || t.some((x) => !Number.isInteger(x) || x < 0) || t.slice(1).some((x) => x >= 60)) return null;
     const hms3 = t.length === 3 ? t : km <= 10 ? [0, ...t] : [...t, 0];
@@ -1265,6 +1274,13 @@
     L.push(null, [`${SITE}/money`, 'Платежи'], [`${SITE}/profile?${me.id}`, 'Мой профиль'], [`${SITE}/logout`, 'Выйти']);
     return L.map((l) => (l ? `<li><a href="${esc(l[0])}">${l[1]}</a></li>` : '<li class="sep" aria-hidden="true"></li>')).join('');
   }
+  const premNote = () => `<p class="w-note w-prem">Записывать задачи можно с Premium: <a href="${SITE}/money" data-act="buy">первые 3 дня бесплатно</a>.</p>`;
+  // a version's name: the race and its goal («Valencia 3:20»), or null without a race
+  function planName() {
+    if (!race) return null;
+    const D = KM_OF(race.prekm), what = raceName || KM_NAME[+race.prekm] || `${n1(+race.prekm)} км`;
+    return race.prediction ? `${what} ${fmtTime(hmsSec(race.prediction), D)}` : what;
+  }
   const topBar = (open) => `<div class="w-topin">
       <button class="w-menub" data-act="menu" aria-expanded="${open}" aria-label="${open ? 'Закрыть меню' : 'Меню S10'}"><i></i><i></i><i></i></button>
       <a class="w-wm" href="${SITE}/" aria-label="S10.run, главная">${LOGO}</a>
@@ -1287,12 +1303,14 @@
       </div>
       <div class="w-duo">
       <section class="w-card w-hero" aria-label="Сегодня и итоги недели">
-        ${todayCard(W)}
+        <div class="w-hero-l">${todayCard(W)}
+          ${daysToRace != null // owner, 09.11.2026: under today's workout, the race and its goal larger, the days small
+            ? `<div class="w-goal"><span class="w-lb num">До старта ${daysToRace} ${plural(daysToRace, 'день', 'дня', 'дней')}</span><span class="w-race num">${[raceName, dayLbl(race.d), `${race.prekm} км`, race.prediction && `цель ${hms(race.prediction)}`].filter(Boolean).map((x) => `<span class="w-nw">${esc(x)}</span>`).join(', ')}</span></div>`
+            : `<div class="w-goal"><span class="w-lb">Главный старт</span><span class="s num">${noRace ? 'нет, план без даты старта' : 'не выбран'}${isSelf ? ` · <button class="w-link" data-act="onbopen">указать</button>` : ''}</span></div>`}</div>
         <div class="w-stats">
           <div class="w-stat w-stat-wide"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span>
             ${W.plan ? `<div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${pct}%"></i></div><div class="w-track-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)} км</span></div>` : '<span class="s">на этой неделе ничего не запланировано</span>'}</div>
-          <div class="w-stat"><span class="w-lb">${daysToRace != null ? 'До старта' : 'Главный старт'}</span><span class="v num">${daysToRace != null ? `${daysToRace}<small>${plural(daysToRace, 'день', 'дня', 'дней')}</small>` : '—'}</span><span class="s num">${daysToRace != null ? `${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}, ${race.prekm} км${race.prediction ? `, цель ${hms(race.prediction)}` : ''}` : noRace ? 'нет, план без даты старта' : 'не выбран'}${daysToRace == null && isSelf ? ` · <button class="w-link" data-act="onbopen">указать</button>` : ''}</span></div>
-          <div class="w-stat w-stat-r"><span class="w-lb">Вероятность достижения цели</span><span class="v num">${C?.pct != null ? `${C.pct}<small>%</small>` : '—'}</span>${C?.pct != null ? chanceBar(C.pct) : ''}<span class="s">${!race ? 'нет старта' : C.none ? 'не от чего считать' : C.pct == null ? 'нет цели' : `${esc(fmtTime(C.goal, C.D))}, ${chanceLevel(C.pct)}`} · <button class="w-link" data-act="ready">подробнее</button></span></div>
+          <div class="w-stat w-stat-full w-stat-r"><span class="w-lb">Вероятность достижения цели</span><span class="v num">${C?.pct != null ? `${C.pct}<small>%</small>` : '—'}</span>${C?.pct != null ? chanceBar(C.pct) : ''}<span class="s">${!race ? 'нет старта' : C.none ? 'не от чего считать' : C.pct == null ? 'нет цели' : `${esc(fmtTime(C.goal, C.D))}, ${chanceLevel(C.pct)}`} · <button class="w-link" data-act="ready">подробнее</button></span></div>
         </div>
       </section>
       ${calHTML()}
@@ -1396,7 +1414,8 @@
   .w-today .w-tx{font-size:16px;max-width:56ch;text-wrap:pretty}
   .w-stats{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;border-left:1px solid var(--rule)}
   .w-stat{padding:20px 24px;display:grid;gap:4px;align-content:start;border-top:1px solid var(--rule)}
-  .w-stat-wide{grid-column:1/-1;border-top:0}.w-stat-full{grid-column:1/-1}.w-stat-r{border-left:1px solid var(--rule)}
+  .w-stat-wide{grid-column:1/-1;border-top:0}.w-stat-full{grid-column:1/-1}.w-race{font-size:19px;line-height:1.35;font-weight:500;color:var(--text);margin-top:4px}
+  .w-hero-l{display:flex;flex-direction:column;min-width:0}.w-goal{margin-top:auto;padding:16px 24px 20px;border-top:1px solid var(--rule);display:grid;gap:2px}.w-goal .s{color:var(--faint);font-size:13px}.w-race .w-nw{white-space:nowrap}
   .w-ready-t[data-l="1"] i{background:var(--key)}.w-ready-t.sm{height:6px;margin-top:0}
   .w-ready-v{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.w-ready-v b{font-size:40px;line-height:1;font-weight:500;letter-spacing:-.01em}.w-ready-v b small{font-size:20px;margin-left:2px}.w-ready-v span{color:var(--muted)}
   .w-ready-p{list-style:none;border-top:1px solid var(--rule)}.w-ready-p li{display:grid;grid-template-columns:200px 56px minmax(0,220px) minmax(0,1fr);gap:8px 16px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--rule)}.w-ready-n{font-weight:500}.w-ready-s{text-align:right}
@@ -1494,6 +1513,8 @@
   .w-sum{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;padding:18px 20px;border-top:1px solid var(--rule);background:var(--soft)}
   .w-card>.w-sum:last-child{border-radius:0 0 8px 8px}
   .w-sum>div{display:grid;gap:2px;flex:1 1 360px;min-width:0}.w-sum>.w-acts{flex:none;align-self:flex-end}
+  .w-sum.w-fill{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"main save" "main go";gap:12px 16px;align-items:start}.w-fill>.w-fmain{grid-area:main}.w-fill>.w-fsave{grid-area:save}.w-fill>.w-fgo{grid-area:go;align-self:end}.w-fill>.w-fgo>.w-btn{width:100%}.w-fill>.w-note{grid-column:1/-1}
+  .w-app a.w-btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
   .w-span button{font-weight:500}
   .w-modes{display:grid}.w-modes>*{grid-area:1/1}.w-modes>[aria-hidden]{visibility:hidden}.w-modev{display:grid;gap:2px;align-content:start}
   .w-hint{margin-top:4px}.w-hint>span{display:block}
@@ -1594,12 +1615,12 @@
     .w-wkh{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w" "n p s"}.w-wkh>span:nth-child(2){grid-area:d}
     .w-gen{grid-template-columns:1fr}}
   @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-topin{gap:14px}/*<demo>*/.w-demo{padding:8px 16px}/*</demo>*/
-    .w-head h1{font-size:24px}.w-big{font-size:24px}.w-today{padding:20px}.w-stat{padding:16px}
+    .w-head h1{font-size:24px}.w-big{font-size:24px}.w-today{padding:20px}.w-goal{padding:14px 20px 18px}.w-stat{padding:16px}
     .w-cal{padding:0 6px}.w-cwh,.w-cw{grid-template-columns:26px repeat(7,minmax(0,1fr))}.w-cm{padding-left:4px}
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
     .w-wdays>li{grid-template-columns:52px minmax(0,1fr) auto}
-    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
+    .w-sum .w-acts,.w-sum .w-btn{width:100%}.w-sum.w-fill{grid-template-columns:minmax(0,1fr);grid-template-areas:"save" "main" "go"}.w-sum .w-prem{text-align:left}.w-confirm{margin:0 16px 16px}.w-confirm .w-acts{width:100%}.w-confirm .w-btn{flex:1}
     .w-plans li{flex-wrap:wrap}.w-paces label{padding:12px 16px}
     .w-ready-p li{grid-template-columns:minmax(0,1fr) auto;padding:12px 16px}.w-rp{padding:16px}.w-rp .w-acts{flex-wrap:wrap}.w-rp-weeks li{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w"}.w-rp-weeks li>:nth-child(2){grid-area:d}.w-rp-weeks li>:nth-child(3){grid-area:w}.w-rp-weeks li>:nth-child(4){grid-area:k}.w-rp .w-btn{flex:1 1 auto}.w-ready-p li>.w-ready-t,.w-ready-p li>.w-muted{grid-column:1/-1}.w-ready .w-note{padding:12px 16px 16px}
     .w-roles{grid-template-columns:repeat(2,minmax(0,1fr))}.w-ptab-wrap{padding:0 16px 4px}.w-ptab{font-size:14px}.w-ptab th,.w-ptab td{padding:10px 6px}
@@ -1655,6 +1676,7 @@
       if (act === 'undoyes') return undoFill();
       if (act === 'fillno') { fill.confirm = false; return render(); }
       if (act === 'fillyes') return fillCalendar();
+      if (act === 'buy') { e.preventDefault(); if (plan() && sel.src !== 'version') await storePlan({ asNew: true }).catch(() => {}); location.href = a.href; return; }
       if (act === 'rprules') { rp = replanByRules(); return render(); }
       if (act === 'rpai') return replanByAI();
       if (act === 'rpcancel') { rp = null; return render(); }
