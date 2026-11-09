@@ -52,7 +52,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     p.on('pageerror', (x) => p.errors.push(x.message));
     await p.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     for (const s of [].concat(init || [])) await p.addInitScript(s); // one script or a list
-    await p.goto(BASE + path); await wait(800); return p;
+    // the page drawn (or its sign-in note) rather than a fixed pause: a busy machine takes longer
+    await p.goto(BASE + path); await p.waitForFunction(() => document.querySelector('#s10-week .w-tabbar, #s10-week .w-dlg, main h1'), null, { timeout: 20000 }).catch(() => {}); await wait(300); return p;
   };
   const box = (p, sel) => p.evaluate((s) => { const r = document.querySelector(s)?.getBoundingClientRect(); return r ? `${Math.round(r.x)},${Math.round(r.y)}` : null; }, sel);
 
@@ -252,7 +253,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.click('[data-act=onbnone]'); await wait(200); await p.click('[data-act=ptab][data-k=new]').catch(() => {}); await wait(150);
     const def = await p.inputValue('[data-g=weeks]');
     await p.fill('[data-g=weeks]', '12'); await p.press('[data-g=weeks]', 'Tab'); await wait(150);
-    await p.fill('textarea[data-g=prompt]', 'Марафон'); await p.click('[data-act=gen]'); await wait(4000);
+    await p.fill('textarea[data-g=prompt]', 'Марафон'); await p.click('[data-act=gen]'); await p.waitForFunction(() => document.querySelector('.w-flash')?.textContent.includes('План готов'), null, { timeout: 20000 }).catch(() => {});
     check('generator: «Недель» decides the plan length (no race: 2 by default)', def === '2' && (await p.innerText('#s10-week')).includes('План готов: 12 недель'), `default ${def}`);
     await p.close(); }
   { const p = await open({ path: '?newbie' });
