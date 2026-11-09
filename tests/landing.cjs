@@ -17,8 +17,9 @@ const srv = http.createServer((q, r) => {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${srv.address().port}/solo/start`;
   const browser = await chromium.launch();
-  for (const [w, h, name] of [[1440, 900, 'desktop'], [768, 1024, 'tablet'], [390, 844, 'phone']]) {
-    const page = await browser.newPage({ viewport: { width: w, height: h } });
+  // the tablet and the phone are touch screens (pointer: coarse), as people hold them: no Lenis, the orb rides with the page
+  for (const [w, h, name, touch] of [[1440, 900, 'desktop', false], [768, 1024, 'tablet', true], [390, 844, 'phone', true]]) {
+    const page = await browser.newPage({ viewport: { width: w, height: h }, hasTouch: touch, isMobile: touch });
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
@@ -40,6 +41,16 @@ const srv = http.createServer((q, r) => {
       return { orbGone: orb.classList.contains('gone'), cellShown: getComputedStyle(cell).visibility === 'visible' };
     });
     check(`${name}: the race circle lands on 6 December`, landed.orbGone && landed.cellShown, JSON.stringify(landed));
+    // on the way down the circle moves steadily toward the calendar: its distance to 6 December shrinks at every step and
+    // it never jumps back (touch: carried by the page, the script only eases it along)
+    const path = [];
+    for (let i = 0; i <= 10; i++) {
+      await page.evaluate((f) => scrollTo(0, document.getElementById('plan').getBoundingClientRect().top * 0 + (document.getElementById('plan').offsetTop) * f), i / 10);
+      await page.waitForTimeout(120);
+      path.push(await page.evaluate(() => { const o = document.getElementById('orb').getBoundingClientRect(), c = document.querySelector('.d.race').getBoundingClientRect(); return Math.hypot(o.left + o.width / 2 - (c.left + c.width / 2), o.top + o.height / 2 - (c.top + c.height / 2)); }));
+    }
+    const steady = path.slice(0, -1).every((d, i) => path[i + 1] <= d + 2);
+    check(`${name}: the circle closes in on 6 December steadily (paged: ${touch})`, steady && (await page.evaluate(() => document.getElementById('orb').classList.contains('paged'))) === touch, path.map((d) => Math.round(d)).join(' '));
 
     // the features scene steps through all six
     const steps = [];
@@ -67,7 +78,8 @@ const srv = http.createServer((q, r) => {
     });
     check(`${name}: the closing sentence and arrow inside the arch`, !cut.length, cut.join(', '));
 
-    const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    // a phone widens its layout viewport to fit anything past the edge, so innerWidth is checked against the screen too
+    const over = await page.evaluate((w) => Math.max(document.documentElement.scrollWidth - document.documentElement.clientWidth, innerWidth - w), w);
     check(`${name}: nothing runs off the side`, over <= 0, `${over}px`);
     check(`${name}: no script errors`, !errors.length, errors.join('; '));
     await page.close();

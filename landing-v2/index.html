@@ -104,6 +104,8 @@ h2 { font-size: var(--step-head); }
 }
 .orb span { display: block; transform: translateY(-.02em); }
 .orb.flying { position: fixed; }
+.orb.flying.paged { position: absolute; } /* touch: carried by the page itself, see flight() */
+.orb-layer { position: absolute; left: 0; top: 0; width: 100%; overflow: hidden; pointer-events: none; z-index: 1; } /* holds it, cut at the screen's sides */
 .orb.gone { visibility: hidden; }
 
 /* ---------- scene: the calendar, the race already marked, fills up to it ---------- */
@@ -388,13 +390,15 @@ html.js [data-rise].in { opacity: 1; transform: none; }
 /* ---------- phone ---------- */
 @media (max-width: 767px) {
   .rail { padding: 0 20px; }
-  .hero { display: block; padding: 28px 20px 0; min-height: calc(100svh - 64px); }
+  .hero { display: block; padding: 28px 20px 0; min-height: calc(100svh - 64px); overflow-x: clip; } /* the circle's part past the edge stays cut, no sideways scroll */
   .hero h1 { font-size: 2.75rem; }
   .hero-sent { margin-top: 18px; font-size: 1.125rem; }
   .hero .row { margin-top: 24px; }
   .hero .btn { width: 100%; }
   .hero-note { margin-top: 16px; }
-  .orb { --D: 112vw; left: calc(100vw - .58 * var(--D)); top: auto; bottom: calc(-.5 * var(--D)); }
+  /* the phone: a smaller circle under the text with the whole 6 readable, a sixth of it past the right edge (owner,
+     09.11.2026: the cropped 6 read as nothing) */
+  .orb { --D: 52vw; position: relative; left: auto; top: auto; bottom: auto; margin: 8px calc(-20px - .16 * var(--D)) 0 auto; }
 
   .cal-stage { grid-template-columns: 1fr; padding: 72px 20px 16px; align-content: center; row-gap: 16px; }
   .cal-text, .cal { grid-column: 1; }
@@ -844,32 +848,46 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   });
 
   /* the orb: the hero's race circle shrinks and lands on 6 December as the calendar arrives */
-  const orb = $('#orb'), calSec = $('#plan'), raceCell = $('.d.race', grid);
+  const orb = $('#orb'), calSec = $('#plan'), raceCell = $('.d.race', grid), home = orb.parentNode;
+  // On a touch screen the browser scrolls the page itself, ahead of any script: an orb fixed to the screen and moved back
+  // by the scroll handler lags a frame and shakes (owner, 09.11.2026). There the orb lives in the page instead and heads
+  // for where 6 December stands on the page, so the scroll carries it and the script only eases it along; the mouse
+  // keeps the screen-fixed flight, smoothed by Lenis.
+  const paged = window.Stage ? Stage.touch : matchMedia('(pointer: coarse)').matches, layer = document.createElement('div');
+  layer.className = 'orb-layer'; layer.setAttribute('aria-hidden', 'true');
   const flight = () => {
     if (reduced) return;
     let S, T, calTop;
     // S: the orb's centre and size in the hero (page coordinates); T: the race circle's centre and size when the calendar is pinned (viewport)
     const measure = () => {
-      orb.classList.remove('flying', 'gone'); orb.style.cssText = '';
+      if (orb.parentNode !== home) home.appendChild(orb);
+      orb.classList.remove('flying', 'paged', 'gone'); orb.style.cssText = '';
       const r = orb.getBoundingClientRect();
       S = { x: r.left + r.width / 2, y: r.top + scrollY + r.height / 2, d: r.width };
       const sr = $('.cal-stage').getBoundingClientRect(), cr = raceCell.getBoundingClientRect(), cs = getComputedStyle(raceCell, '::before');
       T = { x: cr.left + cr.width / 2, y: cr.top - sr.top + parseFloat(cs.top), d: parseFloat(cs.width) };
       calTop = calSec.getBoundingClientRect().top + scrollY;
       orb.classList.add('flying');
+      // page coordinates, top 0 the top of the page, inside a layer as wide as the screen that cuts what passes its sides
+      if (paged) { orb.classList.add('paged'); layer.style.height = document.documentElement.scrollHeight + 'px'; if (!layer.isConnected) document.body.appendChild(layer); layer.appendChild(orb); }
       orb.style.left = (S.x - S.d / 2) + 'px'; orb.style.top = '0px';
     };
     const place = () => {
       const p = Math.min(1, Math.max(0, scrollY / calTop)), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      const cx = S.x + (T.x - S.x) * e, cy = (S.y - scrollY) + (T.y - (S.y - scrollY)) * e, s = 1 - (1 - T.d / S.d) * e;
+      const cx = S.x + (T.x - S.x) * e, s = 1 - (1 - T.d / S.d) * e;
+      // screen: from the hero to where the circle stands once the calendar is pinned; page: from the hero to 6 December's
+      // place on the page (calTop + T.y), which reaches that same screen spot exactly when the calendar pins
+      const cy = paged ? S.y + (calTop + T.y - S.y) * e : (S.y - scrollY) + (T.y - (S.y - scrollY)) * e;
       orb.style.transform = `translate(${cx - S.x}px, ${cy - S.d / 2}px) scale(${s})`;
       const landed = p >= 1;
       orb.classList.toggle('gone', landed);
       calSec.classList.toggle('waiting', !landed);
     };
     measure(); place();
-    addEventListener('scroll', place, { passive: true });
-    let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { measure(); place(); }, 150); });
+    let raf = 0;
+    addEventListener('scroll', paged ? () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; place(); }); } : place, { passive: true });
+    // a phone's address bar showing or hiding changes only the height: nothing to measure again for that
+    let rt, w0 = innerWidth; addEventListener('resize', () => { if (paged && innerWidth === w0) return; w0 = innerWidth; clearTimeout(rt); rt = setTimeout(() => { measure(); place(); }, 150); });
     if (window.ScrollTrigger) ScrollTrigger.addEventListener('refresh', () => { measure(); place(); });
   };
 
