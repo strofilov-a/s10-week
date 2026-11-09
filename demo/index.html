@@ -14,9 +14,11 @@
 <script src="fixtures.js"></script>
 <script>
 // ?newbie: the same demo as someone who has just signed up (no main race, no plans, no S10 forecast, empty diary),
-// starting afresh on every visit; ?newbie&free also without premium. Demo only: nothing is sent to S10.
+// starting afresh on every visit; ?newbie&free also without premium; ?free alone: the usual athlete without premium. Demo only: nothing is sent to S10.
 (() => {
-  const q = new URLSearchParams(location.search); if (!q.has('newbie')) return;
+  const q = new URLSearchParams(location.search);
+  if (q.has('free') && !q.has('newbie')) { window.S10_FIXTURES.me.isPremium = false; return; } // ?free alone: the same athlete without premium
+  if (!q.has('newbie')) return;
   const x = window.S10_FIXTURES;
   x.main = { main: null }; x.versions = []; x.library = []; x.results = []; x.startParam = { param: {} }; x.diary.diaryTasksInfo = [];
   x.me.firstName = 'Новый'; x.me.lastName = 'спортсмен'; if (q.has('free')) x.me.isPremium = false;

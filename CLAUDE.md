@@ -34,7 +34,7 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 | Path | What |
 |---|---|
 | `solo.js` | The whole page: one file, no build, no dependencies. Live on s10.run (by hostname), demo anywhere else. |
-| `demo/index.html`, `demo/fixtures.js` | Demo on an anonymised snapshot (31.10.2026). Published on GitHub Pages: https://strofilov-a.github.io/s10-week/demo/ (`?newbie`: as a just-signed-up athlete, afresh each visit; `&free`: no premium) |
+| `demo/index.html`, `demo/fixtures.js` | Demo on an anonymised snapshot (31.10.2026). Published on GitHub Pages: https://strofilov-a.github.io/s10-week/demo/ (`?newbie`: as a just-signed-up athlete, afresh each visit; `&free`: no premium; `?free` alone: the usual athlete without premium; `?open=replan`: the plan tab with a rule-based re-plan proposal open) |
 | `index.html` | GitHub Pages root: redirects to `demo/` outside s10.run. |
 | `landing/` | Promo page for S10 Solo (traffic from Instagram/Threads): one `index.html` + `scenes/` (taste-skill scroll stage, GSAP/Lenis from jsdelivr). No photos (owner, 03.11.2026). Every button goes to `/login?back=…/solo/plan`. Three palettes (`?p=1`, `3`, `4`; the blue №2 removed by the owner 03.11.2026; picker until he chooses). https://strofilov-a.github.io/s10-week/landing/ |
 | `landing-v2/` | Second take on the same page after a taste review (direction «one motif»: the race-day circle flies from the hero into 6 December; colour fields, «Что умеет Solo» as a held scene of six features, the paces slider, two plan fields). Jost + Golos Text. One palette: 1t, taste's correction of the owner's pacific · tomato · mustard (stone ground, deep teal ink; owner's choice 03.11.2026). Built into `release/solo-start.html` for `/solo/start`. https://strofilov-a.github.io/s10-week/landing-v2/ |
@@ -125,7 +125,12 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   options can be unticked. Writing (`applyReplan`) rewrites only days still exactly as the current plan laid them,
   plus moves; empty days are left to «Заполнить календарь», changed days stay. The plan is stored as a new active version
   «… · перестроен <date>»; the undo record carries `prevActive` and `prevPace`, so «Вернуть как было» restores the days,
-  the previous version and the paces.
+  the previous version and the paces. Review fixes 09.11.2026: the first-week volume follows a re-planned first week so
+  every week keeps its scale; running over 110% never lowers a week; a move only for a key workout not run at all, not
+  one already copied later in the week, one per day, checked again against the diary when written; writing reloads the
+  diary first; a re-plan always leaves an undo record (`replan`, `prevSel`, `prevActive`, `prevPace`, days possibly
+  none) and undo restores the selection, the active version and the paces; a changed plan, volume, day role or pace drops
+  an open proposal. Paces filled in the start window and not edited (`paceGuess`) are no form for the probability.
 - Start window (new athletes only, own page only, never for a coach with `?id=`): shown when the site has no main race
   and the athlete has not chosen «Отсутствует», and/or when there are no complete paces. «Сохранить старт» writes the
   main race through `writeTasks` (`typtrain 6`, `main6: 1`, like calc3), asking once if that day already has a task;
@@ -193,7 +198,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # demo checks (97), the release build and its checks (12), the promo page (18)
+npm test                                     # demo checks (104), the release build and its checks (12), the promo page (18)
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same on every push and pull request, and fails if the committed

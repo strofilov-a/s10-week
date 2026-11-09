@@ -393,6 +393,53 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     check('a saved version is named by the race and its goal: «Барселона 1:35»', (await p.evaluate(() => window.S10_FIXTURES.versions[0]?.name)) === 'Барселона 1:35' && (await p.innerText('#w-plan2-h')).includes('Барселона 1:35'), await p.evaluate(() => window.S10_FIXTURES.versions[0]?.name));
     await p.close(); }
 
+  // 7h. the review of 09.11.2026: each fixed fault checked
+  { // a re-plan before the plan starts keeps the plan's scale: the race week stays as it was
+    const FRI16 = Date.parse('2026-10-16T09:00:00Z') / 1000;
+    const mod = `x.me.nowmsk = ${FRI16}; const add = (s, n) => { const d = new Date(s + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+      for (let d = '2026-10-02'; d < '2026-10-16'; d = add(d, 1)) x.diary.diaryTasksInfo.push({ date: d, type: 1, comment: '5:40-6:00', target: 10, tracks: [{ type: 'run', km: 5, pace: '5:50', time: '0:29:10', json: { subtype: 'RUNNING' } }] });`;
+    const p = await open({ path: '?tab=plan', init: hook(mod) });
+    await p.click('[data-act=rprules]'); await wait(300);
+    const rows = await p.$$eval('.w-rp-weeks li', (l) => l.map((x) => x.innerText.replace(/\s+/g, ' ')));
+    await p.click('[data-act=rpapply]'); await wait(1500);
+    const raceWeek = await p.$eval('.w-wk:last-child .w-wkm', (x) => x.innerText);
+    check('re-plan before the plan starts: the first weeks lower, the race week as before (69,2 км)', /\b76\D+(3\d|4\d)\D*км/.test(rows[0] || '') && raceWeek.replace(/\s+/g, ' ').trim() === '69,2 км', JSON.stringify([rows[0], raceWeek]));
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(HISTORY(true, '4:32', 1.3)) });
+    await p.click('[data-act=rprules]'); await wait(300);
+    const rows = await p.$$eval('.w-rp-weeks li', (l) => l.map((x) => x.innerText.replace(/\s+/g, ' ')));
+    const lower = rows.filter((r) => { const m = r.match(/([\d,]+) → ([\d,]+) км/); return m && parseFloat(m[2].replace(',', '.')) < parseFloat(m[1].replace(',', '.')); });
+    check('re-plan: running more than planned never lowers a week', !lower.length && (await p.innerText('.w-rp')).includes('(130%)'), lower.join(' | '));
+    await p.close(); }
+  { const THU29 = Date.parse('2026-10-29T09:00:00Z') / 1000, K = '3 км разминка 5×1000 м 3:50-3:55 отдых 400 м 2 км заминка';
+    const mod = `x.me.nowmsk = ${THU29}; const drop = ['2026-10-26','2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31','2026-11-01']; x.diary.diaryTasksInfo = x.diary.diaryTasksInfo.filter((r) => !drop.includes(r.date));
+      x.diary.diaryTasksInfo.push({ date: '2026-10-26', type: 3, comment: '${K}', target: 12, tracks: [] }, { date: '2026-10-28', type: 2, comment: '4:30-4:35', target: 10, tracks: [] });`;
+    const p = await open({ path: '?tab=plan', init: hook(mod) });
+    await p.click('[data-act=rprules]'); await wait(300);
+    const why = (await p.innerText('.w-rp')).replace(/\s+/g, ' '), to = [...why.matchAll(/переносится на (\S+ \d+ \S+)/g)].map((m) => m[1]);
+    check('re-plan: two missed key workouts never go to one day', to.length === 2 && new Set(to).size === 2, to.join(' | '));
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(HISTORY(true, '4:20')) });
+    await p.click('[data-act=rprules]'); await wait(300); await p.click('[data-act=rpapply]'); await wait(1500);
+    const line = await p.innerText('.w-undo').catch(() => '');
+    await p.click('.w-undo [data-act=undoask]'); await p.click('[data-act=undoyes]'); await wait(1500);
+    await p.click('#tab-paces'); await wait(200);
+    check('undo of a re-plan that wrote nothing: the previous plan and paces back', line.startsWith('План перестроен') && (await p.inputValue('input[data-k="5"]')) === '3:47' && !p.errors.length, `${line} | T5 ${await p.inputValue('input[data-k="5"]')}`);
+    await p.click('#tab-plan'); await wait(200);
+    check('… and the plan it replaced is the active one again', (await p.innerText('#w-plan2-h')).includes('valencia · 7 нед.'));
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(`${NEWBIE}`) });
+    await p.fill('[data-o=d]', '2027-03-07'); await p.fill('[data-o=goal]', '3:00'); await p.click('[data-act=onbok]'); await wait(500);
+    check('new athlete with a goal and no race result: no probability from paces taken from that goal', (await p.innerText('.w-stat-r')).includes('не от чего считать'));
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(`${NEWBIE}`) });
+    await p.fill('[data-o=d]', '2027-03-07'); await p.selectOption('[data-o=dist]', { label: '10 км' }); await p.fill('[data-o=goal]', '450'); await p.click('[data-act=onbok]'); await wait(300);
+    const err = await p.innerText('.w-dlg .w-err').catch(() => '');
+    await p.fill('[data-o=goal]', '6500'); await p.click('[data-act=onbok]'); await wait(500);
+    const r = await p.evaluate(() => window.__tasks.find((t) => +t.typtrain === 6));
+    check('goal for 10 km: «450» refused as a typo, «6500» read as 1:05:00', err.includes('Цель') && r?.prediction === '01:05:00', `${err.slice(0, 40)} | ${r?.prediction}`);
+    await p.close(); }
+
   // 8. no sideways scroll
   for (const w of [360, 390, 768, 1024, 1440]) {
     const p = await open({ w }); let worst = -1e9;
