@@ -59,7 +59,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // 1. the week view
   { const p = await open();
     check('page loads without errors', !p.errors.length, p.errors.join('; '));
-    check('summary: volume, days to race, readiness', (await p.$$eval('.w-stat .w-lb', (l) => l.map((x) => x.textContent))).join('|') === 'Объём недели|До старта|Вероятность достижения цели');
+    check('summary: volume and the probability; the race and its goal under today\'s workout', (await p.$$eval('.w-stat .w-lb', (l) => l.map((x) => x.textContent))).join('|') === 'Объём недели|Вероятность достижения цели' && (await p.innerText('.w-hero-l .w-goal .w-lb')) === 'До старта 36 дней' && (await p.innerText('.w-race')).replace(/\s+/g, ' ') === 'Valencia, 6 дек, 42 км, цель 3:19:59');
     check('calendar: race is a red disc', !!(await p.$('.w-cd.race')));
     check('site header with the logo', !!(await p.$('.w-top .w-wm svg')));
     await p.click('.w-cd[data-d="2026-10-21"]'); await wait(200);
@@ -144,7 +144,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // 7. special cases
   { const p = await open({ path: '?tab=plan', init: hook('x.me.isPremium = false') });
-    check('no premium: fill disabled with a note', await p.$eval('[data-act=fillask]', (x) => x.disabled) && !!(await p.$('.w-prem')));
+    check('no premium: «Попробовать Premium бесплатно» to /money instead of the fill button, 3 free days said', !(await p.$('[data-act=fillask]')) && (await p.getAttribute('.w-fill [data-act=buy]', 'href')) === 'https://s10.run/money' && (await p.innerText('.w-fill .w-prem')).includes('3 дня бесплатно'));
     await p.close(); }
   { const p = await open({ path: '?tab=plan', init: hook('x.library = []') });
     await p.click('[data-act=pchoose]'); await wait(200);
@@ -228,7 +228,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   { const p = await open({ path: '?tab=plan', init: hook(`${NEWBIE} x.me.isPremium = false;`) });
     await p.click('[data-act=onbnone]'); await wait(200); await p.click('[data-act=ptab][data-k=new]').catch(() => {}); await wait(150);
     await p.fill('textarea[data-g=prompt]', 'Марафон'); await p.click('[data-act=gen]'); await wait(3500);
-    check('new athlete without premium: fill stays disabled', await p.$eval('[data-act=fillask]', (b) => b.disabled));
+    check('new athlete without premium: the Premium button in place of the fill button', !(await p.$('[data-act=fillask]')) && !!(await p.$('.w-fill [data-act=buy]')));
     await p.close(); }
   { const p = await open({ path: '?tab=plan', init: hook(`const w = x.versions[0]; delete w.student.volume; w.plan.weeks.find((k) => k.week === -7).km = 44;`) });
     const row = ((await p.innerText('#s10-week')).replace(/\s+/g, ' ').match(/-7 \d+[^А-Я]{0,12}МПК[^-]*?(\d+) км/) || [])[1];
@@ -375,6 +375,22 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   { const p = await open({ path: '?tab=plan', init: hook(HISTORY(true, '4:32', 0.5) + '; x.me.isPremium = false') });
     await p.click('[data-act=rprules]'); await wait(300);
     check('re-plan without premium: the proposal is shown, writing disabled', await p.$eval('[data-act=rpapply]', (b) => b.disabled) && !!(await p.$('.w-rp .w-prem')));
+    await p.close(); }
+
+  // 7g. the fill block and version names (owner, 09.11.2026)
+  { const p = await open({ path: '?tab=plan' });
+    const y = await p.evaluate(() => ['[data-act=pversion]', '[data-act=fillask]', '.w-span'].map((s) => Math.round(document.querySelector(s).getBoundingClientRect().top)));
+    check('fill block: «Сохранить версию» up beside the 2-weeks switch, «Заполнить календарь» at the bottom', Math.abs(y[0] - y[2]) <= 8 && y[1] > y[0] + 60, y.join(' / '));
+    await p.close(); }
+  { const p = await open({ path: '?tab=plan', init: hook(`${NEWBIE}`) });
+    await p.fill('[data-o=d]', '2027-04-25'); await p.selectOption('[data-o=dist]', { label: 'Полумарафон · 21.1 км' }); await p.fill('[data-o=name]', 'Барселона'); await p.fill('[data-o=goal]', '135'); await wait(100);
+    const note = await p.innerText('#w-onb-pn'), kb = await p.getAttribute('[data-o=goal]', 'inputmode');
+    await p.click('[data-act=onbok]'); await wait(500);
+    const race = await p.evaluate(() => window.__tasks.find((t) => t.d === '2027-04-25'));
+    check('goal typed as digits «135» on a phone pad reads 1:35:00; the field asks for a keyboard with punctuation', note.includes('1:35:00') && race?.prediction === '01:35:00' && kb === 'text', `${note} ${race?.prediction} ${kb}`);
+    await p.click('[data-act=ptab][data-k=new]').catch(() => {}); await p.click('[data-act=gen]'); await wait(3500);
+    await p.click('[data-act=pversion]'); await wait(800);
+    check('a saved version is named by the race and its goal: «Барселона 1:35»', (await p.evaluate(() => window.S10_FIXTURES.versions[0]?.name)) === 'Барселона 1:35' && (await p.innerText('#w-plan2-h')).includes('Барселона 1:35'), await p.evaluate(() => window.S10_FIXTURES.versions[0]?.name));
     await p.close(); }
 
   // 8. no sideways scroll
