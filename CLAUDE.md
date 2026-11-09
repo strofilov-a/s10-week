@@ -179,9 +179,10 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 - Fill buttons sit at the bottom of their box; the hint under the count is two lines. «Сохранить версию» stands at the top
   right beside the «2 беговые недели / До старта» switch (on a phone above it), «Заполнить календарь» at the bottom
   (owner, 09.11.2026). «Заполнить календарь» saves the plan to the profile itself.
-- Paywall (owner, 09.11.2026): without premium «Заполнить календарь» is replaced by «Попробовать Premium бесплатно» to
-  `/money` (it saves a new or library plan to the profile first, so it is there after paying), with «первые 3 дня
-  бесплатно»; the other write buttons stay disabled with a «первые 3 дня бесплатно» link to `/money`.
+- Paywall (owner, 09.11.2026): without premium «Заполнить календарь» is replaced by «Оформить Premium» to `/money` (it
+  saves a new or library plan to the profile first, so it is there after paying), with «750 ₽ в месяц или 9 €»; the other
+  write buttons stay disabled with an «Оформить Premium» link. No free promise in Solo: the site gives Premium for the
+  first 3 days, so the paywall is only seen once it is over (owner: no card binding, a paywall after 3 days).
 - A saved version is named by the race and its goal, «Valencia 3:20» (`planName()`; the distance when the race has no
   name; a re-plan adds «· перестроен <date>»); a coach's version keeps its name.
 - The goal field asks for a keyboard with punctuation (`inputmode="text"`), the easy-run range too (it needs «-»);

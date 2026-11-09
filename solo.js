@@ -989,9 +989,9 @@
           ${fillModes(f)}
           ${(() => { const u = lastUndo(); if (!undoable(u)) return ''; const ds = u.days.map((r) => r[0]).sort(); return `<span class="w-undo">${ds.length ? `Последнее заполнение: ${range(ds[0], last(ds))}` : 'План перестроен'} · <button class="w-link" data-act="undoask" data-where="card">Вернуть как было</button></span>`; })()}</div>
         <button class="w-btn w-fsave" data-act="pversion">Сохранить версию</button>
-        <div class="w-acts w-fgo">${me.isPremium ? `<button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button>` : `<a class="w-btn primary" data-act="buy" href="${SITE}/money">Попробовать Premium бесплатно</a>`}</div>
+        <div class="w-acts w-fgo">${me.isPremium ? `<button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button>` : `<a class="w-btn primary" data-act="buy" href="${SITE}/money">Оформить Premium</a>`}</div>
         ${pacesOk(PACE) ? '' : '<p class="w-note w-prem">Задайте темпа на вкладке «Мои темпа»: без них в задания встанут T5…T42 вместо минут на километр.</p>'}
-        ${me.isPremium ? '' : `<p class="w-note w-prem">Заполнять календарь можно с Premium, первые 3 дня бесплатно. План сохранится в вашем профиле: после оплаты вернитесь сюда и нажмите «Заполнить календарь».</p>`}
+        ${me.isPremium ? '' : `<p class="w-note w-prem">Заполнять календарь можно с Premium: 750 ₽ в месяц или 9 €. План сохранится в вашем профиле: после оплаты вернитесь сюда и нажмите «Заполнить календарь».</p>`}
       </div>
       ${fill.confirm && (fill.snap || f.write.length) ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${(fill.snap || f.write).length} ${plural((fill.snap || f.write).length, 'день', 'дня', 'дней')} в дневник?</b> ${range((fill.snap || f.write)[0].d, last(fill.snap || f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'} План и настройки сохранятся в вашем профиле.</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}
       ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}
@@ -1301,7 +1301,8 @@
     L.push(null, [`${SITE}/money`, 'Платежи'], [`${SITE}/profile?${me.id}`, 'Мой профиль'], [`${SITE}/logout`, 'Выйти']);
     return L.map((l) => (l ? `<li><a href="${esc(l[0])}">${l[1]}</a></li>` : '<li class="sep" aria-hidden="true"></li>')).join('');
   }
-  const premNote = () => `<p class="w-note w-prem">Записывать задачи можно с Premium: <a href="${SITE}/money" data-act="buy">первые 3 дня бесплатно</a>.</p>`;
+  // the paywall is seen once Premium is over (after the 3 free days, or an old free account): no free promise there
+  const premNote = () => `<p class="w-note w-prem">Записывать задачи можно с Premium. <a href="${SITE}/money" data-act="buy">Оформить Premium</a></p>`;
   // a version's name: the race and its goal («Valencia 3:20»), or null without a race
   function planName() {
     if (!race) return null;
