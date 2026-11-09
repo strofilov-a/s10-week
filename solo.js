@@ -188,6 +188,7 @@
   const studentPaces = (p) => p?.student?.t42 ? { 5: hms(p.student.t5), 10: hms(p.student.t10), 21: hms(p.student.t21), 42: hms(p.student.t42), ...(p.student.easy ? { easy: p.student.easy } : {}) } : null;
   let paceSrc = store.get(`paceSrc.${id}`, null);
   let PACE_OWN = store.get(`paceOwn.${id}`, null);
+  let paceGuess = store.get(`paceGuess.${id}`, false); // own paces from the start window as filled in (the goal's or the defaults), not edited by hand
   function activePaces() {
     if (paceSrc === 'own' && PACE_OWN) return PACE_OWN;
     if (paceSrc === 's10' && PACE_S10) return PACE_S10;
@@ -334,7 +335,7 @@
     const wsum = parts.reduce((a, p) => a + READY.w[p.id], 0), score = parts.reduce((a, p) => a + READY.w[p.id] * p.score, 0) / wsum;
     return { score, pct: Math.round(score * 100), parts, q, checked: checked.length, from: start };
   }
-  const fmtHms = (s) => { const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = Math.round(s % 60); return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(x).padStart(2, '0')}`; };
+  const fmtHms = (s) => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(x).padStart(2, '0')}`; };
   const KM_OF = (d) => ({ 42: 42.195, 42.2: 42.195, 21: 21.0975, 21.1: 21.0975 }[+d] || +d);
   const riegel = (sec, from, to) => sec * (to / from) ** CH.k;
   // the normal distribution's Φ (Abramowitz–Stegun 7.1.26)
@@ -347,8 +348,8 @@
     const fr = results.find((r) => r.d === race.d && +r.prehms);
     if (past) { f0 = riegel(+past.realhms, KM_OF(past.distance), D); src = `по старту ${nameOf(past) || ''} ${dayLbl(past.d)}: ${fmtTime(+past.realhms, KM_OF(past.distance))} на ${n1(+past.distance)} км`.replace('  ', ' '); }
     else if (fr) { f0 = +fr.prehms; src = 'по прогнозу S10'; }
-    else if (pacesOk(PACE)) { const k = D >= 30 ? 42 : D >= 15 ? 21 : D >= 7.5 ? 10 : 5; f0 = paceSec(PACE[k]) * D; src = `по вашему темпу T${k}`; }
-    if (!f0) return { goal, D, none: true };
+    else if (pacesOk(PACE) && !(paceSrc === 'own' && paceGuess)) { const k = D >= 30 ? 42 : D >= 15 ? 21 : D >= 7.5 ? 10 : 5; f0 = paceSec(PACE[k]) * D; src = `по вашему темпу T${k}`; }
+    if (!f0) return { goal, D, none: true, guess: pacesOk(PACE) };
     const q = T?.q || 0, fNow = f0 * (1 + q);
     const lvl = Math.max(0, Math.min(1, (riegel(fNow, D, 42.195) - CH.fast) / (CH.slow - CH.fast)));
     const rate = CH.rate[1] + (CH.rate[0] - CH.rate[1]) * lvl, cap = CH.cap[1] + (CH.cap[0] - CH.cap[1]) * lvl;
@@ -360,14 +361,15 @@
   }
   // a race time: h:mm for a half or a marathon, m:ss or h:mm:ss for 10 km and shorter
   const fmtTime = (s, D) => { s = Math.round(s); if (D >= 15) { const m = Math.round(s / 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; } const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(x).padStart(2, '0')}`; };
+  const fmtGoal = (s, D) => (Math.round(s) % 60 ? fmtHms(s) : fmtTime(s, D)); // a goal as the athlete set it: 3:19:59 stays 3:19:59
   const chanceLevel = (p) => (p >= 70 ? 'высокая' : p >= 40 ? 'средняя' : 'низкая');
   const readyBar = (p, cls = '', l = p >= 80 ? 3 : p >= 60 ? 2 : 1) => `<div class="w-track w-ready-t ${cls}" data-l="${l}" role="img" aria-label="${p}%"><i style="width:${p}%"></i></div>`;
   const chanceBar = (p) => readyBar(p, '', p >= 70 ? 3 : p >= 40 ? 2 : 1);
   function chanceCard(C) {
     const head = `<div class="w-ch"><h2 id="w-ready-h">Вероятность достижения цели</h2>${race ? `<span class="w-muted num">${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}</span>` : ''}</div>`;
     const wrap = (body) => `<section class="w-card w-ready" aria-labelledby="w-ready-h">${head}${body}${replanHTML()}</section>`;
-    if (!race) return wrap(`<p class="w-note">Вероятность считается к главному старту и его цели. ${isSelf ? '<button class="w-link" data-act="onbopen">Укажите старт и цель</button>, и он появится здесь.' : 'Старт не выбран.'}</p>`);
-    if (C.none) return wrap(`<p class="w-note">Не от чего посчитать форму: нет ни результата старта за последние 12 недель, ни прогноза S10, ни темпов. Задайте темпа на вкладке «Мои темпа».</p>`);
+    if (!race) return wrap(`<p class="w-note">Вероятность считается к главному старту и его цели. ${isSelf ? '<button class="w-link" data-act="onbopen">Укажите старт и цель</button>, и она появится здесь.' : 'Старт не выбран.'}</p>`);
+    if (C.none) return wrap(`<p class="w-note">Форму пока не от чего посчитать: нет результата старта за последние 12 недель и прогноза S10${C.guess ? ', а темпа посчитаны от цели' : ', темпа не заданы'}. Вероятность появится после старта или когда вы зададите свои темпа на вкладке «Мои темпа».</p>`);
     const D = C.D, T = C.T, t = (s) => fmtTime(s, D), weeks = Math.round(C.weeks);
     const rows = [
       ['Форма сейчас', t(C.fNow), `${C.src}${C.q ? `; ключевые ${C.q < 0 ? 'быстрее' : 'медленнее'} задания: ${C.q < 0 ? '−' : '+'}${fmtHms(Math.abs(C.fNow - C.f0))}` : ''}`],
@@ -375,7 +377,7 @@
       ['Реалистично', t(C.t50), `вероятность 50%; на ${t(C.t80)} — 80%`],
     ];
     return wrap(`
-      <div class="w-step"><div class="w-ready-v"><b class="num">${C.pct != null ? `${C.pct}<small>%</small>` : '—'}</b><span>${C.goal ? `пробежать за ${t(C.goal)}: вероятность ${chanceLevel(C.pct)}` : 'у старта не задана цель: укажите её на странице «Настройка плана»'}</span></div>${C.pct != null ? chanceBar(C.pct) : ''}</div>
+      <div class="w-step"><div class="w-ready-v"><b class="num">${C.pct != null ? `${C.pct}<small>%</small>` : '—'}</b><span>${C.goal ? `пробежать за ${fmtGoal(C.goal, D)}: вероятность ${chanceLevel(C.pct)}` : 'у старта не задана цель: укажите её на странице «Настройка плана»'}</span></div>${C.pct != null ? chanceBar(C.pct) : ''}</div>
       <ul class="w-ready-p">${rows.map(([n, v, s]) => `<li><span class="w-ready-n">${n}</span><span class="num w-ready-s">${v}</span><span aria-hidden="true"></span><span class="w-muted">${esc(s)}</span></li>`).join('')}</ul>
       ${T ? `<h3 class="w-ready-h3">Тренировки за 6 недель: ${T.pct}%</h3><ul class="w-ready-p">${T.parts.map((p) => `<li><span class="w-ready-n">${p.label}</span><span class="num w-ready-s">${Math.round(p.score * 100)}%</span>${readyBar(Math.round(p.score * 100), 'sm')}<span class="w-muted">${esc(p.text)}</span></li>`).join('')}</ul>` : ''}`);
   }
@@ -668,12 +670,14 @@
     await post('/apiweb/userparam.php', fd);
     versions = next.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
   }
+  // a fill or a re-plan can be undone: days to put back, or (a re-plan that wrote nothing) the previous plan and paces
+  const undoable = (u) => !!u && (u.days?.length > 0 || !!u.replan);
   async function undoFill() {
-    const u = lastUndo(); if (!u?.days?.length) return;
-    if (!me.isPremium) { undo.err = 'Ставить задачи можно с премиум-подпиской S10.'; return render(); }
+    const u = lastUndo(); if (!undoable(u)) return;
+    if (u.days.length && !me.isPremium) { undo.err = 'Ставить задачи можно с премиум-подпиской S10.'; return render(); }
     undo.busy = true; undo.err = ''; undo.progress = 'Проверяю дневник…'; render();
     const ds = u.days.map((r) => r[0]).sort();
-    await loadRange(ds[0], last(ds), true).catch(() => {});
+    if (ds.length) await loadRange(ds[0], last(ds), true).catch(() => {});
     const back = [], changed = [];
     for (const [d, wt, wk, wc, wl, wp, nt, nk, nf] of u.days) {
       const x = days.get(d);
@@ -681,7 +685,7 @@
       back.push(wt === null ? { d, typtrain: 0, task: '', prekm: 0, location: '', prediction: '' } : { d, typtrain: wt, task: wc, prekm: wk, location: wl, prediction: wp });
     }
     const { done, error } = await writeByWeek(back, (i, k) => { undo.progress = `Возвращаю неделю ${i} из ${k}…`; render(); });
-    await loadRange(ds[0], last(ds), true).catch(() => {});
+    if (ds.length) await loadRange(ds[0], last(ds), true).catch(() => {});
     const keptNote = changed.length ? ` ${changed.length} ${plural(changed.length, 'день', 'дня', 'дней')} поменяли после заполнения, ${changed.length === 1 ? 'его' : 'их'} не трогали.` : '';
     if (error) {
       undo = { confirm: false, where: 'card', busy: false, progress: '', err: `Вернули ${done} из ${back.length} ${plural(back.length, 'дня', 'дней', 'дней')}, дальше сервер не принял задачи (${error.message}). Нажмите «Вернуть как было» ещё раз.` };
@@ -689,21 +693,25 @@
     }
     store.set(`undo.${id}`, null);
     const v = versions.find((x) => x.active && x.undo);
-    if (u.prevActive && versions.some((x) => x.id === u.prevActive)) { // a re-plan: the plan it replaced is the active one again
-      await editVersions((list) => list.map((x) => { const { active, ...rest } = x; const y = x.id === v?.id ? { ...rest, undo: null } : rest; return x.id === u.prevActive ? { ...y, active: true } : y; })).catch(() => {});
-      sel = { src: 'version', id: u.prevActive }; persistSel(); applyVersion(plan());
+    if (u.replan) { // a re-plan: its version stops being active, the one active before is again, the plan selected before comes back
+      await editVersions((list) => list.map((x) => { if (x.id === v?.id) { const { active, ...rest } = x; return { ...rest, undo: null }; } return x.id === u.prevActive ? { ...x, active: true } : x; })).catch(() => {});
+      const back = u.prevSel && findPlan(u.prevSel) ? u.prevSel : u.prevActive ? { src: 'version', id: u.prevActive } : sel;
+      sel = back; persistSel(); if (sel?.src === 'version') applyVersion(plan());
       if (u.prevPace) { paceSrc = u.prevPace.src; PACE_OWN = u.prevPace.own; store.set(`paceSrc.${id}`, paceSrc); store.set(`paceOwn.${id}`, PACE_OWN); }
       reprice();
     } else if (v) await patchVersion(v.id, { undo: null, filled: u.prevFilled || null }).catch(() => {});
     undo = { confirm: false, where: 'card', busy: false, err: '', progress: '' };
-    flash = `${/*<demo>*/!LIVE ? 'Демо: календарь вернули как было' : /*</demo>*/'Календарь вернули как было'}: ${back.length} ${plural(back.length, 'день', 'дня', 'дней')}, ${range(ds[0], last(ds))}.${keptNote}`; flashUndo = '';
-    wk = monday(ds[0]);
+    flash = ds.length
+      ? `${/*<demo>*/!LIVE ? 'Демо: календарь вернули как было' : /*</demo>*/'Календарь вернули как было'}: ${back.length} ${plural(back.length, 'день', 'дня', 'дней')}, ${range(ds[0], last(ds))}.${keptNote}`
+      : `Вернули прежний план${u.prevPace ? ' и темпа' : ''}.`;
+    flashUndo = '';
+    if (ds.length) wk = monday(ds[0]);
     render();
   }
   const undoHTML = (where) => {
-    const u = lastUndo(); if (!undo.confirm || undo.where !== where || !u?.days?.length) return '';
+    const u = lastUndo(); if (!undo.confirm || undo.where !== where || !undoable(u)) return '';
     const ds = u.days.map((r) => r[0]).sort(), n = ds.length;
-    return `<div class="w-confirm" role="alertdialog" aria-labelledby="w-un-h"><p id="w-un-h"><b>Вернуть ${n} ${plural(n, 'день', 'дня', 'дней')} как было до заполнения?</b> ${range(ds[0], last(ds))}. Дни, которые вы или тренер поменяли после заполнения, останутся как есть.</p><div class="w-acts"><button class="w-btn" data-act="undono">Отмена</button><button class="w-btn primary" data-act="undoyes" ${undo.busy ? 'disabled' : ''}>${undo.busy ? esc(undo.progress || 'Возвращаю…') : 'Вернуть'}</button></div></div>`;
+    return `<div class="w-confirm" role="alertdialog" aria-labelledby="w-un-h"><p id="w-un-h">${n ? `<b>Вернуть ${n} ${plural(n, 'день', 'дня', 'дней')} как было до заполнения?</b> ${range(ds[0], last(ds))}. Дни, которые вы или тренер поменяли после заполнения, останутся как есть.` : `<b>Вернуть прежний план${u.prevPace ? ' и темпа' : ''}?</b> В дневнике ничего не поменяется.`}</p><div class="w-acts"><button class="w-btn" data-act="undono">Отмена</button><button class="w-btn primary" data-act="undoyes" ${undo.busy ? 'disabled' : ''}>${undo.busy ? esc(undo.progress || 'Возвращаю…') : 'Вернуть'}</button></div></div>`;
   };
   async function saveVersion() {
     try { const v = await storePlan({ asNew: true }); if (v) flash = `Версия «${v.name}» сохранена в вашем профиле. Её видно и на странице «План ученика».`; }
@@ -757,22 +765,28 @@
         const P = Math.round(w.km * k);
         let T = r < RP.low ? Math.min(P, Math.max(Math.round(RP.floor * P), Math.round(rk / 2 * RP.ramp * RP.ramp ** i))) : Math.round(Math.min(P * RP.up, maxweek || Infinity));
         if (prevT != null && P < prevP) T = Math.min(T, Math.round(prevT * P / prevP));
+        if (r > RP.high) T = Math.max(T, P); // more run than planned: never less than the plan, even over the S10 limit
         const o = weeksNew.find((x) => x.week === w.week); o.km = Math.round(T / k * 10) / 10;
-        o.slots.forEach((s) => { if (TYPE_BY_NAME[String(s.type).toLowerCase()] !== 5) return; if (T < P) s.km = Math.max(1, Math.round(+s.km * Math.max(RP.longMin, T / P))); if (maxlong && +s.km > maxlong) s.km = maxlong; });
+        o.slots.forEach((s) => { if (TYPE_BY_NAME[String(s.type).toLowerCase()] !== 5) return; if (r < RP.low && T < P) s.km = Math.max(1, Math.round(+s.km * Math.max(RP.longMin, T / P))); if (maxlong && +s.km > maxlong) s.km = maxlong; });
         if (T !== P) rows.push({ week: w.week, mon: weekMon(w.week), was: P, now: T });
         prevT = T; prevP = P;
       });
-      reasons.push(r < RP.low
+      reasons.push(r > RP.high && !rows.length
+        ? `За последние 2 недели пробежано ${n1(rk)} из ${n1(pk)} км (${Math.round(r * 100)}%). Следующие недели плана уже у лимита S10${maxweek ? ` (${maxweek} км в неделю)` : ''}: объём не меняем.`
+        : r < RP.low
         ? `За последние 2 недели пробежано ${n1(rk)} из ${n1(pk)} км (${Math.round(r * 100)}%). Объём следующих недель начнётся от того, что вы бегаете сейчас, и будет расти на 10% в неделю, пока не догонит план; длительные короче.`
         : `За последние 2 недели пробежано ${n1(rk)} из ${n1(pk)} км (${Math.round(r * 100)}%). Объём следующих недель можно поднять до 5% выше плана${maxweek ? `, не больше ${maxweek} км в неделю` : ''}.`);
     } else if (pk) reasons.push(`Объём за последние 2 недели: ${n1(rk)} из ${n1(pk)} км (${Math.round(r * 100)}%), в пределах плана: не меняем.`);
-    // a key workout missed in the last 3 days of this week goes to the first free or easy day left in it, with no hard
-    // day right before or after
+    // a key workout not run at all in the last 3 days of this week goes to the first free or easy day left in it, with no
+    // hard day right before or after, one workout a day; one already standing later in the week (moved before) stays
     const moves = [], hard = (d) => [2, 3, 4, 5, 6].includes(+days.get(d)?.type) || moves.some((m) => m.d === d), sun = add(monday(today), 6);
     for (let d = add(today, -RP.moveBack); d < today; d = add(d, 1)) {
-      const x = days.get(d); if (d < monday(today) || !x || ![2, 3, 4].includes(+x.type) || doneDay(x)) continue;
+      const x = days.get(d); if (d < monday(today) || !x || ![2, 3, 4].includes(+x.type) || runKm(x) > 0) continue;
+      const copy = (y) => +y?.type === +x.type && String(y?.comment || '').trim() === String(x.comment || '').trim();
+      let dup = false; for (let c = add(d, 1); c <= sun; c = add(c, 1)) if (copy(days.get(c))) dup = true;
+      if (dup) continue;
       for (let c = add(today, 1); c <= sun; c = add(c, 1)) {
-        const y = days.get(c); if ((isRun(y) && +y.type !== 1) || hard(add(c, -1)) || hard(add(c, 1)) || (race && c === race.d)) continue;
+        const y = days.get(c); if ((isRun(y) && +y.type !== 1) || moves.some((m) => m.d === c) || hard(add(c, -1)) || hard(add(c, 1)) || (race && c === race.d)) continue;
         moves.push({ d: c, typtrain: +x.type, task: String(x.comment || ''), prekm: +x.target || 0, location: '', prediction: '', moved: d }); break;
       }
     }
@@ -796,7 +810,7 @@
     }
     // a goal the S10 forecast is slower than: said, not changed (the race and its goal stay as set)
     const C = chance();
-    if (C?.pct != null && C.pct < 40) reasons.push(`Вероятность достижения цели ${C.pct}%: к старту ожидается около ${fmtTime(C.fRace, C.D)} при цели ${fmtTime(C.goal, C.D)}. Перестройка его не поднимет, если не выполнять тренировки; реалистичная цель — около ${fmtTime(C.t50, C.D)}.`);
+    if (C?.pct != null && C.pct < 40) reasons.push(`Вероятность достижения цели ${C.pct}%: к старту ожидается около ${fmtTime(C.fRace, C.D)} при цели ${fmtGoal(C.goal, C.D)}. Перестройка её не поднимет, если не выполнять тренировки; реалистичная цель — около ${fmtTime(C.t50, C.D)}.`);
     return { by: 'rules', weeksNew, rows, moves, paces, reasons, opts: { vol: true, move: true, pace: true } };
   }
   // stage 3: the generator rewrites the weeks from next Monday, told what was run
@@ -811,12 +825,12 @@
       pacesOk(PACE) ? `Мои темпа: T5 ${PACE[5]}, T10 ${PACE[10]}, T21 ${PACE[21]}, T42 ${PACE[42]}.` : '',
       R ? `За последние 6 недель: ${R.parts.map((q) => `${q.label.toLowerCase()} ${Math.round(q.score * 100)}% (${q.text})`).join('; ')}.` : '',
       pk ? `За последние 2 недели пробежано ${n1(rk)} из ${n1(pk)} км.` : '',
-      C?.fNow ? `Текущая форма: около ${fmtTime(C.fNow, C.D)}${C.goal ? `, цель ${fmtTime(C.goal, C.D)}` : ''}.` : '',
+      C?.fNow ? `Текущая форма: около ${fmtTime(C.fNow, C.D)}${C.goal ? `, цель ${fmtGoal(C.goal, C.D)}` : ''}.` : '',
       `Объём оставшихся недель в нынешнем плане: ${fut.map((w) => Math.round(w.km * k)).join(', ')} км.`,
       maxweek || maxlong ? `Лимиты: объём до ${maxweek || '—'} км в неделю, длительная до ${maxlong || '—'} км.` : '',
     ].filter(Boolean).join(' ').replace(/ /g, ' ');
     try {
-      const text = await generatePlanText({ distance: p.distance || gen.distance, weeks: fut.length, prompt }, (t) => { const n = t.split('\n').length; if (n !== rp.lines) { rp.lines = n; const s = root.querySelector('#w-rp-status'); if (s) s.textContent = `Модель пишет план… ${n} ${plural(n, 'строка', 'строки', 'строк')}`; } });
+      const text = await generatePlanText({ distance: p.distance || (race && DISTANCES.find((x) => Math.abs(parseFloat(x.match(/([\d.]+) км/)[1]) - KM_OF(race.prekm)) < 0.2)) || gen.distance, weeks: fut.length, prompt }, (t) => { const n = t.split('\n').length; if (n !== rp.lines) { rp.lines = n; const s = root.querySelector('#w-rp-status'); if (s) s.textContent = `Модель пишет план… ${n} ${plural(n, 'строка', 'строки', 'строк')}`; } });
       const parsed = parsePlanText(text), got = new Map(parsed.weeks.map((w) => [w.week, w]));
       if (!fut.some((w) => got.has(w.week))) throw new Error('в ответе нет нужных недель');
       // the generator's km are the athlete's own; the page scales a plan by the first-week volume, so they are divided back
@@ -834,33 +848,44 @@
     const was = lay(cur), oldDays = new Map(was.flatMap((w) => w.days).map((t) => [t.d, t])), oldTotals = new Map(was.map((w) => [w.mon, w.total]));
     const base = planName() || (cur.name || 'План').replace(/ · перестроен[^·]*$/, '').replace(/ · \d+ нед\.$/, '');
     const np = { ...cur, id: 'new', name: `${base} · перестроен ${dayLbl(today)}`, plan: { weeks: r.opts.vol ? r.weeksNew : cur.plan.weeks } };
-    const keepP = PACE; if (r.opts.pace && r.paces) PACE = r.paces;
+    // the plan is scaled by the first-week volume; when the re-plan changes the first week, the volume follows it so
+    // every other week keeps its scale
+    const k = scaleK(cur), keepP = PACE, keepV = volume, vol = volume && firstKm(np) ? Math.round(k * firstKm(np) * 10) / 10 : volume;
+    if (r.opts.pace && r.paces) PACE = r.paces;
+    volume = vol;
     try {
       const weeks = lay(np), nm = nextMonday(), write = [], keep = [];
-      const list = [...(r.opts.move ? r.moves : []), ...weeks.flatMap((w) => w.days).filter((t) => t.d >= nm && (!race || t.d !== race.d))];
+      // a move is checked again against the diary as it is now: the day still free or easy, no hard day either side
+      const hardDay = (d) => [2, 3, 4, 5, 6].includes(+days.get(d)?.type);
+      const moveOk = (m) => { const y = days.get(m.d); return m.d > today && (!isRun(y) || +y.type === 1 || sameDay(y, m)) && !hardDay(add(m.d, -1)) && !hardDay(add(m.d, 1)); };
+      const list = [...(r.opts.move ? r.moves.filter(moveOk) : []), ...weeks.flatMap((w) => w.days).filter((t) => t.d >= nm && (!race || t.d !== race.d))];
       for (const t of list) {
         const x = days.get(t.d), o = oldDays.get(t.d);
         if (sameDay(x, t)) continue;
-        if (t.moved || (isRun(x) && o && sameDay(x, o))) write.push(t); else if (isRun(x)) keep.push(t);
+        if (t.moved || (isRun(x) && o && sameDay(x, o))) write.push(t);
+        else if (isRun(x) && !(o && sameDay(o, t))) keep.push(t); // the re-plan would change it, but someone changed it first
       }
-      return { weeks, plan: np, oldTotals, write: write.sort((a, b) => a.d.localeCompare(b.d)), keep };
-    } finally { PACE = keepP; }
+      return { weeks, plan: np, volume: vol, oldTotals, write: write.sort((a, b) => a.d.localeCompare(b.d)), keep };
+    } finally { PACE = keepP; volume = keepV; }
   }
   async function applyReplan() {
     if (!me.isPremium) { rp.err = 'Ставить задачи можно с премиум-подпиской S10.'; return render(); }
     rp.busy = true; rp.err = ''; rp.progress = 'Проверяю дневник…'; render();
-    await loadRange(add(today, 1), raceEnd || add(today, 1)).catch(() => {});
-    const f = replanPreview(rp), prev = plan(), prevActive = sel.src === 'version' ? prev.id : null, prevFilled = sel.src === 'version' ? prev.filled || null : null;
+    await loadRange(add(today, 1), raceEnd || add(today, 1), true).catch(() => {}); // the diary as it is now: a day the coach changed meanwhile stays
+    // undo goes back to the version that is active now (the plan in the diary), whichever one is selected
+    const act = versions.find((v) => v.active) || null, f = replanPreview(rp), prevActive = act?.id || null, prevFilled = act?.filled || null;
     const before = f.write.map((t) => { const x = days.get(t.d); return [t.d, x ? +x.type || 0 : null, x ? +x.target || 0 : 0, x?.comment || '', x?.location || '', x?.prediction || '', +t.typtrain, +t.prekm, fp(t.task)]; });
     const res = f.write.length ? await writeByWeek(f.write, (i, n) => { rp.progress = `Записываю неделю ${i} из ${n}…`; render(); }) : { done: 0, error: null };
     if (f.write.length) await loadRange(f.write[0].d, last(f.write).d, true).catch(() => {});
     if (res.error && !res.done) { rp.busy = false; rp.err = `Сервер не принял задачи (${res.error.message}). В дневнике ничего не изменилось.`; return render(); }
-    const pacesNew = rp.opts.pace && rp.paces, rec = res.done ? { at: new Date().toISOString(), prevFilled, prevActive, prevPace: pacesNew ? { src: paceSrc, own: PACE_OWN } : null, days: before.slice(0, res.done) } : null;
-    if (rec) store.set(`undo.${id}`, rec);
+    // a re-plan always leaves an undo record, even with nothing written: the plan selected before it, the active version and
+    // the paces go back with the days; the browser's copy is replaced too, so an older fill's record is not offered here
+    const pacesNew = rp.opts.pace && rp.paces, rec = { at: new Date().toISOString(), replan: true, prevFilled, prevActive, prevSel: sel ? { ...sel } : null, prevPace: pacesNew ? { src: paceSrc, own: PACE_OWN } : null, days: before.slice(0, res.done) };
+    store.set(`undo.${id}`, rec);
     if (pacesNew) { PACE_OWN = rp.paces; paceSrc = 'own'; store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); }
     rp.progress = 'Сохраняю план в профиль…'; render();
     const by = rp.by, n = res.done, a = f.write[0]?.d, b = f.write[res.done - 1]?.d;
-    fresh = f.plan; sel = { src: 'new', id: 'new' };
+    fresh = f.plan; sel = { src: 'new', id: 'new' }; volume = f.volume;
     let saved = true; try { await storePlan({ asNew: true, name: f.plan.name, filled: prevFilled ? { from: prevFilled.from, to: prevFilled.to } : null, undo: rec }); } catch { saved = false; }
     rp = null;
     flash = `${/*<demo>*/!LIVE ? 'Демо: ' : /*</demo>*/''}План перестроен${by === 'ai' ? ' с ИИ' : ''}${n ? `: ${n} ${plural(n, 'день', 'дня', 'дней')} в дневнике переписано, ${range(a, b)}` : ', в дневнике ничего не меняли: новые недели встанут при следующем заполнении'}${res.error ? `. Дальше сервер не принял задачи (${res.error.message})` : ''}.${saved ? ` План сохранён в профиле как «${f.plan.name}».` : ' План в профиль сохранить не удалось.'}`;
@@ -879,7 +904,7 @@
       <ul class="w-rp-why">${rp.reasons.map((x) => `<li>${esc(x)}</li>`).join('')}${changes || rp.by === 'ai' ? '' : '<li>План идёт как задумано: менять нечего.</li>'}</ul>
       ${rp.by === 'rules' && [rp.rows.length, rp.moves.length, rp.paces].filter(Boolean).length > 1 ? `<div class="w-rp-opts">${rp.rows.length ? opt('vol', 'Объём следующих недель') : ''}${rp.moves.length ? opt('move', 'Перенести пропущенное') : ''}${rp.paces ? opt('pace', 'Новые темпа') : ''}</div>` : ''}
       ${rp.opts.vol && rp.rows.length ? `<ol class="w-rp-weeks">${rp.rows.map((w) => `<li><span class="num">${w.week}</span><span class="num">${range(w.mon, add(w.mon, 6))}</span><span class="w-wworks w-rp-w">${(laid.get(w.mon)?.days || []).filter((d) => d.typtrain >= 2).map((d) => `<span>${glyph(LEVEL[d.typtrain], d.typtrain === 6)}${SHORT[d.typtrain]} ${n1(d.prekm)}</span>`).join('')}</span><span class="num">${n1(f.oldTotals.get(w.mon) ?? w.was)} → <b>${n1(laid.get(w.mon)?.total ?? w.now)}</b> км</span></li>`).join('')}</ol>` : ''}
-      <p class="w-muted">${f.write.length ? `Запишется в дневник: ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}, ${range(f.write[0].d, last(f.write).d)}.` : 'В дневнике ничего не поменяется: перестроенные недели встанут, когда вы заполните календарь.'}${f.keep.length ? ` ${f.keep.length} ${plural(f.keep.length, 'день', 'дня', 'дней')} вы или тренер поменяли после заполнения, их не трогаем.` : ''} План сохранится в профиле новой версией, вернуть прежний можно кнопкой «Вернуть как было».</p>
+      <p class="w-muted">${f.write.length ? `Запишется в дневник: ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}, ${range(f.write[0].d, last(f.write).d)}.` : 'В дневнике ничего не поменяется: перестроенные недели встанут, когда вы заполните календарь.'}${f.keep.length ? ` ${f.keep.length} ${plural(f.keep.length, 'день', 'дня', 'дней')} в дневнике уже не ${f.keep.length === 1 ? 'совпадает' : 'совпадают'} с планом (их поменяли вы или тренер, или они записаны с другими темпами), ${f.keep.length === 1 ? 'его' : 'их'} не трогаем.` : ''} План сохранится в профиле новой версией, вернуть прежний можно кнопкой «Вернуть как было».</p>
       ${rp.err ? `<p class="w-err" role="alert">${esc(rp.err)}</p>` : ''}
       <div class="w-acts"><button class="w-btn" data-act="rpcancel" ${rp.busy ? 'disabled' : ''}>Отмена</button><button class="w-btn primary" data-act="rpapply" ${rp.busy || !changes || !me.isPremium ? 'disabled' : ''}>${rp.busy ? esc(rp.progress || 'Записываю…') : f.write.length ? `Записать ${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}` : 'Сохранить план'}</button></div>
       ${me.isPremium ? '' : premNote()}
@@ -962,7 +987,7 @@
       <div class="w-sum w-fill">
         <div class="w-fmain"><div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${Object.keys(SPANS).map((k) => [k, spanLabel(k)]).map(([k, l]) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${l}</button>`).join('')}</div>
           ${fillModes(f)}
-          ${(() => { const u = lastUndo(); if (!u?.days?.length) return ''; const ds = u.days.map((r) => r[0]).sort(); return `<span class="w-undo">Последнее заполнение: ${range(ds[0], last(ds))} · <button class="w-link" data-act="undoask" data-where="card">Вернуть как было</button></span>`; })()}</div>
+          ${(() => { const u = lastUndo(); if (!undoable(u)) return ''; const ds = u.days.map((r) => r[0]).sort(); return `<span class="w-undo">${ds.length ? `Последнее заполнение: ${range(ds[0], last(ds))}` : 'План перестроен'} · <button class="w-link" data-act="undoask" data-where="card">Вернуть как было</button></span>`; })()}</div>
         <button class="w-btn w-fsave" data-act="pversion">Сохранить версию</button>
         <div class="w-acts w-fgo">${me.isPremium ? `<button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button>` : `<a class="w-btn primary" data-act="buy" href="${SITE}/money">Попробовать Premium бесплатно</a>`}</div>
         ${pacesOk(PACE) ? '' : '<p class="w-note w-prem">Задайте темпа на вкладке «Мои темпа»: без них в задания встанут T5…T42 вместо минут на километр.</p>'}
@@ -1214,7 +1239,9 @@
     const t = g.split(':').map(Number);
     if (t.length < 2 || t.length > 3 || t.some((x) => !Number.isInteger(x) || x < 0) || t.slice(1).some((x) => x >= 60)) return null;
     const hms3 = t.length === 3 ? t : km <= 10 ? [0, ...t] : [...t, 0];
-    return hms3.map((x) => String(x).padStart(2, '0')).join(':');
+    const sec = hms3[0] * 3600 + hms3[1] * 60 + hms3[2];
+    if (sec / km < 150) return null; // faster than 2:30 a km: a typo
+    return [Math.floor(sec / 3600), Math.floor(sec / 60) % 60, sec % 60].map((x) => String(x).padStart(2, '0')).join(':'); // «65:00» → 01:05:00
   };
   // «Сохранить старт» writes the main race the way calc3 does (a task with main6 = 1); «Отсутствует» keeps the plan
   // without a race date; the paces go to «Мои темпа» as the athlete's own
@@ -1250,7 +1277,7 @@
     }
     if (o.race && !withRace) { noRace = true; store.set(`noRace.${id}`, true); gen.weeks = 2; }
     if (!gen.touched) gen.prompt = promptDefault();
-    if (P) { PACE_OWN = P; paceSrc = 'own'; store.set(`paceOwn.${id}`, P); store.set(`paceSrc.${id}`, 'own'); reprice(); }
+    if (P) { PACE_OWN = P; paceSrc = 'own'; paceGuess = !o.touched; store.set(`paceOwn.${id}`, P); store.set(`paceSrc.${id}`, 'own'); store.set(`paceGuess.${id}`, paceGuess); reprice(); }
     onb = null;
     flash = o.race && withRace ? `${/*<demo>*/!LIVE ? 'Демо: главный старт сохранён только на этой странице' : /*</demo>*/'Главный старт сохранён'}: ${dayLbl(race.d)}${raceName ? `, ${raceName}` : ''}. Теперь выберите или сделайте план.` : o.race ? 'План будет без даты старта: со следующей беговой недели вперёд.' : 'Темпа сохранены.';
     if (o.race) tab = 'plan';
@@ -1279,7 +1306,7 @@
   function planName() {
     if (!race) return null;
     const D = KM_OF(race.prekm), what = raceName || KM_NAME[+race.prekm] || `${n1(+race.prekm)} км`;
-    return race.prediction ? `${what} ${fmtTime(hmsSec(race.prediction), D)}` : what;
+    return race.prediction ? `${what} ${fmtGoal(hmsSec(race.prediction), D)}` : what;
   }
   const topBar = (open) => `<div class="w-topin">
       <button class="w-menub" data-act="menu" aria-expanded="${open}" aria-label="${open ? 'Закрыть меню' : 'Меню S10'}"><i></i><i></i><i></i></button>
@@ -1310,7 +1337,7 @@
         <div class="w-stats">
           <div class="w-stat w-stat-wide"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span>
             ${W.plan ? `<div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${pct}%"></i></div><div class="w-track-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)} км</span></div>` : '<span class="s">на этой неделе ничего не запланировано</span>'}</div>
-          <div class="w-stat w-stat-full w-stat-r"><span class="w-lb">Вероятность достижения цели</span><span class="v num">${C?.pct != null ? `${C.pct}<small>%</small>` : '—'}</span>${C?.pct != null ? chanceBar(C.pct) : ''}<span class="s">${!race ? 'нет старта' : C.none ? 'не от чего считать' : C.pct == null ? 'нет цели' : `${esc(fmtTime(C.goal, C.D))}, ${chanceLevel(C.pct)}`} · <button class="w-link" data-act="ready">подробнее</button></span></div>
+          <div class="w-stat w-stat-full w-stat-r"><span class="w-lb">Вероятность достижения цели</span><span class="v num">${C?.pct != null ? `${C.pct}<small>%</small>` : '—'}</span>${C?.pct != null ? chanceBar(C.pct) : ''}<span class="s">${!race ? 'нет старта' : C.none ? 'не от чего считать' : C.pct == null ? 'нет цели' : `${esc(fmtGoal(C.goal, C.D))}, ${chanceLevel(C.pct)}`} · <button class="w-link" data-act="ready">подробнее</button></span></div>
         </div>
       </section>
       ${calHTML()}
@@ -1417,11 +1444,11 @@
   .w-stat-wide{grid-column:1/-1;border-top:0}.w-stat-full{grid-column:1/-1}.w-race{font-size:19px;line-height:1.35;font-weight:500;color:var(--text);margin-top:4px}
   .w-hero-l{display:flex;flex-direction:column;min-width:0}.w-goal{margin-top:auto;padding:16px 24px 20px;border-top:1px solid var(--rule);display:grid;gap:2px}.w-goal .s{color:var(--faint);font-size:13px}.w-race .w-nw{white-space:nowrap}
   .w-ready-t[data-l="1"] i{background:var(--key)}.w-ready-t.sm{height:6px;margin-top:0}
-  .w-ready-v{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.w-ready-v b{font-size:40px;line-height:1;font-weight:500;letter-spacing:-.01em}.w-ready-v b small{font-size:20px;margin-left:2px}.w-ready-v span{color:var(--muted)}
+  .w-ready-v{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.w-ready-v b{font-size:32px;line-height:1;font-weight:500;letter-spacing:-.01em}.w-ready-v b small{font-size:20px;margin-left:2px}.w-ready-v span{color:var(--muted)}
   .w-ready-p{list-style:none;border-top:1px solid var(--rule)}.w-ready-p li{display:grid;grid-template-columns:200px 56px minmax(0,220px) minmax(0,1fr);gap:8px 16px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--rule)}.w-ready-n{font-weight:500}.w-ready-s{text-align:right}
   .w-ready .w-note{padding:14px 20px 18px}.w-ready-h3{font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:16px 20px 8px}
-  .w-rp{padding:18px 20px 20px;border-top:1px solid var(--rule);display:grid;gap:12px;background:var(--soft);border-radius:0 0 8px 8px}.w-rp h3{font-size:16px;font-weight:500}.w-rp>p{color:var(--muted);max-width:72ch}
-  .w-rp-why{list-style:none;display:grid;gap:6px;max-width:80ch}.w-rp-why li{position:relative;padding-left:14px}.w-rp-why li::before{content:"";position:absolute;left:2px;top:.68em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+  .w-rp{padding:18px 20px 20px;border-top:1px solid var(--rule);display:grid;gap:12px;background:var(--soft);border-radius:0 0 8px 8px}.w-rp h3{font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}.w-rp>p.w-muted{color:var(--text)}.w-rp>p{color:var(--muted);max-width:72ch}
+  .w-rp-why{list-style:none;display:grid;gap:6px;max-width:80ch;text-wrap:pretty}.w-rp-why li{position:relative;padding-left:14px}.w-rp-why li::before{content:"";position:absolute;left:2px;top:.68em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
   .w-rp-opts{display:flex;flex-wrap:wrap;gap:8px 20px}.w-rp-weeks{list-style:none;display:grid;gap:0;border-top:1px solid var(--rule);max-width:760px}.w-rp-weeks li{display:grid;grid-template-columns:40px 120px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule)}
   .w-rp .w-acts{justify-content:flex-start}.w-rp-weeks .w-rp-w{grid-area:auto}
   .w-stat .v{font-size:24px;line-height:1.2}
@@ -1615,7 +1642,7 @@
     .w-wkh{grid-template-columns:36px minmax(0,1fr) auto;grid-template-areas:"n d k" "n w w" "n p s"}.w-wkh>span:nth-child(2){grid-area:d}
     .w-gen{grid-template-columns:1fr}}
   @media (max-width:560px){.w-main{padding:20px 16px 40px;gap:16px}.w-topin{gap:14px}/*<demo>*/.w-demo{padding:8px 16px}/*</demo>*/
-    .w-head h1{font-size:24px}.w-big{font-size:24px}.w-today{padding:20px}.w-goal{padding:14px 20px 18px}.w-stat{padding:16px}
+    .w-head h1{font-size:24px}.w-big{font-size:24px}.w-ready-v b{font-size:24px}.w-today{padding:20px}.w-goal{padding:14px 20px 18px}.w-stat{padding:16px}
     .w-cal{padding:0 6px}.w-cwh,.w-cw{grid-template-columns:26px repeat(7,minmax(0,1fr))}.w-cm{padding-left:4px}
     .w-day{grid-template-columns:44px minmax(0,1fr) auto;gap:12px;padding:14px 16px}
     .w-ch,.w-step,.w-sum,.w-chooser{padding-left:16px;padding-right:16px}.w-pday{padding:14px 16px}.w-wkh{padding:12px 16px}.w-wdays{padding:0 16px 12px}
@@ -1644,6 +1671,7 @@
     const a = e.target.closest('[data-act]');
     if (a) {
       const act = a.dataset.act;
+      if (['psel', 'fillyes', 'undoyes', 'wsave'].includes(act)) rp = null; // the proposal was made for the plan and diary before
       if (act === 'menu') return toggleMenu(!menuOpen);
       if (act === 'plan') { tab = 'week'; return openPlanner(); }
       if (act === 'close') { mode = 'view'; PL = null; return render(); }
@@ -1676,7 +1704,7 @@
       if (act === 'undoyes') return undoFill();
       if (act === 'fillno') { fill.confirm = false; return render(); }
       if (act === 'fillyes') return fillCalendar();
-      if (act === 'buy') { e.preventDefault(); if (plan() && sel.src !== 'version') await storePlan({ asNew: true }).catch(() => {}); location.href = a.href; return; }
+      if (act === 'buy') { e.preventDefault(); if (a.dataset.busy) return; a.dataset.busy = '1'; if (plan() && isSelf) await storePlan({ asNew: sel.src !== 'version' }).catch(() => {}); location.href = a.href; return; }
       if (act === 'rprules') { rp = replanByRules(); return render(); }
       if (act === 'rpai') return replanByAI();
       if (act === 'rpcancel') { rp = null; return render(); }
@@ -1714,6 +1742,7 @@
   });
   root.addEventListener('change', (e) => {
     const t = e.target, f = t.dataset.f, pk = t.dataset.p;
+    if (['role', 'volume', 'pacesrc', 'pace'].includes(pk)) rp = null; // a re-plan proposal was made with the old settings
     if (pk === 'role') { layout[+t.dataset.i] = t.value; store.set('layout', layout); return render(); }
     if (t.dataset.rp && rp?.opts) { rp.opts[t.dataset.rp] = t.checked; return render(); }
     if (pk === 'keep') { keepExisting = t.checked; fill.confirm = false; return render(); }
@@ -1723,7 +1752,7 @@
       if (!v) { t.setCustomValidity('Например 4:30'); t.reportValidity(); return; }
       t.setCustomValidity('');
       // never a partial set: the other three come from the current paces, or from a new athlete's defaults
-      PACE_OWN = { ...(pacesOk(PACE) ? PACE : NEWBIE_PACES), [t.dataset.k]: fmtSec(v) }; paceSrc = 'own'; store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render();
+      PACE_OWN = { ...(pacesOk(PACE) ? PACE : NEWBIE_PACES), [t.dataset.k]: fmtSec(v) }; paceSrc = 'own'; paceGuess = false; store.set(`paceGuess.${id}`, false); store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render();
     }
     if (pk === 'volume') { const v = +t.value.replace(',', '.'); volume = v > 0 ? v : null; return render(); }
     if (t.dataset.g) { const k = t.dataset.g; gen[k] = k === 'weeks' ? Math.max(1, Math.min(30, +t.value || gen.weeks)) : t.value; if (k !== 'prompt') render(); return; }
@@ -1768,6 +1797,7 @@
   if (!LIVE && q === 'colors') { colorsOpen = true; render(); }
   if (!LIVE && q === 'tab-plan') { tab = 'plan'; render(); }
   if (!LIVE && q === 'tab-paces') { tab = 'paces'; render(); }
+  if (!LIVE && q === 'replan') { tab = 'plan'; rp = replanByRules(); render(); }
   /*</demo>*/
   return `S10 «Моя неделя» (${/*<demo>*/!LIVE ? 'demo' : /*</demo>*/'live'}) для ${me.firstName} ${me.lastName}`;
 })();
