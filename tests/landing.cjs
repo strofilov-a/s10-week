@@ -17,7 +17,7 @@ const srv = http.createServer((q, r) => {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${srv.address().port}/solo/start`;
   const browser = await chromium.launch();
-  for (const [w, h, name] of [[1440, 900, 'desktop'], [390, 844, 'phone']]) {
+  for (const [w, h, name] of [[1440, 900, 'desktop'], [768, 1024, 'tablet'], [390, 844, 'phone']]) {
     const page = await browser.newPage({ viewport: { width: w, height: h } });
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -56,6 +56,16 @@ const srv = http.createServer((q, r) => {
     await page.evaluate(() => { const r = document.getElementById('pc-t'); r.value = 5400; r.dispatchEvent(new Event('input', { bubbles: true })); });
     const p1 = await page.textContent('#pc-main');
     check(`${name}: paces follow the goal`, p0 === '4:44' && p1 === '4:16', `${p0}, then ${p1}`);
+
+    // the closing «Начать» block is an arch: its sentence and arrow stay inside the rounded corners (cut on phones and
+    // tablets before 09.11.2026)
+    await page.evaluate(() => document.querySelector('.cta').scrollIntoView({ block: 'end' })); await page.waitForTimeout(300);
+    const cut = await page.evaluate(() => {
+      const c = document.querySelector('.cta'), R = c.getBoundingClientRect(), r = parseFloat(getComputedStyle(c).borderTopLeftRadius);
+      const outside = (x, y) => { const dy = r - (y - R.top); if (dy <= 0) return false; const dl = r - (x - R.left), dr = r - (R.right - x); return (dl > 0 && dl * dl + dy * dy > r * r) || (dr > 0 && dr * dr + dy * dy > r * r); };
+      return [c.querySelector('.cta-sent'), c.querySelector('svg')].filter((e) => { const q = e.getBoundingClientRect(); return [[q.left, q.top], [q.right, q.top]].some(([x, y]) => outside(x, y)); }).map((e) => e.tagName);
+    });
+    check(`${name}: the closing sentence and arrow inside the arch`, !cut.length, cut.join(', '));
 
     const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     check(`${name}: nothing runs off the side`, over <= 0, `${over}px`);

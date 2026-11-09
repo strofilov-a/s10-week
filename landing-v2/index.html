@@ -343,10 +343,12 @@ h2 { font-size: var(--step-head); }
 .faq details p { padding: 0 24px 24px; max-width: 52ch; font-size: 1.0625rem; }
 
 /* ---------- close: one word is the button ---------- */
-.cta { display: block; margin-top: var(--section); position: relative; min-height: 60svh; background: var(--race); color: var(--on-race); text-decoration: none; border-radius: 30svh 30svh 0 0; overflow: hidden; transition: background-color .15s, color .15s; }
+.cta { display: block; margin-top: var(--section); position: relative; min-height: 60svh; background: var(--race); color: var(--on-race); text-decoration: none; --r: 30svh; border-radius: var(--r) var(--r) 0 0; overflow: hidden; transition: background-color .15s, color .15s; }
 .cta:hover, .cta:focus-visible { background: var(--ink); color: var(--bg); outline: none; }
-.cta-sent { position: absolute; left: clamp(40px, 9vw, 160px); top: clamp(40px, 9svh, 96px); max-width: 26ch; font-size: var(--step-lead); line-height: 1.3; font-weight: 500; }
-.cta svg { position: absolute; right: clamp(40px, 9vw, 160px); top: clamp(40px, 9svh, 96px); width: 48px; height: 48px; }
+/* the sentence and the arrow sit clear of the rounded corners: at a third of the radius in from the side and down from
+   the top the arch is always inside (owner, 09.11.2026: the text was cut by the curve) */
+.cta-sent { position: absolute; left: max(clamp(40px, 9vw, 160px), calc(var(--r) * .32)); top: max(clamp(40px, 9svh, 96px), calc(var(--r) * .34)); max-width: 26ch; font-size: var(--step-lead); line-height: 1.3; font-weight: 500; }
+.cta svg { position: absolute; right: max(clamp(40px, 9vw, 160px), calc(var(--r) * .32)); top: max(clamp(40px, 9svh, 96px), calc(var(--r) * .34)); width: 48px; height: 48px; }
 .cta-word { position: absolute; left: var(--m); right: var(--m); bottom: 24px; font: 700 27vw/.78 var(--display); letter-spacing: -0.06em; white-space: nowrap; }
 
 /* ---------- footer: the name built from blocks ---------- */
@@ -467,9 +469,9 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   .faq summary { font-size: 1.125rem; min-height: 64px; padding: 16px 20px; }
   .faq details p { padding: 0 20px 20px; font-size: 1rem; }
 
-  .cta { min-height: 46svh; border-radius: 23svh 23svh 0 0; }
-  .cta-sent { left: 28px; top: 56px; font-size: 1.0625rem; max-width: 18ch; }
-  .cta svg { right: 28px; top: 56px; width: 32px; height: 32px; }
+  .cta { min-height: 46svh; --r: 23svh; }
+  .cta-sent { left: max(28px, calc(var(--r) * .32)); top: max(56px, calc(var(--r) * .34)); font-size: 1.0625rem; max-width: 18ch; }
+  .cta svg { right: max(28px, calc(var(--r) * .32)); top: max(56px, calc(var(--r) * .34)); width: 32px; height: 32px; }
   .cta-word { font-size: 25vw; }
 
   .foot-mark { height: 22svh; min-height: 140px; }
