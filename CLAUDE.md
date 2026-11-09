@@ -198,7 +198,7 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # demo checks (104), the release build and its checks (12), the promo page (18)
+npm test                                     # demo checks (104), the release build and its checks (12), the promo page (30)
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same on every push and pull request, and fails if the committed
