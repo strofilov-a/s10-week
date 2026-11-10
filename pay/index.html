@@ -1,361 +1,830 @@
 <!doctype html>
-<html lang="ru" data-type="software" data-radius="soft">
+<html lang="ru" data-type="software" data-radius="soft" data-ground="sage" data-buttons="pill" data-motion>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="page-type" content="software">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S10 Premium: анализ тренировок и план до старта для бегунов</title>
+<meta name="description" content="Premium на S10.run: разбор каждой пробежки по кругам, графики формы и загрузки, план до старта в календаре. 750 ₽ или 9 € в месяц.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="S10 Premium: анализ тренировок и план до старта">
+<meta property="og:description" content="Разбор каждой пробежки по кругам, графики формы и загрузки, план до старта. 750 ₽ или 9 € в месяц.">
+<meta property="og:image" content="share.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#004aad">
+<!-- <link rel="canonical" href="https://s10.run/money"> once the page is installed -->
 <meta name="site-kind" content="software">
-<meta name="theme-color" content="#ffffff">
-<title>Оплата Premium · S10.run</title>
-<meta name="description" content="Premium на S10.run: 9 € в месяц картой через Stripe или 750 ₽ через Т-Банк.">
+<meta name="page-type" content="software">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..700&display=swap" rel="stylesheet">
-<!--
-  tasteskill deal (09.11.2026): kind software (a fintech checkout inside the s10.run app);
-  palette white-link-blue «Sheet and biro» (a payment page wants a calm white sheet and one trusted blue);
-  type onest (Cyrillic-first neo-grotesk); radius soft; one effect: orb-sphere on the Premium card;
-  moment: the card enters on load. App screen: the marketing page rules (one section per screen) do not apply.
--->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wdth,wght@85..100,400..700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/system.css">
+<link rel="stylesheet" href="assets/ui/cards.css">
+<link rel="stylesheet" href="assets/motion/motion.css">
+<link rel="stylesheet" href="assets/backgrounds/backgrounds.css">
+<link rel="stylesheet" href="assets/layout/layout.css">
+<link rel="stylesheet" href="assets/icons/icon.css">
 <style>
 :root {
-  --p-bg: #ffffff; --p-surface: #f4f4f4; --p-ink: #111111; --p-muted: #595959; /* dealt #6b6b6b, darkened to 7:1 as on solo */
-  --p-accent: #1a4be0; --p-accent-ink: #ffffff; --p-action: #1a4be0; --p-action-ink: #ffffff;
-  --p-inv-bg: #111111; --p-inv-surface: #1e1e1e; --p-inv-ink: #ffffff; --p-inv-muted: #9a9a9a;
-  --font-display: "Onest", system-ui, sans-serif;
-  --font-text: "Onest", system-ui, sans-serif;
-  --display-weight: 400;
-  --display-tracking: -0.035em;
-
-  --line: #e7e7e9;
-  --line-strong: #d6d6da;
-  --accent-soft: #eef2fd;
-  --deep: #0a1a52;          /* the card's field: the accent's deep tone */
-  --ok: #17784a;
-  --r-s: 8px; --r-m: 12px; --r-l: 18px;
-  --ease: cubic-bezier(.2,.7,.2,1);
+  /* S10.run's colours: the header blue #004aad as accent and action, the logo's coral for the one warm mark */
+  --p-bg: #f7f9fc; --p-surface: #e9eef7; --p-ink: #14233b; --p-muted: #44536b;
+  --p-accent: #004aad; --p-accent-ink: #ffffff; --p-action: #004aad; --p-action-ink: #ffffff;
+  --p-inv-bg: #0a2a5c; --p-inv-surface: #17397a; --p-inv-ink: #f7f9fc; --p-inv-muted: #a9b6cf;
+  --p-inv-accent: #f7f9fc; --p-inv-accent-ink: #0a2a5c; --p-inv-action: #f7f9fc; --p-inv-action-ink: #0a2a5c;
+  --font-display: "IBM Plex Sans", system-ui, sans-serif;
+  --font-text: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.025em;
+  --display-tracking-xl: -0.035em;
+  --ly-scale: 0.98;
 }
-*, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0; background: var(--p-bg); color: var(--p-ink);
-  font: 400 15px/1.5 var(--font-text); font-feature-settings: "tnum" 1, "cv11" 1;
-  -webkit-font-smoothing: antialiased;
-}
-a { color: inherit; }
-button, input { font: inherit; color: inherit; }
-.skip { position: absolute; left: 16px; top: -60px; background: var(--p-ink); color: #fff; padding: 10px 14px; border-radius: var(--r-s); z-index: 10; }
-.skip:focus { top: 12px; }
-:focus-visible { outline: 2px solid var(--p-accent); outline-offset: 2px; }
+/* the lit ground in S10 blue */
+html[data-ground] { --ground-bg: #c8d6ee; --ground-surface: #dbe5f6; --ground-ink: #14233b; --ground-muted: #44536b; --ground-accent: #3f6fc0; }
+/* the site's header: blue bar, the S10.run logo, white words; the menus under it keep the page's ink */
+.nav { background: #004aad; border-bottom-color: #004aad; }
+.nav__bar > .nav__logo, .nav__links > .nav__item > .nav__link, .nav__actions > .nav__link, .nav .nav__toggle { color: #fff; }
+.nav__bar > .nav__logo svg { height: 30px; }
+.nav__bar > .nav__logo:hover { opacity: .85; }
+.nav .nav__actions .btn--primary { background: #fff; color: #004aad; }
+.nav .nav__actions .btn--primary:hover { background: #e9eef7; }
+.nav .nav__toggle { background: none; border-color: rgb(255 255 255 / .45); }
+.nav.is-open .nav__links > .nav__item > .nav__link { color: var(--ink); }
+/* on the blue bar the focus ring is white */
+.nav__bar > .nav__logo:focus-visible, .nav:not(.is-open) .nav__links > .nav__item > .nav__link:focus-visible, .nav__actions > a:focus-visible, .nav .nav__toggle:focus-visible { outline-color: #fff; }
+</style>
+<link rel="stylesheet" href="assets/ui/base.css">
+<link rel="stylesheet" href="assets/ui/window/fragment.css">
+<link rel="stylesheet" href="assets/ui/calendar/fragment.css">
+<link rel="stylesheet" href="assets/ui/notify/fragment.css">
+<link rel="stylesheet" href="assets/ui/chat/fragment.css">
+<script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
+<script src="assets/backgrounds/backgrounds.js"></script>
+<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
+<link rel="modulepreload" href="assets/moments/moments.js">
+<link rel="modulepreload" href="assets/moments/lib.js">
+<link rel="modulepreload" href="assets/moments/pinned-chapters/moment.js">
+<!-- page CSS: S10's own screens drawn with the kit's --u-* tokens, the pay form, one --p-h per card group -->
+<style>
+  :root { --c-hot: #cf4f3c; --c-warm: #d99a2b; }
+  .hero__window { background: #c8d6ee; }
+  .hero__window .ui { --u-bg: #ffffff; }
 
-/* ---------- top bar ---------- */
-.bar { position: sticky; top: 0; z-index: 5; background: rgba(255,255,255,.92); border-bottom: 1px solid var(--line); }
-@supports (backdrop-filter: blur(8px)) { .bar { background: rgba(255,255,255,.78); backdrop-filter: saturate(1.4) blur(12px); } }
-.bar-in { max-width: 1160px; margin: 0 auto; padding: 0 32px; height: 60px; display: flex; align-items: center; gap: 16px; }
-.back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; text-decoration: none; color: var(--p-muted); font-size: 14px; border-radius: var(--r-s); padding: 0 6px; margin-left: -6px; transition: color .2s; }
-.back:hover { color: var(--p-ink); }
-.back svg { transition: transform .25s var(--ease); }
-.back:hover svg { transform: translateX(-3px); }
-.logo { display: block; width: 78px; height: 24px; }
-.logo path[fill="white"] { fill: var(--p-ink); }
-.bar .sp { flex: 1; }
-.who { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-size: 14px; color: var(--p-muted); min-height: 44px; }
-.who:hover { color: var(--p-ink); }
-.ava { width: 32px; height: 32px; border-radius: 50%; background: var(--p-surface) center/cover; display: grid; place-items: center; font-size: 12px; font-weight: 600; color: var(--p-muted); overflow: hidden; }
+  /* S10 screens (inside visuals only) */
+  .sx { font: 400 13px/20px var(--ui-font, var(--font-text)); color: var(--u-ink); overflow: hidden; text-align: left; }
+  .sx__bar { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 16px; border-bottom: 1px solid var(--u-line); }
+  .sx__crumb { color: var(--u-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .sx__crumb b { color: var(--u-ink); font-weight: 500; }
+  .sx__crumb i { font-style: normal; opacity: .5; margin: 0 4px; }
+  .sx__label { display: block; font-size: 11px; line-height: 16px; letter-spacing: .06em; text-transform: uppercase; color: var(--u-muted); }
+  .sx__h { font-weight: 500; font-size: 15px; line-height: 22px; }
+  .sx__kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+  .sx__kpi { padding: 8px 10px; border-radius: 8px; background: var(--u-fill); }
+  .sx__kpi dt { font-size: 11px; line-height: 16px; color: var(--u-muted); }
+  .sx__kpi dd { margin: 0; font: 500 15px/22px var(--font-mono); letter-spacing: -.02em; white-space: nowrap; }
+  .sx-laps { display: grid; }
+  .sx-laps__r { display: grid; grid-template-columns: 34px 1fr 1fr 1fr 1fr 64px; gap: 8px; align-items: center; height: 34px; padding: 0 12px; border-bottom: 1px solid var(--u-line); font-family: var(--font-mono); font-size: 12.5px; }
+  .sx-laps__r > :first-child { color: var(--u-muted); }
+  .sx-laps__r--head { height: 28px; font: 400 11px/16px var(--font-text); letter-spacing: .04em; color: var(--u-muted); }
+  .sx-laps__r--rest { color: var(--u-muted); }
+  .sx-laps__r b { font-weight: 500; }
+  .sx-laps__d { justify-self: end; padding: 0 8px; height: 22px; display: inline-flex; align-items: center; border-radius: 999px; background: var(--u-tint); color: var(--u-accent-text); font: 500 11.5px/1 var(--font-text); white-space: nowrap; }
 
-/* ---------- layout ---------- */
-main { max-width: 1160px; margin: 0 auto; padding: 40px 32px 88px; }
-.grid { display: grid; grid-template-columns: minmax(0,1fr) 440px; grid-template-areas: "card pay"; column-gap: 72px; align-items: center; }
-.a-card { grid-area: card; }
-.a-pay { grid-area: pay; }
+  .sx-run__body { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .sx-run__task { display: grid; gap: 10px; align-content: start; padding: 18px 20px 28px; border-right: 1px solid var(--u-line); }
+  .sx-run__task p { margin: 0; color: var(--u-ink); }
+  .sx-run__task .sx__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sx-run__laps { padding: 10px 8px 28px; }
+  @media (max-width: 767px) {
+    .sx-run__body { grid-template-columns: minmax(0, 1fr); }
+    .sx-run__task { border-right: 0; padding: 14px 14px 6px; }
+    .sx-run__task p, .sx-run__task .sx__kpis { display: none; }
+    .sx-run__laps { padding: 0 2px 20px; }
+    .sx-laps__r { grid-template-columns: 22px 1fr 1fr 1fr 56px; padding: 0 10px; }
+    .sx-laps__r > :nth-child(5) { display: none; }
+  }
 
-.eyebrow { font-size: 13px; color: var(--p-muted); margin: 0 0 10px; }
-h1 { font: var(--display-weight) 40px/1.08 var(--font-display); letter-spacing: var(--display-tracking); margin: 0 0 28px; text-wrap: balance; }
-h2 { font: 500 17px/1.3 var(--font-display); letter-spacing: -0.01em; margin: 0 0 16px; }
-.muted { color: var(--p-muted); }
+  /* the open workout in the app frame */
+  .sx-open { padding: 20px 24px 40px; display: grid; gap: 18px; align-content: start; }
+  .sx-open__head { display: flex; align-items: flex-start; gap: 12px; }
+  .sx-open__head p { margin: 2px 0 0; color: var(--u-muted); }
+  .sx-open__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 20px; }
+  .sx-box { border: 1px solid var(--u-line); border-radius: 10px; overflow: hidden; align-self: start; }
+  .sx-box > .sx__label { padding: 10px 12px 6px; }
+  .sx-split { display: flex; height: 10px; border-radius: 999px; overflow: hidden; margin: 4px 12px 8px; background: var(--u-fill-2); }
+  .sx-split i { display: block; background: var(--u-accent); }
+  .sx-split__legend { display: flex; justify-content: space-between; padding: 0 12px 12px; font-size: 12px; color: var(--u-muted); }
+  .sx-split__legend b { color: var(--u-ink); font-weight: 500; }
+  .sx-modes { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .sx-modes th, .sx-modes td { padding: 7px 12px; text-align: right; border-top: 1px solid var(--u-line); font-weight: 400; white-space: nowrap; }
+  .sx-modes th:first-child, .sx-modes td:first-child { text-align: left; }
+  .sx-modes thead th { color: var(--u-muted); font-size: 11px; border-top: 0; }
+  .sx-modes td { font-family: var(--font-mono); }
+  .sx-modes td:first-child { font-family: var(--font-text); }
+  @media (max-width: 1279px) { .sx-open__grid { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 639px) {
+    .sx-open { padding: 16px 14px 32px; }
+    .sx-open .sx__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sx-open .sx-laps__r { grid-template-columns: 22px 1fr 1fr 1fr 56px; padding: 0 10px; }
+    .sx-open .sx-laps__r > :nth-child(5) { display: none; }
+  }
 
-/* ---------- the Premium card ---------- */
-.pcard {
-  position: relative; isolation: isolate; overflow: hidden;
-  aspect-ratio: 1.586; width: 100%; max-width: 560px;
-  border-radius: 22px; color: #fff; background: var(--deep);
-  box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 30px 60px -30px rgba(10,26,82,.55), 0 18px 36px -18px rgba(0,0,0,.25);
-  --bg: #0a1a52; --surface: #12267a; --ink: #ffffff; --muted: #aab6e6; --accent: #4f7bff; --accent-ink: #ffffff;
-}
-.pcard::after { /* the hairline edge of a real card */
-  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
-}
-.pcard-in { position: absolute; inset: 0; padding: 26px 28px; display: flex; flex-direction: column; }
-.pcard .top { display: flex; align-items: flex-start; justify-content: space-between; }
-.pcard .brand { font: 500 20px/1 var(--font-display); letter-spacing: -0.02em; }
-.pcard .brand small { display: block; margin-top: 6px; font: 400 13px/1 var(--font-text); letter-spacing: 0; color: #c7d0f2; }
-.pcard .logo { width: 70px; height: 22px; }
-.pcard .logo path[fill="white"] { fill: #fff; }
-.pcard .bottom { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
-.pcard .name { font: 500 17px/1.2 var(--font-display); letter-spacing: .01em; }
-.pcard .until { margin-top: 6px; font-size: 13px; color: #c7d0f2; }
-.pcard .chip { font-size: 12px; font-weight: 500; padding: 6px 10px; border-radius: 99px; background: rgba(255,255,255,.14); white-space: nowrap; }
-.pcard.off { --bg: #2a2d36; --surface: #353945; --muted: #a0a4b0; --accent: #8b93a8; background: #2a2d36; }
-.pcard.off .chip { background: rgba(255,255,255,.1); color: #d9dbe2; }
+  /* app-frame (sections-library.md) */
+  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); overflow: hidden; }
+  .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  .app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
+  .app > .app__pane > .ui-panel { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+  .app > .app__pane::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px; background: linear-gradient(transparent, var(--u-bg)); pointer-events: none; }
+  @media (min-width: 1024px) and (max-width: 1279px) { .app.ui { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
+  @media (max-width: 1023px) {
+    .app.ui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .app > .app__pane--list { max-height: 252px; }
+    .app > .app__pane--list::after { display: none; }
+    .app .ui-win__side { display: none; }
+    .app .ui-win__body { grid-template-columns: minmax(0, 1fr); }
+    .app > .app__pane + .app__pane { border-left: 0; border-top: 1px solid var(--u-line); }
+  }
+  @media (max-width: 639px) {
+    .app.ui { grid-template-rows: minmax(0, 1fr); }
+    .app > .app__pane--list { display: none; }
+    .app > .app__pane + .app__pane { border-top: 0; }
+  }
 
-[data-enter] { animation: enter .9s var(--ease) both; }
-[data-enter="2"] { animation-delay: .08s; }
-[data-enter="3"] { animation-delay: .16s; }
-@keyframes enter { from { opacity: 0; transform: translateY(14px); } }
+  /* chart cards */
+  #charts .panel { --p-h: 336px; }
+  .sx-chart { padding: 14px 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .sx-chart__head { display: flex; align-items: center; gap: 10px; }
+  .sx-chart__head .sx__h { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sx-chart svg { display: block; width: 100%; height: auto; }
+  .sx-chart text { font: 400 10.5px var(--font-text); fill: var(--u-muted); }
+  .sx-key { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--u-muted); }
+  .sx-key span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .sx-key i { width: 10px; height: 10px; border-radius: 3px; background: var(--k, var(--u-accent)); }
+  .sx-key i.ln { height: 3px; border-radius: 2px; }
+  .sx-key i.dot { border-radius: 50%; }
+  .sx-seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--u-fill); font-size: 11.5px; }
+  .sx-seg span { padding: 2px 8px; border-radius: 6px; color: var(--u-muted); white-space: nowrap; }
+  .sx-seg span.on { background: var(--u-bg); color: var(--u-ink); box-shadow: 0 1px 2px rgb(31 48 56 / .12); }
+  .sx-rings { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; }
+  .sx-rings b { display: block; font-weight: 500; }
+  .sx-rings small { display: block; font-size: 11.5px; color: var(--u-muted); }
+  @media (max-width: 639px) {
+    #charts .panel { --p-h: 168px; }
+    /* the three windows fill the scene's two screens, each read from its top */
+    #solo:not(.is-live) .mo-pc__visual--lit { aspect-ratio: auto; height: 296px; align-items: flex-start; padding-bottom: 0;
+      -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent); }
+    /* the plot itself in the short window: no legend, the drawing fitted whole */
+    #charts .sx-key, #charts .sx-chart__head .ui-chip { display: none; }
+    #charts .sx-chart > svg { height: 100px; }
+    #charts .sx-rings small { display: none; }
+    #charts .sx-chart { gap: 4px; padding-top: 10px; }
+    #charts .grid, #charts > .wrap { row-gap: var(--s-5); }
+    .sx-chart__head { flex-wrap: wrap; }
+    .sx-chart__head .sx__h { flex: 1 0 auto; }
+    .sx-seg { display: none; }
+    .sx-rings { gap: 4px; }
+    .sx-chart svg.sx-bars { max-height: 190px; }
+  }
 
-/* ---------- status line under the card ---------- */
-.status { max-width: 560px; margin: 22px 0 0; }
-.status-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
-.track { height: 4px; border-radius: 4px; background: var(--p-surface); margin-top: 10px; overflow: hidden; }
-.track i { display: block; height: 100%; background: var(--p-accent); border-radius: inherit; transform-origin: left; animation: grow 1.2s .3s var(--ease) both; }
-@keyframes grow { from { transform: scaleX(0); } }
+  /* pinned chapters: fragments keep their size inside the lit frame */
+  #solo .mo-pc__visual > .ui { width: min(100%, 440px); }
+  #solo .ui { --u-bg: #ffffff; }
 
-/* ---------- what is in Premium: a band of feature cards (taste cards.md: card > lit panel > fragment) ---------- */
-.feat-band { background: #f3f4f6; border-top: 1px solid var(--line); }
-.feat-in { max-width: 1160px; margin: 0 auto; padding: 88px 32px 96px; }
-.feat-head { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 32px; align-items: end; margin-bottom: 40px; }
-.feat-head h2 { font: var(--display-weight) 36px/1.1 var(--font-display); letter-spacing: var(--display-tracking); margin: 0; text-wrap: balance; }
-.feat-head p { margin: 0; font-size: 16px; line-height: 1.5; color: #2b2b2b; max-width: 46ch; justify-self: end; }
-.bento { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
-.fcard { background: #fff; border: 1px solid rgba(17,17,17,.09); border-radius: 20px; padding: 32px 32px 0; display: flex; flex-direction: column; overflow: hidden; }
-.fcard h3, .mini h3 { font: 500 19px/1.25 var(--font-display); letter-spacing: -0.015em; margin: 0 0 8px; }
-.fcard p, .mini p { margin: 0; font-size: 16px; line-height: 24px; color: #2b2b2b; max-width: 46ch; min-height: 48px; }
-.panel { --p-h: 290px; position: relative; isolation: isolate; height: var(--p-h); margin-top: 32px; border-radius: 12px 12px 0 0; overflow: hidden; }
-.panel::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(17,17,17,.06); pointer-events: none; z-index: 3; }
-/* soft lit fields in the «sky» family: one hue, the light from a different side in each panel */
-.g1 { background: radial-gradient(110% 90% at 12% 0%, #eef3f8 0%, rgba(238,243,248,0) 58%), radial-gradient(90% 80% at 100% 100%, #a9bccf 0%, rgba(169,188,207,0) 70%), #c6d3df; }
-.g2 { background: radial-gradient(100% 90% at 90% 0%, #eef3f8 0%, rgba(238,243,248,0) 55%), radial-gradient(90% 90% at 0% 100%, #a5b9cd 0%, rgba(165,185,205,0) 70%), #c9d5e0; }
-.g3 { background: radial-gradient(120% 80% at 50% 0%, #f0f4f8 0%, rgba(240,244,248,0) 60%), radial-gradient(70% 80% at 100% 90%, #aabdd0 0%, rgba(170,189,208,0) 70%), #c6d3df; }
-.g4 { background: radial-gradient(100% 100% at 0% 0%, #edf2f7 0%, rgba(237,242,247,0) 55%), radial-gradient(90% 70% at 80% 100%, #a7bacd 0%, rgba(167,186,205,0) 70%), #cbd6e1; }
-.frag { position: absolute; z-index: 1; background: #fff; border: 1px solid rgba(17,17,17,.12); border-radius: 12px; font-size: 13px; line-height: 1.35; color: var(--p-ink);
-  box-shadow: 0 1px 1px rgba(17,25,40,.04), 0 6px 14px -6px rgba(17,25,40,.12), 0 22px 40px -18px rgba(17,25,40,.22); }
-.frag .meta { font-size: 12px; color: var(--p-muted); }
-/* placements: corner (cut right and bottom), rise (cut bottom), right, low stack */
-.at-corner { left: 32px; top: 36px; width: 460px; } /* runs past the panel's right edge only by the empty end of its rows */
-.at-rise { left: 50%; transform: translateX(-50%); top: 40px; width: min(400px, calc(100% - 64px)); }
-.at-right { right: 28px; top: 32px; width: min(360px, calc(100% - 56px)); }
-.at-low { left: 32px; right: 32px; bottom: 32px; }
+  @media (min-width: 1024px) { .nav__menu .menu-card { padding: var(--s-5); border-radius: var(--r-md); background: var(--surface); align-content: start; } }
+  /* tablets: the pay split and the questions keep two columns, so each stays one screen */
+  @media (min-width: 720px) and (max-width: 1023px) {
+    #faq > .wrap > .span-5 { grid-column: 1 / span 5; }
+    #faq > .wrap > .faq { grid-column: 6 / span 7; }
+  }
+  @media (min-width: 640px) and (max-width: 1023px) {
+    /* pay: the reasons in two columns over the form, one screen */
+    #pay .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3) var(--s-6); }
+    #pay .checks > li { margin: 0; }
+    /* the grain ground under the form takes what the screen leaves, so a tall tablet has no empty foot */
+    main > #pay > .wrap { flex: 1 1 auto; display: flex; flex-direction: column; row-gap: var(--s-5); }
+    #pay > .wrap > .start-7 { flex: 1 1 auto; display: flex; flex-direction: column; }
+    #pay .payfx { flex: 1 1 auto; height: auto; padding: var(--s-3) var(--s-4); }
+    #pay .paycard { padding: var(--s-4) var(--s-5); }
+    #payform { gap: 10px; }
+    #faq .faq > .faq__item { padding: var(--s-4) 0; }
+    #faq .faq > .faq__item:first-child { padding-top: 0; }
+  }
+  /* a short tablet (768x1024): the form in two columns, the choice left and the sum with the button right */
+  @media (min-width: 640px) and (max-width: 1023px) and (max-height: 1100px) {
+    #payform { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--s-6); }
+    #payform > fieldset, #payform > .pay__auto, #payform > .pay__slot { grid-column: 1; }
+    #payform > .pay__sum { grid-column: 2; grid-row: 1; align-self: end; padding-top: 0; border-top: 0; }
+    #payform > .btn { grid-column: 2; grid-row: 2; }
+    #payform > .pay__fine { grid-column: 2; grid-row: 3 / span 2; }
+    #payform > .pay__status { grid-column: 2; grid-row: 4; align-self: end; }
+    #payform .pay__plans { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    #payform .pay__plan { grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; gap: 12px; min-height: 48px; padding-block: 8px; }
+    #payform .pay__plan::before { top: 50%; margin-top: -9px; }
+    #payform .pay__plan b { white-space: nowrap; }
+    #payform .pay__plan span { text-align: right; }
+    #pay .section-head { margin-bottom: var(--s-6); }
+    #pay .checks { row-gap: var(--s-5); }
+    main #pay .payfx { margin-top: var(--s-5); padding-top: var(--s-7); }
+    #payform { row-gap: var(--s-4); }
+  }
+  @media (min-width: 640px) and (max-width: 1023px) {
+    /* charts: the four cards as two rows in one screen, the windows as tall as the screen leaves */
+    main > #charts { --h: 1; }
+    main > #charts > .wrap { display: flex; flex-direction: column; row-gap: var(--s-5); }
+    #charts .grid { row-gap: var(--s-5); }
+    #charts .panel { --p-h: clamp(180px, 50svh - 306px, 336px); }
+    /* the quote larger, its figures under it, together in the middle of the screen */
+    #founder > .wrap { justify-content: center; }
+    #founder .founder__quote blockquote { font-size: clamp(44px, 6.4vw, 56px); line-height: 1.12; }
+    #founder .founder__stats { margin-top: 0; padding-top: 88px; }
+    /* the form stands on the page itself, in two columns: no card inside a panel, so its text keeps the container's left */
+    main #pay .payfx, main #pay .paycard { padding: 0; background: none !important; border: 0 !important; border-radius: 0; box-shadow: none !important; outline: 0 !important; }
+    main #pay .payfx::before, main #pay .payfx::after, main #pay .payfx > canvas { display: none !important; }
+    main #pay .payfx { flex: 0 0 auto; align-content: start; padding-top: var(--s-6); border-top: 1px solid var(--line) !important; }
+    @media (min-height: 1101px) { #payform { gap: var(--s-4); } #payform > .btn { height: 56px; font-size: 18px; } }
+    main #pay .pay__note { padding: 0; background: none; }
+    /* one action, one size: the closing button as tall as the bar's */
+    .closing__cta.close--type > .btn--xl { height: 44px; min-height: 44px; font-size: 16px; width: auto; padding-inline: 28px; }
+    /* figures in the windows as a ruled row, not filled tiles */
+    .sx__kpi { padding: 4px 0 4px 10px; border-radius: 0; background: none; border-left: 1px solid var(--u-line, rgba(0,0,0,.12)); }
+    /* the third note would sit under the window's fade */
+    #solo:not(.is-live) .ui-note:nth-of-type(3) { display: none; }
+  }
+  /* the scene at rest on tablets: three rows in one screen, each window cut at its foot */
+  @media (min-width: 640px) {
+    #solo:not(.is-live) .mo-pc__steps { gap: var(--s-5); }
+    #solo:not(.is-live) .mo-pc__step { padding-top: var(--s-5); }
+    #solo:not(.is-live) .mo-pc__visual--lit { aspect-ratio: 5 / 3; align-items: flex-start; padding-bottom: 0;
+      -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
+  }
+  .faq__chat { display: inline-flex; align-items: center; gap: var(--s-3); text-decoration: none; }
+  /* the band's own spacing would break the screen rhythm and the pinned scene: the section keeps the system's */
+  main > #solo { padding: var(--padt) 0 calc(var(--padb) + var(--bar)); grid-template-columns: minmax(0, 1fr); align-content: start; }
+  main > #solo:not(.is-live) { min-height: 100svh; }
+  @media (max-width: 639px) { main > #solo:not(.is-live) { min-height: 200vh; min-height: 200lvh; } }
+  main > #solo.is-live { display: block; padding: 0; min-height: 0; height: 200svh; }
+  /* founder band: the quote is the statement, the three facts stand on the bottom line */
+  @media (max-width: 1023px) { #charts .sx-modes { display: none; } }
+  .founder__quote { max-width: none; }
+  .founder__quote blockquote { font-size: clamp(25px, 4.4vw + 8px, 72px); line-height: 1.1; }
+  .founder__quote figcaption { margin-top: var(--s-6); }
+  .founder__stats { margin-top: auto; padding-top: var(--s-7); }
+  #founder > .wrap { display: flex; flex-direction: column; }
+  .founder__mark { color: #ff6f61; margin-bottom: var(--s-5); }
+  #founder .founder__stats dt { color: #c3ccd0; }
+  .founder__stats .t-stat { font-size: clamp(30px, 2vw + 18px, 48px); }
+  #solo .ui-cal__events .ui-cal__ev { align-items: center; }
 
-/* S10 Solo: the week of a plan */
-.wk-h { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
-.wk-h b { font-weight: 500; }
-.wk-r { display: grid; grid-template-columns: 22px 8px 136px minmax(0,1fr); gap: 10px; align-items: center; padding: 11px 16px; border-bottom: 1px solid #f0f0f2; }
-.wk-r .d { color: var(--p-muted); font-size: 12px; }
-.wk-r i { width: 8px; height: 8px; border-radius: 50%; }
-.wk-r.on { background: #f3f6fe; box-shadow: inset 2px 0 0 var(--p-accent); }
-.t-rec { background: #2e9e5b; } .t-dev { background: #2f6fdb; } .t-int { background: #f08a24; } .t-long { background: #d9443a; }
-
-/* analysis: 80:20 */
-.an { padding: 16px 18px 18px; }
-.an-h { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-.an-h b { font-weight: 500; }
-.split { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px; }
-.split i { display: block; }
-.split .slow { background: #c3cfe6; } .split .fast { background: var(--p-accent); }
-.leg { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: var(--p-muted); }
-.leg b { color: var(--p-ink); font-weight: 500; }
-.spark { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
-.spark svg { display: block; width: 100%; height: 56px; margin-top: 8px; }
-
-/* coach: a task, its report and the coach's comment */
-.task { padding: 14px 16px; border-bottom: 1px solid var(--line); }
-.task-t { display: flex; align-items: center; gap: 8px; font-weight: 500; }
-.task-t i { width: 8px; height: 8px; border-radius: 50%; }
-.task .meta { margin-top: 4px; }
-.done { display: inline-block; margin-top: 8px; font-size: 12px; padding: 3px 8px; border-radius: 99px; background: #eef0f3; color: #2b2b2b; }
-.cmt { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 10px; padding: 14px 16px 16px; }
-.cmt .av { width: 28px; height: 28px; border-radius: 50%; background: #e4e8ef; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #3d4a6b; }
-.cmt .txt { border-left: 2px solid var(--p-accent); padding-left: 10px; }
-.cmt .txt b { font-weight: 500; display: block; margin-bottom: 2px; }
-
-/* Telegram: a short stack of notifications */
-.ntf { display: grid; grid-template-columns: 36px minmax(0,1fr); gap: 12px; padding: 14px 16px; border-bottom: 1px solid #f0f0f2; }
-.ntf:last-child { border-bottom: 0; }
-.ntf .tile { width: 36px; height: 36px; border-radius: 9px; background: #f4f6f9; display: grid; place-items: center; }
-.ntf .tile img { width: 22px; height: 22px; display: block; }
-.ntf .top { display: flex; justify-content: space-between; gap: 8px; }
-.ntf .top b { font-weight: 500; }
-
-/* the four smaller things */
-.minis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-top: 16px; }
-.mini { background: #fff; border: 1px solid rgba(17,17,17,.09); border-radius: 20px; padding: 28px; }
-.mini h3 { margin-top: 20px; }
-.mini p { font-size: 15px; line-height: 22px; min-height: 0; }
-.mini .tiles { display: flex; gap: 8px; }
-.mini .tl { width: 44px; height: 44px; border-radius: 12px; background: #f1f4f9; color: #24324f; display: grid; place-items: center; }
-.mini .tl svg { width: 22px; height: 22px; }
-.mini .tl img { width: 24px; height: 24px; display: block; }
-
-/* ---------- the pay panel ---------- */
-.pay {
-  border: 1px solid var(--line); border-radius: var(--r-l); background: #fff; padding: 24px 26px;
-  box-shadow: 0 1px 2px rgba(17,17,17,.04), 0 24px 48px -28px rgba(17,17,17,.18);
-  display: flex; flex-direction: column;
-}
-#pay-body { flex: 1; display: flex; flex-direction: column; }
-.pay-t { font: 500 22px/1.2 var(--font-display); letter-spacing: -0.02em; margin: 0 0 18px; }
-.lbl { display: block; font-size: 13px; color: var(--p-muted); margin: 0 0 8px; }
-
-.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--p-surface); border-radius: var(--r-m); margin-bottom: 18px; position: relative; }
-.seg::before { content: ""; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 6px); border-radius: 9px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 2px 8px -2px rgba(0,0,0,.08); transition: transform .35s var(--ease); }
-.seg[data-v="rub"]::before { transform: translateX(calc(100% + 4px)); }
-.seg button { position: relative; z-index: 1; border: 0; background: none; min-height: 48px; border-radius: 9px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.2; color: var(--p-muted); transition: color .2s; }
-.seg button b { font-weight: 500; font-size: 14px; color: inherit; }
-.seg button small { font-size: 12px; }
-.seg button[aria-pressed="true"] { color: var(--p-ink); }
-.seg button:hover { color: var(--p-ink); }
-
-.plans { display: grid; gap: 8px; margin-bottom: 14px; }
-.plan { position: relative; display: grid; grid-template-columns: 20px minmax(0,1fr) auto; gap: 12px; align-items: center; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: var(--r-m); cursor: pointer; transition: border-color .2s, box-shadow .2s, background .2s; min-height: 60px; }
-.plan:hover { border-color: #a9b9ec; }
-.plan input { position: absolute; opacity: 0; pointer-events: none; }
-.plan .dot { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center; transition: border-color .2s; }
-.plan .dot::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--p-accent); transform: scale(0); transition: transform .25s var(--ease); }
-.plan:has(input:checked) { border-color: var(--p-accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.plan:has(input:checked) .dot { border-color: var(--p-accent); }
-.plan:has(input:checked) .dot::after { transform: scale(1); }
-.plan:has(input:focus-visible) { outline: 2px solid var(--p-accent); outline-offset: 2px; }
-.plan b { font-weight: 500; display: block; }
-.plan small { font-size: 13px; color: var(--p-muted); }
-.plan .price { font-weight: 500; font-size: 16px; text-align: right; white-space: nowrap; }
-.plan .price small { display: block; font-weight: 400; }
-
-.switch { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); cursor: pointer; }
-.switch b { font-weight: 500; display: block; font-size: 14px; }
-.switch small { font-size: 13px; color: var(--p-muted); display: block; }
-.switch small a { color: var(--p-accent); }
-.tg { position: relative; width: 44px; height: 26px; }
-.tg input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
-.tg i { position: absolute; inset: 0; border-radius: 99px; background: var(--line-strong); transition: background .25s; }
-.tg i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .3s var(--ease); }
-.tg input:checked + i { background: var(--p-accent); }
-.tg input:checked + i::after { transform: translateX(18px); }
-.tg input:focus-visible + i { outline: 2px solid var(--p-accent); outline-offset: 2px; }
-.switch.is-off { opacity: .5; cursor: default; }
-.switch.is-off .tg input { cursor: default; }
-
-.field { padding: 12px 0 0; border-top: 1px solid var(--line); }
-.field input { width: 100%; height: 46px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: var(--r-s); background: #fff; transition: border-color .2s, box-shadow .2s; font-size: 16px; }
-.field input:hover { border-color: #a9b9ec; }
-.field input:focus { outline: none; border-color: var(--p-accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.field .err { display: none; color: #c4372c; font-size: 13px; margin-top: 6px; }
-.field.bad input { border-color: #c4372c; }
-.field.bad .err { display: block; }
-
-.note { display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 12px; padding: 14px 16px; margin-top: 4px; border-radius: var(--r-m); background: var(--accent-soft); color: var(--p-accent); font-size: 13px; line-height: 1.45; }
-.note b { display: block; color: var(--p-ink); font-weight: 500; font-size: 14px; margin-bottom: 2px; }
-.note span { color: #3d4a6b; }
-.sum { margin-top: auto; padding-top: 16px; }
-.sum-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--p-muted); padding: 4px 0; }
-.sum-row.total { color: var(--p-ink); font-size: 16px; font-weight: 500; padding-top: 12px; margin-top: 8px; border-top: 1px solid var(--line); }
-.sum-row.total b { font: 500 22px/1 var(--font-display); letter-spacing: -0.02em; }
-
-.go {
-  margin-top: 18px; width: 100%; min-height: 54px; border: 0; border-radius: var(--r-m); cursor: pointer;
-  background: var(--p-action); color: var(--p-action-ink); font-weight: 500; font-size: 16px;
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 8px 20px -8px rgba(26,75,224,.6);
-  transition: background .2s, transform .15s var(--ease), box-shadow .2s;
-}
-.go:hover { background: #163fc0; transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 12px 24px -10px rgba(26,75,224,.7); }
-.go:active { transform: translateY(1px) scale(.995); box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 4px 10px -6px rgba(26,75,224,.6); }
-.go[disabled] { opacity: .6; cursor: progress; }
-.fine { margin: 12px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--p-muted); display: flex; gap: 8px; align-items: flex-start; }
-.fine svg { flex: none; margin-top: 2px; }
-.fine a { color: inherit; }
-
-footer { max-width: 1160px; margin: 0 auto; padding: 28px 32px 40px; position: relative; display: flex; gap: 8px 24px; flex-wrap: wrap; font-size: 13px; color: var(--p-muted); }
-footer::before { content: ""; position: absolute; top: 0; left: 32px; right: 32px; border-top: 1px solid var(--line); }
-@media (max-width: 860px) { footer::before { left: 20px; right: 20px; } }
-footer a { text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
-footer a:hover { color: var(--p-ink); text-decoration: underline; text-underline-offset: 3px; }
-footer .sp { flex: 1; }
-
-.demo-note { font-size: 12px; color: var(--p-muted); background: var(--p-surface); padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
-.demo-note a { color: var(--p-accent); margin-left: 6px; }
-@media (max-width: 560px) { .demo-note { display: none; } }
-
-/* ---------- smaller screens ---------- */
-@media (max-width: 1080px) {
-  .grid { grid-template-columns: minmax(0,1fr) 400px; column-gap: 40px; }
-  .minis { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .at-corner { width: 480px; }
-}
-@media (max-width: 860px) {
-  main { padding: 28px 20px 64px; }
-  .bar-in, footer { padding-left: 20px; padding-right: 20px; }
-  .grid { grid-template-columns: minmax(0,1fr); grid-template-areas: "card" "pay"; }
-  .a-pay { margin-top: 32px; }
-  .feat-in { padding: 56px 20px 64px; }
-  .feat-head { grid-template-columns: minmax(0,1fr); gap: 12px; margin-bottom: 28px; }
-  .feat-head h2 { font-size: 28px; }
-  .feat-head p { justify-self: start; }
-  .bento { grid-template-columns: minmax(0,1fr); }
-  .pay { padding: 22px 20px; }
-  .pcard { max-width: none; }
-  .status { max-width: none; }
-  h1 { font-size: 30px; margin-bottom: 20px; }
-}
-@media (max-width: 420px) {
-  .pcard-in { padding: 18px 20px; }
-  .pcard .brand { font-size: 17px; }
-  .pcard .name { font-size: 15px; }
-  .pcard .chip { display: none; }
-  .who > span:first-child { display: none; }
-  .fcard { padding: 24px 24px 0; border-radius: 18px; }
-  .fcard p { min-height: 0; }
-  .panel { --p-h: 250px; margin-top: 24px; }
-  .at-corner { left: 16px; top: 24px; width: 400px; }
-  /* on a phone the week runs past the right edge: its end fades out instead of being sliced */
-  .at-corner { width: calc(100% - 32px); }
-  .wk-r { grid-template-columns: 22px 8px minmax(0,1fr); }
-  .wk-r .meta, .wk-r.ph-off { display: none; } /* three days, whole, inside the phone's panel */
-  .leg .goal, .spark .per, .task.rep { display: none; }
-  .at-rise { width: calc(100% - 32px); top: 24px; }
-  .at-right { right: 16px; width: calc(100% - 32px); top: 24px; }
-  .at-low { left: 16px; right: 16px; bottom: 24px; }
-  .minis { grid-template-columns: minmax(0,1fr); }
-  .mini { padding: 24px; border-radius: 18px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-}
+  /* the pay card */
+  .paycard { padding: clamp(20px, 2.4vw, 32px); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: 0 1px 2px rgb(31 48 56 / .05), 0 18px 48px -24px rgb(31 48 56 / .28); }
+  /* the pay card stands on the same grain ground as the chart cards */
+  #pay .payfx { display: grid; align-content: center; min-height: 0; height: 100%; padding: clamp(12px, 3.2vw, 44px); border-radius: var(--r-lg); }
+  #pay .payfx > .paycard { position: relative; z-index: 2; border-color: transparent; }
+  #pay .wrap > .start-7 { align-self: stretch; }
+  .pay { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .pay fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  .pay__cur { display: flex; gap: 28px; border-bottom: 1px solid var(--line); }
+  .pay__cur label { position: relative; display: inline-flex; align-items: center; height: 44px; font-weight: 500; color: var(--muted); cursor: pointer; }
+  .pay__cur label:hover { color: var(--ink); }
+  .pay__cur label:has(:checked) { color: var(--ink); box-shadow: inset 0 -2px 0 var(--action); }
+  .pay input[type="radio"] { -webkit-appearance: none; appearance: none; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; border: 0; background: none; border-radius: inherit; cursor: pointer; }
+  .pay input[type="radio"]:focus-visible { outline: 2px solid var(--action); outline-offset: 3px; }
+  .pay input[type="radio"]:disabled { cursor: default; }
+  .pay__plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .pay__plan { position: relative; display: grid; gap: 2px; align-content: start; padding: 12px 14px 12px 42px; min-height: 68px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; transition: border-color .2s, background-color .2s; }
+  .pay__plan::before { content: ""; position: absolute; left: 14px; top: 15px; width: 18px; height: 18px; box-sizing: border-box; border-radius: 50%; border: 1.5px solid color-mix(in oklab, var(--ink) 40%, var(--bg)); background: var(--bg); }
+  .pay__plan:hover { border-color: color-mix(in oklab, var(--ink) 45%, var(--bg)); }
+  .pay__plan:has(:checked) { border-color: var(--action); box-shadow: inset 0 0 0 1px var(--action); background: color-mix(in oklab, var(--action) 5%, var(--bg)); }
+  .pay__plan:has(:checked)::before { border: 5.5px solid var(--action); }
+  .pay__plan:has(:disabled) { cursor: default; background: var(--surface); }
+  .pay__plan:has(:disabled) b { color: var(--muted); }
+  .pay__plan b { font-weight: 500; }
+  .pay__plan span { font-size: var(--t-small); color: var(--muted); }
+  .pay__auto { display: flex; align-items: center; gap: 12px; min-height: 48px; cursor: pointer; }
+  .pay__auto small { display: block; font-size: var(--t-small); color: var(--muted); }
+  .pay__auto:has(:disabled) { cursor: default; }
+  .pay__auto input:focus-visible { outline: 2px solid var(--action); outline-offset: 3px; }
+  .pay__slot { min-height: 104px; display: grid; align-content: start; }
+  .pay__slot .field { display: grid; gap: 6px; }
+  .pay__slot input { width: 100%; }
+  .pay__note { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--surface); font-size: var(--t-small); line-height: 1.5; }
+  .pay__sum { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .pay__sum b { font: var(--display-weight) 32px/1.1 var(--font-display); letter-spacing: var(--display-tracking); white-space: nowrap; }
+  .pay .btn { width: 100%; }
+  .pay__status { margin: 0; min-height: 22px; font-size: var(--t-small); color: var(--muted); overflow-wrap: anywhere; }
+  .pay__fine { margin: 0; font-size: var(--t-small); line-height: 1.5; color: var(--muted); }
+  .pay__fine a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  #paystate { min-height: 3em; }
+  [hidden] { display: none !important; }
+  @media (max-width: 639px) {
+    .pay { gap: 12px; }
+    .pay__cur { gap: 20px; }
+    /* on a phone each period is one row, name left and price right, so the form fits its screen */
+    .pay__plans { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .pay__plan { grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; gap: 12px; min-height: 48px; padding: 8px 14px 8px 38px; }
+    .pay__plan::before { left: 12px; top: 50%; margin-top: -9px; }
+    .pay__plan b { white-space: nowrap; }
+    .pay__plan span { text-align: right; }
+    /* a phone has no room for a card in a card: the form stands on the page, on the container's lines */
+    #pay .payfx, .paycard { padding: 0; background: none !important; border: 0; border-radius: 0; box-shadow: none; }
+    #pay .payfx { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
+    #pay .payfx::before, #pay .payfx::after { display: none !important; }
+    #pay .payfx > canvas { display: none !important; }
+    .pay__plans { gap: 0; }
+    .pay__plan, .pay__plan:has(:checked) { padding: 8px 34px 8px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; box-shadow: none; }
+    .pay__plan::before { left: auto; right: 2px; }
+    .pay__plan:has(:checked) b { color: var(--action); }
+    .pay__note { padding: 0; background: none; }
+    /* the reasons fill their screen */
+    #pay > .wrap > .span-5 { align-self: stretch; display: flex; flex-direction: column; }
+    #pay .checks { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 0; }
+    #pay .checks > li { margin: 0; }
+    /* the price and the banks are said by the form above: four questions fit one screen */
+    #faq .faq__item:is(:nth-child(1), :nth-child(3)) { display: none; }
+    #faq .section-head p { display: none; }
+    #faq .faq > .faq__item { padding: var(--s-3) 0; }
+    #faq .faq > .faq__item:nth-child(2) { padding-top: 0; }
+    .hero .pill { padding: 0; border: 0; background: none; box-shadow: none; }
+    .hero .sx__pre, .hero .sx__bar .ui-dots { display: none; }
+    .hero .sx__crumb { overflow: visible; }
+  }
 </style>
 </head>
+<!-- type: software · deal: hero centred, cool-white-slate, plex, soft, nav-mega, footer-dark, close-type, dark-band,
+     pill, initial, sage; effect fluted-glass (hero), card ground grain-gradient
+     moments: pinned-chapters (#solo)
+     grounds: #solo bg-band, #founder ground-inverse -->
 <body>
-<a class="skip" href="#pay">К оплате</a>
-<div id="app"></div>
+<header class="nav">
+  <div class="wrap nav__bar">
+    <a class="skip-link" href="#top">К содержанию</a>
+    <a class="nav__logo" href="https://s10.run/" aria-label="S10.run, главная"><svg viewBox="0 0 89 27" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M23 17.9L22.6 17.6L22.5 17.7L22.4 17.5L22 17.7L21.6 17.3L21.2 17.5L20.7 17.3L20.1 16.8L20.2 16.1L20.6 15L20.7 14.1L21.2 14.1L21.4 13.9L21.4 13.5L21.2 13.1L21.5 12.3L22.6 11.5L22.5 11.3L22.9 10.9L22.7 10.7L23.3 10.3L23.6 9.7L23.6 9.6L23.2 10L22.5 10.2L22.1 10.8L22.1 10.4L22.7 8.9L23.1 7L23.3 6.8L24 4.6L24.8 3L24.7 2.5L25.6 1L25.6 .7L25.4 .4L25.8 0L26.3 .2L26.9 .1L28.8 1.4L28.9 2.1L28.4 3.3L28.5 3.4L28.4 3.8L28.6 3.9L27.5 6L27.4 6.3L27.6 6.3L27.3 7L27.2 7.8L26.8 8.3L26.8 8.8L26.3 9.2L26.3 10.6L26 10.9L26 11.1L25.1 13.2L25.2 14.2L24.9 14.9L24.7 15.5L24.9 15.9L24.4 17.6L23.9 18.3L23.2 18.1L23 17.9ZM20.6 15.3L20.7 15.6L20.8 15.3L20.6 15.3ZM20.8 15.1L21 15.1L21.1 14.9L20.9 14.8L20.8 15.1ZM21.7 11.6L21.9 11.4L22.1 11.4L21.9 11.8L21.7 11.9L21.7 11.6ZM22.1 12.7L21.8 13L21.8 13.3L22.3 13L22.5 13L22.5 13.2L22.9 12.8L22.1 12.7ZM22.3 12.5L22.8 12.4L23 11.7L22.3 12.5ZM24.6 16L24.2 16.2L24.6 16.1L24.6 16Z" fill="white"/><path d="M37.1 16.9L36.7 17.1L34.6 17L33.1 16.5L32.2 15.9L31.7 15.2L31.6 14.5L31.4 14.4L31.4 14.2L31.2 14.4L31.6 13.2L31.5 13.1L31.3 13.2L31.3 13.1L31.4 12.6L31.3 12.5L31.3 12.6L31.3 11.8L31.6 11.4L31.3 11.5L31.6 10.9L31.8 9.6L32 9.4L31.9 9.6L32.3 9.4L32.2 9.2L32.6 7.9L32.7 7.6L32.5 7.7L32.7 7L34.1 5L34 4.6L34.3 4.5L34.5 3.3L35.7 1.8L36.7 1.5L36.7 1.8L37.6 1.7L38 1.4L38.4 1.5L41.4 2.1L43 3.5L43.1 3.9L43.3 4L43.4 5.2L43.9 5.9L43.7 6.6L43.8 7L43.9 9L43.8 9.4L43.7 9.5L43.6 9.3L43.4 9.6L43.3 10.3L43.1 10.6L43.3 11.1L42.7 12.2L42.4 12.3L42.1 13.5L41.9 13.4L41.9 13.9L41.3 14.3L41.2 14.2L41.2 14.6L40.7 14.8L40.6 15.2L38.9 16.7L37.6 17.1L37.1 16.9ZM32.4 8.2L32.2 8.7L31.8 9.1L32.1 8.4L32.4 8.2ZM32.2 11L32.1 11.5L32.4 11.2L32.2 11ZM34.5 13.3L34.7 14.2L35.1 14.8L35.7 15L36.4 14.9L37.1 14.6L37.9 13.9L39.2 11.8L39.6 9.9L40.3 7.8L40.4 5.5L40.6 5L40 4.2L39.9 4.3L39.5 4.2L39.5 3.8L39.4 3.7L38.6 3.7L38.2 3.9L36.5 6.5L35.8 8.4L35.6 8.6L34.9 11.2L34.5 12L34.6 12.1L34.5 12.3L34.5 13.3ZM38.2 3.2L39.5 3.3L39.3 3.1L38.7 2.9L38.6 3.1L38.2 3.2ZM41 14L41.3 14L41.3 13.6L41 14ZM43.3 7.5L43.5 7.8L43.6 7.5L43.4 6.9L43.3 7.5Z" fill="white"/><path d="M43.4 18.1L43.6 16.2L45.3 15.5L46.5 15.7L47 16L47 16.6L46.7 17.6L46.7 18.8L46.1 19.3L45.3 19.5L44.2 19.4L43.6 18.8L43.4 18.1Z" fill="white"/><path d="M53.6 14.3L53.7 15.2L53.6 15.6L53.4 17.2L52.6 17.3L52.6 17.1L52.5 17.6L51.3 17.3L50.7 17.3L50.7 17L50.4 16.3L50 16.1L50.2 15.4L50.1 13.9L50.4 13.6L50.3 13.2L50.5 12.8L50.5 11.3L50.8 7L51.5 6.9L52.9 7.4L54 9L56.1 7.7L58.6 6.4L59.8 6.9L60.5 7.6L60.1 8.3L59.6 8.5L59.5 8.8L59.3 8.9L58.4 9.1L58.3 9.2L55.9 10.1L53.7 11.9L53.6 12.3L53.9 12.6L53.6 14.3ZM55.1 8.9L54.2 9.5L55.3 8.9L55.3 8.7L55.1 8.9ZM57.1 8L55.8 8.7L57.6 8L57.1 8Z" fill="white"/><path d="M70.8 9.4L71 9L71.1 9.6L71.3 9.6L71.6 8.8L71.6 8.6L71.3 8.7L71.2 8.1L71.6 7.1L71.6 6.6L71.9 6.5L74.2 6.5L75.2 7.3L75.4 7.7L75.5 8L74.6 10.8L74.1 13.7L74 13.7L73.8 14L73.6 15.2L73.8 16.5L73.7 17.1L72.3 17.3L71.6 17.5L71.1 17.5L69.9 16.7L69.9 15.5L68.4 16.4L66.2 16.7L66 16.5L64.7 16.3L63.6 15.4L63.2 14.8L62.9 13.6L63.6 9.5L64 8.7L64.2 7.7L64.4 7.3L65 7.3L65.6 7.7L66.4 8.4L66.7 9.1L65.8 13.4L66.1 14.3L66.3 14.5L67.6 14.4L68.9 13.9L69.9 13.1L70.2 12.4L70.4 12.4L71.1 11.9L71 11.7L70.4 11.7L70.9 10.8L70.4 10.6L70.9 10L70.8 9.4ZM70.9 10.3L70.7 10.4L70.8 10.5L70.9 10.3ZM71 11.5L71.2 11.4L71.5 10.7L71 11.5ZM71.2 10.2L71.2 10L71.2 10.2Z" fill="white"/><path d="M78.1 12.6L78.5 11.7L78.5 10.9L78.8 10.1L80.1 7.6L80.3 7.4L81.3 7.6L82.2 8.2L82.8 8.9L82.8 9.5L85.6 8.3L86.6 8.1L88.5 9L88.5 9.6L88.3 9.7L88.5 9.9L88.5 10.9L88.3 11.6L88 12.1L88.2 12.1L88.2 12.6L87.7 14.7L87.7 15.4L87.5 15.9L87.5 16.4L86.8 17L85.8 16.9L85.2 15.8L85.1 13.3L85.3 11.2L85.2 10.3L83.1 11.3L82.2 12.3L82 13L82 13.8L82.3 13.6L82.2 13.9L81.6 14.9L81.9 16L81.8 16.9L80.9 17.2L79.3 17L77.9 16.4L78.2 16L77.9 16L78 15.7L78.1 15.9L78.2 15.8L78.7 15.1L78.6 15L78.4 15.1L78 15L78.3 14.1L77.8 13.9L78.2 13.2L78.1 12.6ZM78.2 13.6L78.1 13.7L78.2 13.8L78.2 13.6ZM78.3 14.6L78.3 14.4L78.3 14.6ZM78.5 13.5L78.5 13.3L78.5 13.5ZM78.6 14.7L78.7 14.7L78.8 14L78.6 14.3L78.6 14.7Z" fill="white"/><path d="M5.4 2.8L5.7 2.2L5.4 2.3L5.4 2.8Z" fill="#FF6F61"/><path d="M5 4.3L5.2 3.3L4.9 4.1L5 4.3Z" fill="#FF6F61"/><path d="M15.3 9L15 8.7L14.4 8.5L14.1 8.1L14.7 8.2L15.2 8.5L15.4 8.7L15.3 9Z" fill="white"/><path d="M10.3 14.8L10.3 14.6L10.7 14.5L10.3 14.8Z" fill="white"/><path d="M19.4 1.5L17.5 .4L16.6 .3L12.6 .1L9.9 .4L7.4 .8L6.7 1.2L5.7 2.5L4.7 5.8L4.2 6.3L4.2 6.9L4 7.3L4.1 7.9L5.1 9.6L6.4 10.3L8.4 10.9L9.7 11.1L12.2 10.7L12.6 10.1L12.2 9.7L10.4 9.1L9.8 9.1L9.3 8.7L8.2 8.4L7.9 8.1L7.6 7.6L7.6 7L8 5.7L8.5 4.6L9.9 3.7L12.4 3.2L14.5 3.3L16.4 3.1L18.1 3.6L18.6 3.6L19.1 3.4L19.4 2.9L19.4 2.1L19.6 1.8L19.4 1.5ZM12.9 2.6L10.8 2.9L12.4 2.5L12.9 2.6ZM17.2 2.6L16.7 2.4L15.5 2.4L16.4 2.2L17.4 2.5L17.2 2.6Z" fill="#F9625A"/><path d="M16.1 9.2L15.8 8.7L15.2 8.1L14.2 7.6L11.4 7.2L9.3 7.2L8.7 7.7L8.8 7.9L10.4 8.6L12.3 9L12.9 9.3L13.2 9.7L13.3 11.8L11.7 13.8L11.2 14.1L9.7 14.5L3.8 14.2L1.8 13.8L.9 13.8L.4 14.1L.4 15.8L0 15.9L.2 16.1L0 16.3L3.8 17L8.4 17.3L11.5 17L13.1 16.5L13.9 15.9L16.2 13.1L16.4 11.2L16.1 9.2ZM.8 16.2L.7 15.9L1 16.1L.8 16.2ZM1.1 16.5L1.1 16.3L1.1 16.5ZM1.7 14.6L1.6 14.4L1 14.6L1.3 14.2L2 14.2L1.7 14.6ZM15.7 9.2L15.6 9.4L15.4 9.1L15.5 9L15.7 9.2Z" fill="white"/><path d="M6.2 19.1L5.8 19.1L6 19.3L5.3 19.1L6.1 19.9L5.8 19.9L9.6 22.7L13.4 25L15.4 25.9L17.5 26.5L19.7 26.9L21.8 27L23.9 26.8L26.1 26.3L28.3 25.5L30.5 24.4L32.7 22.9L34.7 21.3L34.7 21.1L33.3 22L35.3 20.3L35.1 20.4L35.3 20.2L35.3 19.7L34.9 19.9L36.1 18.8L31.9 21.7L28.2 23.5L25 24.4L23 24.7L21.1 24.8L17.7 24.5L15.6 24L13.8 23.4L11.5 22.3L8.2 20.1L8.2 20.3L6.2 19.1ZM34.3 21.5L34.1 21.6L34.3 21.5Z" fill="#F9625A"/><path d="M10.4 22.7L9.8 22.6L8.3 21.5L10.4 22.7Z" fill="white"/><path d="M26 25.9L26.8 25.7L27 25.3L26 25.9Z" fill="white"/><path d="M27.6 25.3L28.9 24.7L29.4 24.3L27.6 25.3Z" fill="white"/><path d="M10.6 23L10.8 23.2L11.1 23.2L10.6 23Z" fill="white"/><path d="M31 22.4L31.5 22.2L31 22.4Z" fill="white"/></svg></a>
+    <nav class="nav__links" aria-label="Разделы">
+      <div class="nav__item">
+        <a class="nav__link" href="#analysis">Возможности<svg class="nav__chev" viewBox="0 0 12 12" aria-hidden="true"><path d="m3 4.5 3 3 3-3"/></svg></a>
+        <div class="nav__menu">
+          <div class="wrap grid">
+            <div class="menu-col span-3">
+              <p class="t-label">Тренировки</p>
+              <a href="#analysis">Разбор по кругам<span>Каждый круг рядом с заданием</span></a>
+              <a href="#charts">Форма и загрузка<span>Когда добавить, когда отдохнуть</span></a>
+            </div>
+            <div class="menu-col span-3">
+              <p class="t-label">План</p>
+              <a href="#solo">S10 Solo<span>Календарь заполнен до старта</span></a>
+              <a href="#solo">Telegram-бот<span>Разбор тренировки приходит сообщением</span></a>
+            </div>
+            <a class="menu-card span-3 start-10" href="#pay">
+              <span class="t-card">750 ₽ или 9 € в месяц</span>
+              <span class="t-small muted">Рубли через Т-Банк, евро через Stripe</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item"><a class="nav__link" href="#charts">Графики</a></div>
+      <div class="nav__item"><a class="nav__link" href="#solo">План</a></div>
+      <div class="nav__item"><a class="nav__link" href="#faq">Вопросы</a></div>
+    </nav>
+    <div class="nav__actions">
+      <a class="btn btn--primary" href="#pay">Оплатить Premium</a>
+    </div>
+    <button class="nav__toggle" type="button" aria-label="Меню" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  </div>
+</header>
 
+<main id="top">
+  <section class="hero hero--centred" data-enter aria-labelledby="hero-h">
+    <div class="wrap"><div class="hero-text">
+      <div class="hero__c">
+        <a class="pill" href="#pay"><span>Premium</span><span class="muted">750 ₽ или 9 € в месяц</span></a>
+        <h1 id="hero-h">S10 Premium для бегунов с целью</h1>
+        <p class="hero__lead">Каждая тренировка разобрана по кругам и сверена с заданием. Форма и загрузка на графиках, план до старта уже в календаре.</p>
+        <div class="btn-row"><a class="btn btn--primary" href="#pay">Оплатить Premium</a><a class="btn btn--secondary" href="#analysis">Что входит</a></div>
+      </div>
+      <div class="hero__window" data-fx="fluted-glass" data-fx-seed="4711" role="img" aria-label="Разбор интервальной тренировки в S10: задание, четыре круга по 1600 метров, темп и пульс каждого">
+        <div class="ly-piece" aria-hidden="true">
+          <div class="ui ui-panel sx sx-run">
+            <div class="sx__bar"><span class="ui-dots"><i></i><i></i><i></i></span><span class="sx__crumb"><span class="sx__pre">S10.run <i>/</i> </span><b>11 ноября</b></span><span class="ui-spacer"></span><span class="ui-chip ui-chip--accent">Исполнение 100%</span></div>
+            <div class="sx-run__body">
+              <div class="sx-run__task">
+                <span class="sx__label">Задание тренера</span>
+                <div class="sx__h">Интервальная, 4×1600 м в темпе 3:57</div>
+                <p>Разминка 3 км лёгкий бег, отдых 400 м между отрезками, заминка 3,5 км.</p>
+                <dl class="sx__kpis">
+                  <div class="sx__kpi"><dt>Дистанция</dt><dd>14,1 км</dd></div>
+                  <div class="sx__kpi"><dt>Средний пульс</dt><dd>158</dd></div>
+                </dl>
+              </div>
+              <div class="sx-run__laps">
+                <div class="sx-laps" data-ly-steps="900">
+                  <div class="sx-laps__r sx-laps__r--head"><span>№</span><span>Км</span><span>Время</span><span>Темп</span><span>Пульс</span><span></span></div>
+                  <div class="sx-laps__r" data-step><span>1</span><span>1,60</span><span>6:19</span><b>3:57</b><span>162</span><span class="sx-laps__d">в темп</span></div>
+                  <div class="sx-laps__r" data-step><span>2</span><span>1,60</span><span>6:17</span><b>3:56</b><span>166</span><span class="sx-laps__d">−1 с</span></div>
+                  <div class="sx-laps__r" data-step><span>3</span><span>1,60</span><span>6:20</span><b>3:58</b><span>169</span><span class="sx-laps__d">+1 с</span></div>
+                  <div class="sx-laps__r" data-step><span>4</span><span>1,60</span><span>6:15</span><b>3:54</b><span>172</span><span class="sx-laps__d">−3 с</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="section g2m" id="pay" aria-labelledby="pay-h">
+    <div class="wrap grid grid--top">
+      <div class="span-5">
+        <div class="section-head">
+          <h2 id="pay-h">Месяц Premium за 750 ₽ или 9 €</h2>
+          <p id="paystate">Рубли принимает Т-Банк, евро принимает Stripe. Доступ одинаковый.</p>
+        </div>
+        <ul class="checks">
+          <li>Анализ тренировок: графики, индикаторы и статистика по пробежкам</li>
+          <li>S10 Solo: тренировочные планы и анализ прошедшей недели</li>
+          <li>Telegram-бот: разбор тренировки, напоминания и задачи</li>
+          <li>Отчёты и комментарии тренера в одном месте</li>
+          <li>Более 100 подкастов на беговые темы</li>
+          <li>Приложения для iOS и Android</li>
+        </ul>
+      </div>
+      <div class="span-6 start-7">
+        <div class="panel payfx" data-fx="grain-gradient" data-fx-seed="903" data-fx-palette='{"bg":"#c8d6ee","surface":"#dbe5f6","ink":"#14233b","accent":"#3f6fc0"}' data-fx-params='{"drift":0}'>
+        <div class="paycard">
+          <form id="payaux" hidden></form>
+          <form class="pay" id="payform" method="get" action="/money2" novalidate>
+            <input type="hidden" name="paysite" value="1">
+            <input type="hidden" name="paymonth12" value="1" id="pay12" disabled>
+            <fieldset>
+              <div class="pay__cur" role="radiogroup" aria-label="Валюта">
+                <label><input type="radio" form="payaux" name="cur" value="rub" checked>Рубли · Т-Банк</label>
+                <label><input type="radio" form="payaux" name="cur" value="eur">Евро · Stripe</label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <div class="pay__plans" role="radiogroup" aria-label="Срок">
+                <label class="pay__plan"><input type="radio" form="payaux" name="period" value="1" checked><b>1 месяц</b><span id="p1">750 ₽</span></label>
+                <label class="pay__plan"><input type="radio" form="payaux" name="period" value="12"><b>12 месяцев</b><span id="p12">9 000 ₽ одним платежом</span></label>
+              </div>
+            </fieldset>
+            <label class="pay__auto"><input type="checkbox" class="m-check" name="recur" value="1" id="auto"><span>Продлевать автоматически<small id="autonote">Следующий месяц оплатится сам</small></span></label>
+            <div class="pay__slot">
+              <div class="field" id="mailbox">
+                <label for="email">Почта · её просит Т-Банк</label>
+                <input id="email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-describedby="email-err">
+                <p class="field__error" id="email-err" hidden>Нужна почта: без неё Т-Банк не примет платёж</p>
+              </div>
+              <p class="pay__note" id="stripenote" hidden>Оплата откроется на защищённой странице Stripe. S10.run данные карты не видит и не хранит.</p>
+            </div>
+            <div class="pay__sum"><span>К оплате сегодня</span><b id="sum">750 ₽</b></div>
+            <button class="btn btn--primary" type="submit">Оплатить Premium<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></button>
+            <p class="pay__status" role="status" data-form-status id="paystatus"></p>
+            <p class="pay__fine">Деньги за Premium не возвращаются. Автопродление в рублях идёт по <a href="/tilda/85144/offer_tinkoff">соглашению</a> с Т-Банком.</p>
+          </form>
+        </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="analysis" aria-labelledby="analysis-h">
+    <div class="wrap">
+        <div class="grid grid--top">
+          <h2 class="span-5" id="analysis-h">Каждая пробежка разобрана по кругам</h2>
+          <p class="span-6 start-7 muted">Трек приходит с часов, и S10 сверяет его с заданием: темп и пульс каждого круга, быстрые и медленные километры, исполнение в процентах. <a class="link" href="#charts">Смотреть графики</a></p>
+        </div>
+        <div class="ui app fill" role="img" aria-label="Окно S10: слева список тренировок за две недели, справа открыта интервальная тренировка с таблицей кругов">
+          <div class="app__pane app__pane--list">
+            <div class="ui ui-panel ui-win" data-ui="window" data-open="План" data-work="Разбор" data-done="Выполнено">
+              <div class="ui-win__bar">
+                <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="ui-win__crumb">S10.run <i>/</i> <b>Тренировки</b></span>
+                <span class="ui-spacer"></span>
+                <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph">Поиск</span><span class="ui-kbd">/</span></span>
+              </div>
+              <div class="ui-win__body">
+                <nav class="ui-win__side" aria-hidden="true">
+                  <span class="ui-win__nav is-on"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 9h3l1 1.5h3l1-1.5h3"/><path d="M2.5 9 4 3.5h8L13.5 9v3.5h-11z"/></svg>Тренировки</span>
+                  <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 12.5 6 8l2.5 2.5 5-6"/></svg>Графики</span>
+                  <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg>Задачи</span>
+                  <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg>Подкасты</span>
+                  <span class="ui-win__label">Типы</span>
+                  <span class="ui-win__nav"><span class="ui-win__hash">#</span>Интервальные</span>
+                  <span class="ui-win__nav"><span class="ui-win__hash">#</span>Длительные</span>
+                </nav>
+                <div class="ui-win__main">
+                  <div class="ui-win__cols" aria-hidden="true"><span>Тренировка</span><span>Задание</span><span>Статус</span><span>День</span></div>
+                  <ul class="ui-win__rows">
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">И</span><span class="ui-win__who">Интервальная</span><span class="ui-win__sub">4×1600 м в темпе 3:57 · 14 км</span><span class="ui-win__st is-you" data-st>Разбор</span><span class="ui-win__age">11 ноя</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">В</span><span class="ui-win__who">Восстановительная</span><span class="ui-win__sub">8 км, 5:35–5:55</span><span class="ui-win__st is-done" data-st>Выполнено</span><span class="ui-win__age">10 ноя</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">Д</span><span class="ui-win__who">Длительная</span><span class="ui-win__sub">28 км, последние 8 в темпе 4:44</span><span class="ui-win__st is-done" data-st>Выполнено</span><span class="ui-win__age">8 ноя</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">В</span><span class="ui-win__who">Восстановительная</span><span class="ui-win__sub">10 км, 5:35–5:55</span><span class="ui-win__st is-done" data-st>Выполнено</span><span class="ui-win__age">7 ноя</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">Р</span><span class="ui-win__who">Развивающая</span><span class="ui-win__sub">12 км в темпе 4:44</span><span class="ui-win__st is-done" data-st>Выполнено</span><span class="ui-win__age">6 ноя</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="5">П</span><span class="ui-win__who">Повторная</span><span class="ui-win__sub">8×400 м, отдых 400 м</span><span class="ui-win__st is-done" data-st>Выполнено</span><span class="ui-win__age">4 ноя</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">В</span><span class="ui-win__who">Восстановительная</span><span class="ui-win__sub">8 км, 5:35–5:55</span><span class="ui-win__st is-done" data-st>Выполнено</span><span class="ui-win__age">3 ноя</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">Д</span><span class="ui-win__who">Длительная</span><span class="ui-win__sub">26 км ровно</span><span class="ui-win__st is-done" data-st>Выполнено</span><span class="ui-win__age">1 ноя</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">В</span><span class="ui-win__who">Восстановительная</span><span class="ui-win__sub">10 км, 5:35–5:55</span><span class="ui-win__st is-done" data-st>Выполнено</span><span class="ui-win__age">31 окт</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">И</span><span class="ui-win__who">Интервальная</span><span class="ui-win__sub">5×1000 м в темпе 3:50</span><span class="ui-win__st is-done" data-st>Выполнено</span><span class="ui-win__age">29 окт</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">В</span><span class="ui-win__who">Восстановительная</span><span class="ui-win__sub">8 км, 5:35–5:55</span><span class="ui-win__st is-done" data-st>Выполнено</span><span class="ui-win__age">28 окт</span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="app__pane app__pane--open">
+            <div class="ui ui-panel sx sx-open">
+              <div class="sx-open__head">
+                <div><div class="sx__h">Интервальная, среда 11 ноября</div><p>Задание: 4×1600 м в темпе 3:57, отдых 400 м лёгкий бег</p></div>
+                <span class="ui-spacer"></span><span class="ui-chip ui-chip--accent">Исполнение 100%</span>
+              </div>
+              <dl class="sx__kpis">
+                <div class="sx__kpi"><dt>Дистанция</dt><dd>14,1 км</dd></div>
+                <div class="sx__kpi"><dt>Средний темп</dt><dd>4:28</dd></div>
+                <div class="sx__kpi"><dt>Средний пульс</dt><dd>158</dd></div>
+                <div class="sx__kpi"><dt>Каденс</dt><dd>172</dd></div>
+              </dl>
+              <div class="sx-open__grid">
+                <div class="sx-box">
+                  <span class="sx__label">Таблица кругов интервальной тренировки</span>
+                  <div class="sx-laps">
+                    <div class="sx-laps__r sx-laps__r--head"><span>№</span><span>Км</span><span>Время</span><span>Темп</span><span>Пульс</span><span></span></div>
+                    <div class="sx-laps__r"><span>1</span><span>1,60</span><span>6:19</span><b>3:57</b><span>162</span><span class="sx-laps__d">в темп</span></div>
+                    <div class="sx-laps__r sx-laps__r--rest"><span></span><span>0,40</span><span>2:24</span><span>6:00</span><span>141</span><span></span></div>
+                    <div class="sx-laps__r"><span>2</span><span>1,60</span><span>6:17</span><b>3:56</b><span>166</span><span class="sx-laps__d">−1 с</span></div>
+                    <div class="sx-laps__r sx-laps__r--rest"><span></span><span>0,40</span><span>2:27</span><span>6:08</span><span>144</span><span></span></div>
+                    <div class="sx-laps__r"><span>3</span><span>1,60</span><span>6:20</span><b>3:58</b><span>169</span><span class="sx-laps__d">+1 с</span></div>
+                    <div class="sx-laps__r sx-laps__r--rest"><span></span><span>0,40</span><span>2:31</span><span>6:18</span><span>147</span><span></span></div>
+                    <div class="sx-laps__r"><span>4</span><span>1,60</span><span>6:15</span><b>3:54</b><span>172</span><span class="sx-laps__d">−3 с</span></div>
+                    <div class="sx-laps__r sx-laps__r--rest"><span></span><span>3,50</span><span>19:50</span><span>5:40</span><span>139</span><span></span></div>
+                    <div class="sx-laps__r sx-laps__r--rest"><span></span><span>0,20</span><span>1:14</span><span>6:10</span><span>131</span><span></span></div>
+                  </div>
+                </div>
+                <div class="sx-box">
+                  <span class="sx__label">Быстро и медленно</span>
+                  <div class="sx-split"><i style="width:45%"></i></div>
+                  <div class="sx-split__legend"><span><b>6,4 км</b> быстро</span><span><b>7,7 км</b> медленно</span></div>
+                  <table class="sx-modes">
+                    <thead><tr><th>Боевой темп</th><th>Сегодня</th><th>7 дней</th><th>30 дней</th></tr></thead>
+                    <tbody>
+                      <tr><td>5 км</td><td>6,4</td><td>6,4</td><td>14,2</td></tr>
+                      <tr><td>10 км</td><td>0</td><td>5,0</td><td>18,5</td></tr>
+                      <tr><td>21,1 км</td><td>0</td><td>8,0</td><td>31,0</td></tr>
+                      <tr><td>42,2 км</td><td>0</td><td>12,0</td><td>46,5</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  </section>
+
+  <section class="section g2" id="charts" aria-labelledby="charts-h">
+    <div class="wrap">
+      <div class="group">
+        <div class="section-head">
+          <h2 id="charts-h">Графики отвечают на вопросы. <span class="muted">Растёт ли форма и не пора ли отдохнуть.</span></h2>
+        </div>
+        <div class="grid">
+          <article class="card card--row card--open span-6">
+            <h3>Показывает форму и загрузку</h3>
+            <p>Форма, загрузка и баланс на одном графике. Видно, когда добавить объём, а когда отдохнуть перед стартом.</p>
+            <div class="panel" data-fx="grain-gradient" data-fx-seed="21" data-fx-palette='{"bg":"#c8d6ee","surface":"#dbe5f6","ink":"#14233b","accent":"#3f6fc0"}' data-fx-params='{"drift":0}'>
+              <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:460px;--ax:max(24px, 50% - 230px);--ay:max(40px, 50% - 150px);--ay-sm:20px">
+                <div class="ui ui-panel sx sx-chart" role="img" aria-label="График «Загрузка, форма и баланс» за три месяца: форма растёт, сегодняшний день отмечен линией">
+                  <div class="sx-chart__head"><span class="sx__h">Загрузка, форма и баланс</span><span class="sx-seg" aria-hidden="true"><span class="on">3 месяца</span><span>Год</span></span></div>
+                  <div class="sx-key" aria-hidden="true"><span><i class="ln"></i>Форма</span><span><i class="ln" style="--k:var(--c-hot)"></i>Загрузка</span><span><i style="--k:var(--c-warm)"></i>Баланс</span></div>
+                  <svg viewBox="0 0 420 190" aria-hidden="true">
+                    <g stroke="var(--u-line)" stroke-width="1"><path d="M30 20h380M30 65h380M30 110h380M30 155h380"/></g>
+                    <g fill="var(--c-warm)" opacity=".75">
+                      <rect x="38" y="110" width="9" height="14"/><rect x="54" y="110" width="9" height="20"/><rect x="70" y="110" width="9" height="9"/><rect x="86" y="98" width="9" height="12"/><rect x="102" y="110" width="9" height="24"/><rect x="118" y="110" width="9" height="30"/><rect x="134" y="110" width="9" height="16"/><rect x="150" y="92" width="9" height="18"/><rect x="166" y="110" width="9" height="22"/><rect x="182" y="110" width="9" height="34"/><rect x="198" y="110" width="9" height="26"/><rect x="214" y="100" width="9" height="10"/><rect x="230" y="110" width="9" height="28"/><rect x="246" y="110" width="9" height="36"/><rect x="262" y="110" width="9" height="20"/><rect x="278" y="88" width="9" height="22"/><rect x="294" y="110" width="9" height="30"/><rect x="310" y="110" width="9" height="18"/>
+                    </g>
+                    <path d="M34 128C70 122 96 116 130 104s62-14 96-26 62-18 96-30" fill="none" stroke="var(--u-accent)" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M34 112c18-14 30 6 48-10s30 14 50-12 30 16 50-14 32 14 52-18 30 18 50-10 26 4 38-6" fill="none" stroke="var(--c-hot)" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M322 14v146" stroke="var(--c-hot)" stroke-width="1.5" stroke-dasharray="3 3"/>
+                    <circle cx="322" cy="48" r="4.5" fill="var(--u-bg)" stroke="var(--u-accent)" stroke-width="2.5"/>
+                    <text x="328" y="24">сегодня</text>
+                    <text x="34" y="178">сен</text><text x="134" y="178">окт</text><text x="234" y="178">ноя</text><text x="372" y="178">старт</text>
+                    <path d="M322 48c26-8 48-4 78-22" fill="none" stroke="var(--u-accent)" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round"/>
+                  </svg>
+                </div>
+              </div></div>
+            </div>
+          </article>
+          <article class="card card--row card--open span-6">
+            <h3>Сравнивает пульс на темпе</h3>
+            <p>Сколько ударов сердца уходит на километр. Сегодняшняя тренировка стоит точкой рядом с вашей средней.</p>
+            <div class="panel" data-fx="grain-gradient" data-fx-seed="22" data-fx-palette='{"bg":"#c8d6ee","surface":"#dbe5f6","ink":"#14233b","accent":"#3f6fc0"}' data-fx-params='{"drift":0}'>
+              <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:460px;--ax:max(24px, 50% - 230px);--ay:max(40px, 50% - 150px);--ay-sm:20px">
+                <div class="ui ui-panel sx sx-chart" role="img" aria-label="График пульсовой стоимости от темпа: сегодняшняя тренировка чуть выше средней кривой">
+                  <div class="sx-chart__head"><span class="sx__h">Пульсовая стоимость от темпа</span></div>
+                  <div class="sx-key" aria-hidden="true"><span><i class="ln"></i>Ваша средняя</span><span><i class="dot" style="--k:var(--c-hot)"></i>Сегодня</span><span><i class="dot" style="--k:#c3ccd0"></i>Прошлые</span></div>
+                  <svg viewBox="0 0 420 190" aria-hidden="true">
+                    <g stroke="var(--u-line)" stroke-width="1"><path d="M44 20h366M44 65h366M44 110h366M44 155h366"/></g>
+                    <text x="12" y="24">800</text><text x="12" y="69">750</text><text x="12" y="114">700</text><text x="12" y="159">650</text>
+                    <g fill="#c3ccd0"><circle cx="70" cy="42" r="3.5"/><circle cx="92" cy="58" r="3.5"/><circle cx="118" cy="54" r="3.5"/><circle cx="140" cy="76" r="3.5"/><circle cx="166" cy="72" r="3.5"/><circle cx="188" cy="92" r="3.5"/><circle cx="214" cy="96" r="3.5"/><circle cx="236" cy="112" r="3.5"/><circle cx="262" cy="108" r="3.5"/><circle cx="288" cy="126" r="3.5"/><circle cx="318" cy="130" r="3.5"/><circle cx="344" cy="142" r="3.5"/><circle cx="372" cy="138" r="3.5"/><circle cx="104" cy="70" r="3.5"/><circle cx="200" cy="80" r="3.5"/><circle cx="300" cy="116" r="3.5"/></g>
+                    <path d="M56 40c70 30 130 58 190 76s110 26 158 30" fill="none" stroke="var(--u-accent)" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M330 136v-22" stroke="var(--c-hot)" stroke-width="1.5" stroke-dasharray="2 3"/>
+                    <circle cx="330" cy="108" r="6" fill="var(--c-hot)" stroke="var(--u-bg)" stroke-width="2"/>
+                    <text x="262" y="96">сегодня, 4×1600 м</text>
+                    <text x="50" y="178">5:00</text><text x="150" y="178">4:30</text><text x="250" y="178">4:00</text><text x="350" y="178">3:30 /км</text>
+                  </svg>
+                </div>
+              </div></div>
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card card--row card--open span-6">
+          <h3>Считает боевые километры</h3>
+          <p>Какую часть дистанции старта вы пробежали в целевом темпе за 7 и 30 дней: 5, 10, 21,1 и 42,2 км.</p>
+          <div class="panel" data-fx="grain-gradient" data-fx-seed="23" data-fx-palette='{"bg":"#c8d6ee","surface":"#dbe5f6","ink":"#14233b","accent":"#3f6fc0"}' data-fx-params='{"drift":0}'>
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:460px;--ax:max(24px, 50% - 230px);--ay:max(40px, 50% - 214px);--ay-sm:20px">
+              <div class="ui ui-panel sx sx-chart" role="img" aria-label="Кольца «Дистанции в боевом темпе» за 7 дней: 5 км закрыты полностью, 10 км наполовину, марафон на 28 процентов">
+                <div class="sx-chart__head"><span class="sx__h">Дистанции в боевом темпе</span><span class="sx-seg" aria-hidden="true"><span class="on">7 дней</span><span>30 дней</span></span></div>
+                <div class="sx-rings" aria-hidden="true">
+                  <div><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="30" fill="none" stroke="var(--u-fill-2)" stroke-width="8"/><circle cx="40" cy="40" r="30" fill="none" stroke="var(--u-accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="188.5 188.5" transform="rotate(-90 40 40)"/><text x="40" y="44" text-anchor="middle" style="font:500 13px var(--font-mono);fill:var(--u-ink)">100%</text></svg><b>5 км</b><small>6,4 км</small></div>
+                  <div><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="30" fill="none" stroke="var(--u-fill-2)" stroke-width="8"/><circle cx="40" cy="40" r="30" fill="none" stroke="var(--u-accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="94.2 188.5" transform="rotate(-90 40 40)"/><text x="40" y="44" text-anchor="middle" style="font:500 13px var(--font-mono);fill:var(--u-ink)">50%</text></svg><b>10 км</b><small>5,0 км</small></div>
+                  <div><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="30" fill="none" stroke="var(--u-fill-2)" stroke-width="8"/><circle cx="40" cy="40" r="30" fill="none" stroke="var(--u-accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="71.6 188.5" transform="rotate(-90 40 40)"/><text x="40" y="44" text-anchor="middle" style="font:500 13px var(--font-mono);fill:var(--u-ink)">38%</text></svg><b>21,1 км</b><small>8,0 км</small></div>
+                  <div><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="30" fill="none" stroke="var(--u-fill-2)" stroke-width="8"/><circle cx="40" cy="40" r="30" fill="none" stroke="var(--c-warm)" stroke-width="8" stroke-linecap="round" stroke-dasharray="52.8 188.5" transform="rotate(-90 40 40)"/><text x="40" y="44" text-anchor="middle" style="font:500 13px var(--font-mono);fill:var(--u-ink)">28%</text></svg><b>42,2 км</b><small>12,0 км</small></div>
+                </div>
+                <div class="sx-key" aria-hidden="true"><span><i></i>В темпе дистанции</span><span><i style="--k:var(--c-warm)"></i>Ваш старт, 42,2 км</span></div>
+                <table class="sx-modes" aria-hidden="true">
+                  <thead><tr><th>Боевой темп</th><th>За тренировку</th><th>7 дней</th><th>30 дней</th></tr></thead>
+                  <tbody>
+                    <tr><td>5 км, 3:57</td><td>6,4</td><td>6,4</td><td>14,2</td></tr>
+                    <tr><td>10 км, 4:10</td><td>0</td><td>5,0</td><td>18,5</td></tr>
+                    <tr><td>21,1 км, 4:21</td><td>0</td><td>8,0</td><td>31,0</td></tr>
+                    <tr><td>42,2 км, 4:44</td><td>0</td><td>12,0</td><td>46,5</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div></div>
+          </div>
+        </article>
+        <article class="card card--row card--open span-6">
+          <h3>Держит соотношение 20:80</h3>
+          <p>Быстрые и медленные километры по неделям. Видно, когда лёгкие пробежки стали слишком быстрыми.</p>
+          <div class="panel" data-fx="grain-gradient" data-fx-seed="24" data-fx-palette='{"bg":"#c8d6ee","surface":"#dbe5f6","ink":"#14233b","accent":"#3f6fc0"}' data-fx-params='{"drift":0}'>
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:460px;--ax:max(24px, 50% - 230px);--ay:max(40px, 50% - 212px);--ay-sm:20px">
+              <div class="ui ui-panel sx sx-chart" role="img" aria-label="Столбики быстрых и медленных километров за восемь недель: на этой неделе быстрых 21 процент">
+                <div class="sx-chart__head"><span class="sx__h">Быстро и медленно</span><span class="ui-chip ui-chip--accent">Эта неделя 21:79</span></div>
+                <div class="sx-key" aria-hidden="true"><span><i></i>Быстро</span><span><i style="--k:#c3ccd0"></i>Медленно</span><span>км за неделю</span></div>
+                <svg class="sx-bars" viewBox="0 0 420 322" aria-hidden="true">
+                  <g fill="#c3ccd0"><rect x="40" y="112" width="30" height="141" rx="3"/><rect x="86" y="93" width="30" height="152" rx="3"/><rect x="132" y="81" width="30" height="151" rx="3"/><rect x="178" y="131" width="30" height="126" rx="3"/><rect x="224" y="69" width="30" height="169" rx="3"/><rect x="270" y="56" width="30" height="174" rx="3"/><rect x="316" y="50" width="30" height="188" rx="3"/><rect x="362" y="75" width="30" height="168" rx="3"/></g>
+                  <g fill="var(--u-accent)"><rect x="40" y="256" width="30" height="36" rx="3"/><rect x="86" y="248" width="30" height="44" rx="3"/><rect x="132" y="235" width="30" height="57" rx="3"/><rect x="178" y="260" width="30" height="32" rx="3"/><rect x="224" y="241" width="30" height="51" rx="3"/><rect x="270" y="233" width="30" height="59" rx="3"/><rect x="316" y="241" width="30" height="51" rx="3"/><rect x="362" y="246" width="30" height="46" rx="3"/></g>
+                  <text x="55" y="105" text-anchor="middle">58</text><text x="40" y="314">21 сен</text><text x="101" y="86" text-anchor="middle">64</text><text x="147" y="74" text-anchor="middle">68</text><text x="132" y="314">5 окт</text><text x="193" y="124" text-anchor="middle">52</text><text x="239" y="62" text-anchor="middle">72</text><text x="224" y="314">19 окт</text><text x="285" y="49" text-anchor="middle">76</text><text x="331" y="43" text-anchor="middle">78</text><text x="316" y="314">2 ноя</text><text x="377" y="68" text-anchor="middle">70</text>
+                </svg>
+              </div>
+            </div></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section bg-band" style="--h: 2" data-moment="pinned-chapters" id="solo" aria-labelledby="solo-h">
+    <div class="wrap mo-pc__grid">
+      <div class="mo-pc__text">
+        <h2 id="solo-h">Premium ведёт вас до старта</h2>
+        <ol class="mo-pc__steps">
+          <li class="mo-pc__step">
+            <h3>Solo заполняет календарь</h3>
+            <p>План ложится на ваши даты и темпа до дня старта. Рядом вероятность достижения цели: она двигается с каждой тренировкой.</p>
+            <figure class="mo-pc__visual mo-pc__visual--lit">
+              <div class="ui ui-panel ui-calendar" data-ui="calendar" data-start="1" data-end="5" data-month="дек">
+                <div class="ui-cal__head">
+                  <div class="ui-cal__month">Декабрь <span>2026</span></div>
+                  <span class="ui-spacer"></span>
+                  <span class="ui-chip ui-chip--plain ui-chip--ink" data-cal-range>1 – 5 дек</span>
+                </div>
+                <div class="ui-cal__dow" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+                <div class="ui-cal__days">
+                  <span class="ui-cal__d is-out"><b>30</b></span><span class="ui-cal__d is-start" data-d="1"><b>1</b></span><span class="ui-cal__d is-in" data-d="2"><b>2</b></span><span class="ui-cal__d is-in" data-d="3"><b>3</b></span><span class="ui-cal__d is-in" data-d="4"><b>4</b></span><span class="ui-cal__d is-end" data-d="5"><b>5</b></span><span class="ui-cal__d is-mark" data-d="6"><b>6</b></span>
+                  <span class="ui-cal__d" data-d="7"><b>7</b></span><span class="ui-cal__d" data-d="8"><b>8</b></span><span class="ui-cal__d" data-d="9"><b>9</b></span><span class="ui-cal__d" data-d="10"><b>10</b></span><span class="ui-cal__d" data-d="11"><b>11</b></span><span class="ui-cal__d" data-d="12"><b>12</b></span><span class="ui-cal__d" data-d="13"><b>13</b></span>
+                  <span class="ui-cal__d" data-d="14"><b>14</b></span><span class="ui-cal__d" data-d="15"><b>15</b></span><span class="ui-cal__d" data-d="16"><b>16</b></span><span class="ui-cal__d" data-d="17"><b>17</b></span><span class="ui-cal__d" data-d="18"><b>18</b></span><span class="ui-cal__d" data-d="19"><b>19</b></span><span class="ui-cal__d" data-d="20"><b>20</b></span>
+                </div>
+                <div class="ui-cal__events">
+                  <div class="ui-cal__ev" data-ev="6">
+                    <span class="ui-cal__date"><b>6</b><i>дек</i></span>
+                    <span class="ui-cal__evtext"><span class="ui-cal__evtitle">Valencia, 42,2 км</span><span class="ui-cal__evsub">Цель 3:19:59 · вероятность 62%</span></span>
+                  </div>
+                </div>
+              </div>
+            </figure>
+          </li>
+          <li class="mo-pc__step">
+            <h3>Бот присылает разбор</h3>
+            <p>Загрузили тренировку, и детальная информация по ней приходит сообщением в Telegram. Задачи и напоминания там же.</p>
+            <figure class="mo-pc__visual mo-pc__visual--lit">
+              <div class="ui ui-notify" data-ui="notify">
+                <ul class="ui-notify__list" data-notify-list>
+                  <li class="ui-note"><span class="ui-avatar ui-note__av" data-tone="1">S</span><span class="ui-note__text"><span class="ui-note__title">Тренировка загружена<time>сейчас</time></span><span class="ui-note__body">14,1 км, 4:28 /км, исполнение 100%</span></span></li>
+                  <li class="ui-note"><span class="ui-avatar ui-note__av" data-tone="3">S</span><span class="ui-note__text"><span class="ui-note__title">Задача на завтра<time>2 ч</time></span><span class="ui-note__body">Восстановительная 8 км, 5:35–5:55</span></span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Напоминание<time>вс</time></span><span class="ui-note__body">Сегодня длительная, 28 км</span></span></li>
+                </ul>
+              </div>
+            </figure>
+          </li>
+          <li class="mo-pc__step">
+            <h3>Тренер отвечает по делу</h3>
+            <p>Отчёт, комментарии и обратная связь собраны в одном месте, рядом с треком и заданием на день.</p>
+            <figure class="mo-pc__visual mo-pc__visual--lit">
+              <div class="ui ui-panel ui-chat" data-ui="chat">
+                <div class="ui-head"><span class="ui-avatar" data-tone="4" aria-hidden="true">Т</span><div class="ui-title">Тренер</div><span class="ui-chat__online">На связи</span><span class="ui-spacer"></span></div>
+                <div class="ui-chat__body">
+                  <div class="ui-chat__day">Среда, 11 ноября</div>
+                  <div class="ui-msg ui-msg--me" data-chat-q><span class="ui-msg__text">Четвёртый отрезок дался тяжело, пульс 172.</span></div>
+                  <div class="ui-msg ui-msg--bot" data-chat-a>
+                    <span class="ui-avatar ui-msg__av" data-tone="4" aria-hidden="true">Т</span>
+                    <span class="ui-msg__col"><span class="ui-chat__answer">Темп ровный, все четыре в задании. В пятницу <b>только лёгкий бег</b>, длительную оставляем.</span></span>
+                  </div>
+                </div>
+                <div class="ui-chat__input"><span class="ui-chat__ph">Написать тренеру</span></div>
+              </div>
+            </figure>
+          </li>
+        </ol>
+      </div>
+      <div class="mo-pc__visuals frame"></div>
+    </div>
+  </section>
+
+  <section class="section ground-inverse" id="founder" aria-labelledby="founder-h">
+    <div class="wrap">
+      <h2 class="sr-only" id="founder-h">Зачем разбирать каждую пробежку</h2>
+      <figure class="quote founder__quote">
+        <svg class="ic ic-svg ic-48 founder__mark" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2a1 1 0 0 1 1 1v1a2 2 0 0 1-2 2a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1a6 6 0 0 0 6-6V5a2 2 0 0 0-2-2zM5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2a1 1 0 0 1 1 1v1a2 2 0 0 1-2 2a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1a6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>
+        <blockquote>Когда вы регулярно тратите на что-то час-полтора в день, имеет смысл делать это осознанно. Именно так добиваются результатов.</blockquote>
+        <figcaption>Юрий Строфилов, основатель S10.run</figcaption>
+      </figure>
+      <dl class="stats founder__stats">
+        <div><dt class="t-small muted">атлетов на S10.run</dt><dd class="t-stat">33 000+</dd></div>
+        <div><dt class="t-small muted">тренеров на S10.run</dt><dd class="t-stat">410</dd></div>
+        <div><dt class="t-small muted">подкастов о беге в Premium</dt><dd class="t-stat">100+</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="section" id="faq" aria-labelledby="faq-h">
+    <div class="wrap grid grid--top">
+      <div class="span-5">
+        <div class="section-head">
+          <h2 id="faq-h">Вопросы</h2>
+          <p class="muted">Не нашли свой? Спросите в чате.</p>
+        </div>
+        <a class="faq__chat" href="https://t.me/+wP4aOZ4910I2MTk6"><span class="ic-tile ic-tile--40"><img class="ic ic-24" src="assets/icons/telegram.svg" alt="" loading="lazy" width="24" height="24"></span><span class="link">Написать в Telegram</span></a>
+      </div>
+      <div class="span-6 start-7 faq">
+        <div class="faq__item"><h3>Сколько стоит Premium?</h3><p>750 ₽ или 9 € в месяц. За 12 месяцев 9 000 ₽: цена та же, платёж один.</p></div>
+        <div class="faq__item"><h3>Можно попробовать до оплаты?</h3><p>Да. Первые 3 дня после регистрации Premium открыт без оплаты.</p></div>
+        <div class="faq__item"><h3>Чем отличаются рубли и евро?</h3><p>Только банком. Рубли принимает Т-Банк, евро принимает Stripe, доступ одинаковый.</p></div>
+        <div class="faq__item"><h3>Как работает автопродление?</h3><p>Отметьте «Продлевать автоматически», и следующий месяц оплатится сам. Без отметки платёж разовый. Для 12 месяцев автопродления нет.</p></div>
+        <div class="faq__item"><h3>Где вводятся данные карты?</h3><p>На странице Stripe или Т-Банка. Эта страница данные карты не спрашивает.</p></div>
+        <div class="faq__item"><h3>Можно ли вернуть деньги?</h3><p>Нет, деньги за Premium-доступ не возвращаются. Сначала попробуйте: первые 3 дня бесплатные.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer closing footer--dark ground-inverse" id="contact" aria-labelledby="close-h">
+  <div class="wrap">
+    <div class="closing__cta close--type">
+      <div class="section-head"><h2 id="close-h">Бегите осознанно</h2><p class="t-lead">Анализ, графики и план до старта. 750 ₽ или 9 € в месяц.</p></div>
+      <a class="btn btn--primary btn--xl" href="#pay">Оплатить Premium<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+    </div>
+    <div class="closing__links">
+      <div class="grid">
+        <div class="span-6 stack-5">
+          <a class="nav__logo" href="#top">S10 Premium</a>
+          <p class="footer__lede">Подписка для бегунов на S10.run.</p>
+        </div>
+        <div class="span-3 start-7 footer__col"><h3>Premium</h3><ul><li><a href="#pay">Оплата</a></li><li><a href="#analysis">Разбор тренировок</a></li><li><a href="#charts">Графики</a></li><li><a href="#solo">План до старта</a></li></ul></div>
+        <div class="span-3 footer__col"><h3>S10.run</h3><ul><li><a href="/">Вернуться в S10</a></li><li><a href="/about">Условия использования</a></li><li><a href="/tilda/85144/offer_tinkoff">Соглашение о списаниях</a></li><li><a href="https://t.me/+wP4aOZ4910I2MTk6">Вопросы в Telegram</a></li></ul></div>
+      </div>
+      <div class="footer__legal"><span>&copy; 2010–2026 S10.run</span></div>
+    </div>
+  </div>
+</footer>
+<nav class="actionbar" aria-label="Оплата"><a class="btn btn--primary" href="#pay">Оплатить Premium</a></nav>
+
+<script type="module" src="assets/system.js"></script>
+<script type="module" src="assets/motion/motion.js"></script>
+<script type="module" src="assets/layout/layout.js"></script>
 <script type="module">
-/* S10 Premium checkout. Live on s10.run (it reads the old /money_stripe and /money2 pages as data and submits to the
-   same URLs with the same fields), demo anywhere else. Nothing is sent from this page until «Оплатить». */
-import fx from './fx/fx.js';
-
+/* S10 Premium payment page. Live on s10.run it reads the old /money_stripe and /money2 pages as data and the form
+   sends the same GETs they do; anywhere else it is a demo and nothing leaves the browser. */
 const LIVE = /(^|\.)s10\.run$/.test(location.hostname);
 const Q = new URLSearchParams(location.search);
 const $ = (s, r = document) => r.querySelector(s);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-const d8 = (s) => new Date(s + 'T12:00:00Z');
 const iso = (d) => d.toISOString().slice(0, 10);
-const longDate = (s) => { const d = d8(s); return `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
-const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 12 || h > 14) ? b : c; };
-const num = (v, f = 0) => Number(v).toLocaleString('ru-RU', { minimumFractionDigits: f, maximumFractionDigits: f });
+const longDate = (s) => { const d = new Date(s + 'T12:00:00Z'); return `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
+const num = (v, f = 0) => Number(v).toLocaleString('ru-RU', { minimumFractionDigits: f, maximumFractionDigits: f }).replace(/[  ]/g, ' ');
 const money = (v, cur) => cur === 'rub' ? `${num(v)} ₽` : `${num(v, Number.isInteger(+v) ? 0 : 2)} €`;
-const LOGO = '<svg class="logo" viewBox="0 0 89 27" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S10.run"><path d="M23 17.9L22.6 17.6L22.5 17.7L22.4 17.5L22 17.7L21.6 17.3L21.2 17.5L20.7 17.3L20.1 16.8L20.2 16.1L20.6 15L20.7 14.1L21.2 14.1L21.4 13.9L21.4 13.5L21.2 13.1L21.5 12.3L22.6 11.5L22.5 11.3L22.9 10.9L22.7 10.7L23.3 10.3L23.6 9.7L23.6 9.6L23.2 10L22.5 10.2L22.1 10.8L22.1 10.4L22.7 8.9L23.1 7L23.3 6.8L24 4.6L24.8 3L24.7 2.5L25.6 1L25.6 .7L25.4 .4L25.8 0L26.3 .2L26.9 .1L28.8 1.4L28.9 2.1L28.4 3.3L28.5 3.4L28.4 3.8L28.6 3.9L27.5 6L27.4 6.3L27.6 6.3L27.3 7L27.2 7.8L26.8 8.3L26.8 8.8L26.3 9.2L26.3 10.6L26 10.9L26 11.1L25.1 13.2L25.2 14.2L24.9 14.9L24.7 15.5L24.9 15.9L24.4 17.6L23.9 18.3L23.2 18.1L23 17.9Z" fill="white"/><path d="M37.1 16.9L36.7 17.1L34.6 17L33.1 16.5L32.2 15.9L31.7 15.2L31.6 14.5L31.4 14.4L31.4 14.2L31.2 14.4L31.6 13.2L31.5 13.1L31.3 13.2L31.3 13.1L31.4 12.6L31.3 12.5L31.3 12.6L31.3 11.8L31.6 11.4L31.3 11.5L31.6 10.9L31.8 9.6L32 9.4L31.9 9.6L32.3 9.4L32.2 9.2L32.6 7.9L32.7 7.6L32.5 7.7L32.7 7L34.1 5L34 4.6L34.3 4.5L34.5 3.3L35.7 1.8L36.7 1.5L36.7 1.8L37.6 1.7L38 1.4L38.4 1.5L41.4 2.1L43 3.5L43.1 3.9L43.3 4L43.4 5.2L43.9 5.9L43.7 6.6L43.8 7L43.9 9L43.8 9.4L43.7 9.5L43.6 9.3L43.4 9.6L43.3 10.3L43.1 10.6L43.3 11.1L42.7 12.2L42.4 12.3L42.1 13.5L41.9 13.4L41.9 13.9L41.3 14.3L41.2 14.2L41.2 14.6L40.7 14.8L40.6 15.2L38.9 16.7L37.6 17.1L37.1 16.9ZM34.5 13.3L34.7 14.2L35.1 14.8L35.7 15L36.4 14.9L37.1 14.6L37.9 13.9L39.2 11.8L39.6 9.9L40.3 7.8L40.4 5.5L40.6 5L40 4.2L39.9 4.3L39.5 4.2L39.5 3.8L39.4 3.7L38.6 3.7L38.2 3.9L36.5 6.5L35.8 8.4L35.6 8.6L34.9 11.2L34.5 12L34.6 12.1L34.5 12.3L34.5 13.3Z" fill="white"/><path d="M43.4 18.1L43.6 16.2L45.3 15.5L46.5 15.7L47 16L47 16.6L46.7 17.6L46.7 18.8L46.1 19.3L45.3 19.5L44.2 19.4L43.6 18.8L43.4 18.1Z" fill="white"/><path d="M53.6 14.3L53.7 15.2L53.6 15.6L53.4 17.2L52.6 17.3L52.6 17.1L52.5 17.6L51.3 17.3L50.7 17.3L50.7 17L50.4 16.3L50 16.1L50.2 15.4L50.1 13.9L50.4 13.6L50.3 13.2L50.5 12.8L50.5 11.3L50.8 7L51.5 6.9L52.9 7.4L54 9L56.1 7.7L58.6 6.4L59.8 6.9L60.5 7.6L60.1 8.3L59.6 8.5L59.5 8.8L59.3 8.9L58.4 9.1L58.3 9.2L55.9 10.1L53.7 11.9L53.6 12.3L53.9 12.6L53.6 14.3Z" fill="white"/><path d="M70.8 9.4L71 9L71.1 9.6L71.3 9.6L71.6 8.8L71.6 8.6L71.3 8.7L71.2 8.1L71.6 7.1L71.6 6.6L71.9 6.5L74.2 6.5L75.2 7.3L75.4 7.7L75.5 8L74.6 10.8L74.1 13.7L74 13.7L73.8 14L73.6 15.2L73.8 16.5L73.7 17.1L72.3 17.3L71.6 17.5L71.1 17.5L69.9 16.7L69.9 15.5L68.4 16.4L66.2 16.7L66 16.5L64.7 16.3L63.6 15.4L63.2 14.8L62.9 13.6L63.6 9.5L64 8.7L64.2 7.7L64.4 7.3L65 7.3L65.6 7.7L66.4 8.4L66.7 9.1L65.8 13.4L66.1 14.3L66.3 14.5L67.6 14.4L68.9 13.9L69.9 13.1L70.2 12.4L70.4 12.4L71.1 11.9L71 11.7L70.4 11.7L70.9 10.8L70.4 10.6L70.9 10L70.8 9.4Z" fill="white"/><path d="M78.1 12.6L78.5 11.7L78.5 10.9L78.8 10.1L80.1 7.6L80.3 7.4L81.3 7.6L82.2 8.2L82.8 8.9L82.8 9.5L85.6 8.3L86.6 8.1L88.5 9L88.5 9.6L88.3 9.7L88.5 9.9L88.5 10.9L88.3 11.6L88 12.1L88.2 12.1L88.2 12.6L87.7 14.7L87.7 15.4L87.5 15.9L87.5 16.4L86.8 17L85.8 16.9L85.2 15.8L85.1 13.3L85.3 11.2L85.2 10.3L83.1 11.3L82.2 12.3L82 13L82 13.8L82.3 13.6L82.2 13.9L81.6 14.9L81.9 16L81.8 16.9L80.9 17.2L79.3 17L77.9 16.4L78.2 16L77.9 16L78 15.7L78.1 15.9L78.2 15.8L78.7 15.1L78.6 15L78.4 15.1L78 15L78.3 14.1L77.8 13.9L78.2 13.2L78.1 12.6Z" fill="white"/><path d="M19.4 1.5L17.5 .4L16.6 .3L12.6 .1L9.9 .4L7.4 .8L6.7 1.2L5.7 2.5L4.7 5.8L4.2 6.3L4.2 6.9L4 7.3L4.1 7.9L5.1 9.6L6.4 10.3L8.4 10.9L9.7 11.1L12.2 10.7L12.6 10.1L12.2 9.7L10.4 9.1L9.8 9.1L9.3 8.7L8.2 8.4L7.9 8.1L7.6 7.6L7.6 7L8 5.7L8.5 4.6L9.9 3.7L12.4 3.2L14.5 3.3L16.4 3.1L18.1 3.6L18.6 3.6L19.1 3.4L19.4 2.9L19.4 2.1L19.6 1.8L19.4 1.5Z" fill="#F9625A"/><path d="M16.1 9.2L15.8 8.7L15.2 8.1L14.2 7.6L11.4 7.2L9.3 7.2L8.7 7.7L8.8 7.9L10.4 8.6L12.3 9L12.9 9.3L13.2 9.7L13.3 11.8L11.7 13.8L11.2 14.1L9.7 14.5L3.8 14.2L1.8 13.8L.9 13.8L.4 14.1L.4 15.8L0 15.9L.2 16.1L0 16.3L3.8 17L8.4 17.3L11.5 17L13.1 16.5L13.9 15.9L16.2 13.1L16.4 11.2L16.1 9.2Z" fill="white"/><path d="M6.2 19.1L5.8 19.1L6 19.3L5.3 19.1L6.1 19.9L5.8 19.9L9.6 22.7L13.4 25L15.4 25.9L17.5 26.5L19.7 26.9L21.8 27L23.9 26.8L26.1 26.3L28.3 25.5L30.5 24.4L32.7 22.9L34.7 21.3L34.7 21.1L33.3 22L35.3 20.3L35.1 20.4L35.3 20.2L35.3 19.7L34.9 19.9L36.1 18.8L31.9 21.7L28.2 23.5L25 24.4L23 24.7L21.1 24.8L17.7 24.5L15.6 24L13.8 23.4L11.5 22.3L8.2 20.1L8.2 20.3L6.2 19.1Z" fill="#F9625A"/></svg>';
-const I = {
-  back: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  arrow: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  lock: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" stroke-width="1.5"/></svg>',
-  card: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2" y="4.5" width="16" height="11" rx="2.2" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h16" stroke="currentColor" stroke-width="1.5"/><path d="M5 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-  check: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.2l2.3 2.3 4.7-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-};
-
-/* ================= data =================
-   { me, today, paidUntil (iso | null), autopay (bool | null), eur: {m1}, rub: {m1, m12}, email } */
-const RU_DATE = /(\d{1,2})\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+(\d{4})/;
-const ruDate = (s) => { const m = RU_DATE.exec(s || ''); return m ? `${m[3]}-${String(MON.indexOf(m[2]) + 1).padStart(2, '0')}-${m[1].padStart(2, '0')}` : null; };
+const RU_DATE = /(\d{1,2})\s+([а-яё]+)\s+(\d{4})/i;
+const ruDate = (s) => { const m = RU_DATE.exec(s || ''); const i = m ? MON.indexOf(m[2].toLowerCase()) : -1; return i < 0 ? null : `${m[3]}-${String(i + 1).padStart(2, '0')}-${m[1].padStart(2, '0')}`; };
 
 async function loadLive() {
   const j = (u) => fetch(u, { credentials: 'include' }).then((r) => r.json());
@@ -377,234 +846,91 @@ async function loadLive() {
 
 /*<demo>*/
 function loadDemo() {
-  const today = '2026-11-09';
   const free = Q.has('free');
-  return {
-    me: { id: 1000000001, firstName: 'Спортсмен', lastName: 'Демо', avatarUrl: '', isPremium: !free },
-    today,
-    paidUntil: free ? '2026-10-12' : '2027-02-03',
-    paidFrom: '2026-11-03',
-    autopay: false,
-    eur: { m1: 9 }, rub: { m1: 750, m12: 9000 },
-    email: 'athlete@example.com',
-  };
+  return { today: '2026-11-11', me: { id: 1000000001, firstName: 'Спортсмен', lastName: 'Демо', isPremium: !free },
+    paidUntil: free ? '2026-10-12' : '2027-02-03', autopay: false, eur: { m1: 9 }, rub: { m1: 750, m12: 9000 }, email: 'athlete@example.com' };
 }
 /*</demo>*/
 
-/* ================= what is in Premium =================
-   from s10.run/premium; the fragments show each feature as the athlete sees it on the site */
-function featBand() {
-  const ui = { infinity: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16c5 0 7-8 12-8a4 4 0 0 1 0 8c-5 0-7-8-12-8a4 4 0 1 0 0 8"/></svg>',
-    scale: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18m7-13l3 8a5 5 0 0 1-6 0zV7"/><path d="M3 7h1a17 17 0 0 0 8-2a17 17 0 0 0 8 2h1M5 8l3 8a5 5 0 0 1-6 0zV7m2 14h10"/></svg>',
-    phones: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>' };
-  const row = (d, t, name, what, on, off) => `<div class="wk-r${on ? ' on' : ''}${off ? ' ph-off' : ''}"><span class="d">${d}</span><i class="${t}"></i><span>${name}</span><span class="meta">${what}</span></div>`;
-  return `
-  <section class="feat-band" aria-labelledby="h-in"><div class="feat-in">
-    <div class="feat-head">
-      <h2 id="h-in">Что входит в Premium</h2>
-      <p>Всё, что открывает подписка: на сайте, в приложении и в Telegram.</p>
-    </div>
-    <div class="bento">
-      <article class="fcard">
-        <h3>S10 Solo</h3>
-        <p>План до старта по дням: S10 раскладывает тренировки в календарь и разбирает прошедшую неделю.</p>
-        <div class="panel g1" aria-hidden="true"><div class="frag at-corner">
-          <div class="wk-h"><b>Неделя 6 из 8</b></div>
-          ${row('Вт', 't-int', 'Интервальная', '5 × 1000 м по 4:20')}
-          ${row('Чт', 't-dev', 'Развивающая', '10 км по 4:45')}
-          ${row('Сб', 't-rec', 'Восстановительная', '8 км по 5:40–6:00', false, true)}
-          ${row('Вс', 't-long', 'Длительная', '26 км в лёгком темпе', true)}
-          ${row('Пн', 't-rec', 'Восстановительная', '6 км', false, true)}
-        </div></div>
-      </article>
-      <article class="fcard">
-        <h3>Анализ тренировок</h3>
-        <p>Графики формы и нагрузки, пульс, каденс и баланс медленных и быстрых тренировок.</p>
-        <div class="panel g2" aria-hidden="true"><div class="frag at-rise an">
-          <div class="an-h"><b>Медленные и быстрые</b><span class="meta">4 недели</span></div>
-          <div class="split"><i class="slow" style="width:79%"></i><i class="fast" style="width:21%"></i></div>
-          <div class="leg"><span>Медленные <b>79%</b></span><span class="goal">цель 80 : 20</span><span>Быстрые <b>21%</b></span></div>
-          <div class="spark"><div class="an-h" style="margin:0"><b>Пульсовая стоимость</b><span class="meta per">уд/км, 12 недель</span></div>
-            <svg viewBox="0 0 300 56" preserveAspectRatio="none"><path d="M0 14 L27 12 L54 18 L81 16 L108 22 L136 21 L163 27 L190 30 L218 29 L245 35 L272 38 L300 41" fill="none" stroke="#24324f" stroke-width="1.6" vector-effect="non-scaling-stroke"/><path d="M0 14 L27 12 L54 18 L81 16 L108 22 L136 21 L163 27 L190 30 L218 29 L245 35 L272 38 L300 41 L300 56 L0 56Z" fill="#24324f" opacity=".06"/></svg></div>
-        </div></div>
-      </article>
-      <article class="fcard">
-        <h3>Работа с тренером</h3>
-        <p>Задания, отчёты и комментарии тренера в одном месте, у каждой тренировки.</p>
-        <div class="panel g3" aria-hidden="true"><div class="frag at-right">
-          <div class="task"><div class="task-t"><i class="t-long"></i>Длительная</div><div class="meta">24 км в лёгком темпе, последние 2 км по 5:00</div><span class="done">Исполнение 100%</span></div>
-          <div class="task rep"><div class="task-t">Отчёт</div><div class="meta">24,3 км · 5:31 /км · пульс 138</div></div>
-          <div class="cmt"><span class="av">ТР</span><div class="txt"><b>Тренер</b>Ровно по плану. В четверг добавлю отрезки.</div></div>
-        </div></div>
-      </article>
-      <article class="fcard">
-        <h3>Telegram-бот</h3>
-        <p>Загруженные тренировки, напоминания и задачи приходят в Telegram.</p>
-        <div class="panel g4" aria-hidden="true"><div class="frag at-low">
-          <div class="ntf"><span class="tile"><img src="icons/telegram.svg" alt=""></span><div><div class="top"><b>S10.run</b><span class="meta">сейчас</span></div>Тренировка загружена: 12,4 км, 5:12 /км, исполнение 100%</div></div>
-          <div class="ntf"><span class="tile"><img src="icons/telegram.svg" alt=""></span><div><div class="top"><b>S10.run</b><span class="meta">20:00</span></div>Завтра: интервальная, 5 × 1000 м по 4:20</div></div>
-        </div></div>
-      </article>
-    </div>
-    <div class="minis">
-      <article class="mini"><div class="tiles"><span class="tl">${ui.infinity}</span></div><h3>Треки без лимита</h3><p>Ходьба, велосипед, плавание и лыжи, архив за всё время.</p></article>
-      <article class="mini"><div class="tiles"><span class="tl">${ui.scale}</span></div><h3>Апелляции</h3><p>Результат челленджа можно отправить на повторную проверку.</p></article>
-      <article class="mini"><div class="tiles"><span class="tl">${ui.phones}</span></div><h3>Подкасты и статьи</h3><p>Слушать на бегу, читать Premium-материалы.</p></article>
-      <article class="mini"><div class="tiles"><span class="tl"><img src="icons/app-store.svg" alt="App Store"></span><span class="tl"><img src="icons/google-play.svg" alt="Google Play"></span></div><h3>Приложения</h3><p>S10.run для iOS и Android.</p></article>
-    </div>
-  </div></section>`;
+const form = $('#payform'), aux = $('#payaux');
+const el = { auto: $('#auto'), autonote: $('#autonote'), email: $('#email'), err: $('#email-err'), mailbox: $('#mailbox'), stripe: $('#stripenote'),
+  sum: $('#sum'), p1: $('#p1'), p12: $('#p12'), pay12: $('#pay12'), status: $('#paystatus'), state: $('#paystate') };
+const radio = (name, v) => document.querySelector(`input[form=payaux][name=${name}][value="${v}"]`);
+const stored = (() => { try { return localStorage.getItem('s10pay.cur'); } catch { return null; } })();
+const ruUser = /^ru\b/i.test(navigator.language || '') || /^(Europe\/(Moscow|Kaliningrad|Samara|Volgograd|Saratov|Astrakhan|Ulyanovsk|Kirov)|Asia\/(Yekaterinburg|Omsk|Novosibirsk|Krasnoyarsk|Irkutsk|Chita|Yakutsk|Vladivostok|Magadan|Kamchatka|Tomsk|Barnaul|Novokuznetsk|Sakhalin))$/.test(Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+const st = { cur: ['rub', 'eur'].includes(Q.get('cur')) ? Q.get('cur') : ['rub', 'eur'].includes(stored) ? stored : ruUser ? 'rub' : 'eur',
+  period: 1, price: { eur: { m1: 9 }, rub: { m1: 750, m12: 9000 } } };
+
+/* One place sets everything the choice changes: the action, the field names, what is sent. Rows keep their height. */
+function sync() {
+  const rub = st.cur === 'rub';
+  if (!rub) st.period = 1;
+  radio('cur', st.cur).checked = true;
+  radio('period', st.period).checked = true;
+  radio('period', 12).disabled = !rub;
+  const year = st.period === 12;
+  form.action = rub ? '/money2' : '/money_stripe';
+  el.auto.name = rub ? 'recur' : 'siterecur';
+  el.auto.disabled = year;
+  if (year) el.auto.checked = false;
+  el.autonote.textContent = year ? 'Для оплаты за год автопродления нет' : 'Следующий месяц оплатится сам';
+  el.pay12.disabled = !year;
+  el.email.disabled = !rub;
+  el.mailbox.hidden = !rub;
+  el.stripe.hidden = rub;
+  el.p1.textContent = money(st.price[st.cur].m1, st.cur);
+  el.p12.textContent = rub ? `${money(st.price.rub.m12, 'rub')} одним платежом` : 'Только в рублях';
+  el.sum.textContent = money(year ? st.price.rub.m12 : st.price[st.cur].m1, st.cur);
+  el.status.textContent = '';
 }
-
-async function start() {
-  /*<demo>*/ if (!LIVE) return render(loadDemo()); /*</demo>*/
-  const data = await loadLive();
-  if (!data.me) { location.href = '/login?back=' + encodeURIComponent(location.pathname); return; }
-  render(data);
+function mailError(on) {
+  el.err.hidden = !on;
+  if (on) el.email.setAttribute('aria-invalid', 'true'); else el.email.removeAttribute('aria-invalid');
 }
-
-function render(D) {
-  const st = { cur: Q.get('cur') === 'rub' ? 'rub' : 'eur', period: 1, autopay: true }; // on, as the old Stripe page had it
-  const name = [D.me.firstName, D.me.lastName].filter(Boolean).join(' ') || 'Спортсмен S10';
-  const active = !!(D.paidUntil && D.paidUntil >= D.today);
-  const daysLeft = active ? Math.round((d8(D.paidUntil) - d8(D.today)) / 864e5) : 0;
-  const initials = name.split(/\s+/).map((x) => x[0]).join('').slice(0, 2).toUpperCase();
-
-  $('#app').innerHTML = `
-  <header class="bar"><div class="bar-in">
-    <a class="back" href="/">${I.back}<span>На S10.run</span></a>
-    <span class="sp"></span>
-    ${LOGO}
-    <span class="sp"></span>
-    ${LIVE ? '' : `<span class="demo-note">Демо<a href="?${Q.has('free') ? '' : 'free'}">${Q.has('free') ? 'с Premium' : 'без Premium'}</a></span>`}
-    <a class="who" href="/profile?${esc(D.me.id)}"><span>${esc(name)}</span><span class="ava" ${D.me.avatarUrl ? `style="background-image:url('${esc(D.me.avatarUrl)}')"` : ''}>${D.me.avatarUrl ? '' : esc(initials)}</span></a>
-  </div></header>
-
-  <main id="main">
-    <div class="grid">
-      <section class="a-card" aria-labelledby="h1">
-        <p class="eyebrow">${active ? 'Ваша подписка' : 'Подписка S10.run'}</p>
-        <h1 id="h1">${active ? 'Продлить S10 Premium' : 'Подключить S10 Premium'}</h1>
-        <div class="pcard${active ? '' : ' off'}" data-enter data-fx="orb-sphere" data-fx-seed="1003"
-          data-fx-params='{"size":0.46,"orbX":0.86,"orbY":0.42,"calmX":0.2,"calmY":0.5,"calm":0.6,"glow":0.5,"rim":0.9,"stars":70,"speed":0.04}'>
-          <div class="pcard-in">
-            <div class="top"><div class="brand">Premium<small>S10.run</small></div></div>
-            <div class="bottom">
-              <div><div class="name">${esc(name)}</div><div class="until">${active ? `Оплачено до ${longDate(D.paidUntil)}` : D.paidUntil ? `Закончился ${longDate(D.paidUntil)}` : 'Не подключён'}</div></div>
-              <span class="chip">${active ? (D.autopay ? 'Автопродление' : 'Активен') : 'Не активен'}</span>
-            </div>
-          </div>
-        </div>
-        <div class="status" data-enter="2">
-          ${active ? `<div class="status-row"><span>Осталось ${daysLeft} ${plural(daysLeft, 'день', 'дня', 'дней')}</span><span class="muted">${D.autopay ? 'продлится автоматически' : 'автопродление не подключено'}</span></div>
-          <div class="track" aria-hidden="true"><i style="width:${Math.min(100, Math.max(3, (daysLeft / 365) * 100))}%"></i></div>`
-          : `<div class="status-row"><span>Premium сейчас не активен</span><span class="muted">${D.paidUntil ? `был до ${longDate(D.paidUntil)}` : ''}</span></div>`}
-        </div>
-      </section>
-
-      <aside class="a-pay" id="pay" aria-labelledby="pay-h" data-enter="2">
-        <form class="pay" id="pay-form" method="get" novalidate>
-          <div class="pay-t" id="pay-h">Оплата</div>
-          <span class="lbl" id="cur-l">Валюта и способ</span>
-          <div class="seg" role="group" aria-labelledby="cur-l" data-v="${st.cur}">
-            <button type="button" data-cur="eur" aria-pressed="${st.cur === 'eur'}"><b>Евро</b><small>картой · Stripe</small></button>
-            <button type="button" data-cur="rub" aria-pressed="${st.cur === 'rub'}"><b>Рубли</b><small>Т-Банк</small></button>
-          </div>
-          <div id="pay-body"></div>
-        </form>
-      </aside>
-
-    </div>
-  </main>
-${featBand()}
-  <footer>
-    <a href="/about" target="_blank" rel="noopener">Условия использования</a>
-    <a href="/tilda/85144/offer_tinkoff" target="_blank" rel="noopener">Соглашение о рекуррентных списаниях</a>
-    <a href="https://t.me/+wP4aOZ4910I2MTk6" target="_blank" rel="noopener">Вопросы в Telegram</a>
-    <span class="sp"></span>
-    <span>© 2010–2026 S10.run</span>
-  </footer>
-  `;
-
-  const form = $('#pay-form'), body = $('#pay-body'), seg = $('.seg');
-
-  function drawPay() {
-    const eur = st.cur === 'eur';
-    if (eur) st.period = 1;
-    const price = eur ? D.eur.m1 : st.period === 12 ? D.rub.m12 : D.rub.m1;
-    const recurOk = eur || st.period === 1; // the old RUB page offers autopay with the monthly payment only
-    const perMonth12 = Math.round(D.rub.m12 / 12);
-    body.innerHTML = `
-      <span class="lbl">Срок</span>
-      <div class="plans" role="radiogroup" aria-label="Срок">
-        <label class="plan"><input type="radio" name="period" value="1" ${st.period === 1 ? 'checked' : ''}><span class="dot"></span>
-          <span><b>1 месяц</b><small>${eur ? 'Все функции Premium' : 'Зачисление мгновенно'}</small></span>
-          <span class="price">${money(eur ? D.eur.m1 : D.rub.m1, st.cur)}<small>в месяц</small></span></label>
-        ${eur ? '' : `<label class="plan"><input type="radio" name="period" value="12" ${st.period === 12 ? 'checked' : ''}><span class="dot"></span>
-          <span><b>12 месяцев</b><small>Одним платежом</small></span>
-          <span class="price">${money(D.rub.m12, 'rub')}<small>${money(perMonth12, 'rub')} в месяц</small></span></label>`}
-      </div>
-      <label class="switch${recurOk ? '' : ' is-off'}">
-        <span><b>Продлевать автоматически</b>
-          <small>${recurOk ? `${money(price, st.cur)} раз в месяц` : 'Для оплаты за год автопродления нет'}${!eur && recurOk ? ` · <a href="/tilda/85144/offer_tinkoff" target="_blank" rel="noopener">соглашение</a>` : ''}</small></span>
-        <span class="tg"><input type="checkbox" id="recur" ${st.autopay && recurOk ? 'checked' : ''} ${recurOk ? '' : 'disabled'} aria-label="Продлевать автоматически"><i></i></span>
-      </label>
-      ${eur ? `<div class="note">${I.card}<span><b>Карту введёте на странице Stripe</b>Оплата откроется на защищённой странице. S10.run данные карты не видит и не хранит.</span></div>` : `<div class="field" id="mail-f">
-        <label class="lbl" for="mail">Почта <span class="muted">· её просит Т-Банк</span></label>
-        <input id="mail" type="email" autocomplete="email" inputmode="email" value="${esc(D.email)}" required>
-        <div class="err" id="mail-e">Нужна почта: без неё Т-Банк не примет платёж</div></div>`}
-      <div class="sum">
-        <div class="sum-row"><span>Premium, ${st.period === 12 ? '12 месяцев' : '1 месяц'}</span><span>${money(price, st.cur)}</span></div>
-        <div class="sum-row total"><span>К оплате сегодня</span><b>${money(price, st.cur)}</b></div>
-        <button class="go" type="submit">${I.lock}<span>Оплатить ${money(price, st.cur)}</span></button>
-        <p class="fine">${I.lock}<span>${eur ? 'Защищённая оплата через Stripe.' : 'Защищённая оплата через Т-Банк, зачисление мгновенно.'} Деньги за Premium не возвращаются.</span></p>
-      </div>`;
-    body.querySelectorAll('input[name=period]').forEach((r) => r.addEventListener('change', () => { st.period = +r.value; drawPay(); body.querySelector(`input[name=period][value="${st.period}"]`)?.focus(); }));
-    $('#recur').addEventListener('change', (e) => { st.autopay = e.target.checked; drawPay(); $('#recur').focus(); });
-    const mail = $('#mail'); if (mail) mail.addEventListener('input', () => { D.email = mail.value; $('#mail-f').classList.remove('bad'); });
+aux.addEventListener('submit', (e) => e.preventDefault());
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.form !== aux) return;
+  if (t.name === 'cur') { st.cur = t.value; try { localStorage.setItem('s10pay.cur', st.cur); } catch { /* private mode */ } mailError(false); }
+  if (t.name === 'period') st.period = +t.value;
+  sync();
+});
+el.email.addEventListener('input', () => mailError(false));
+form.addEventListener('submit', (e) => {
+  if (st.cur === 'rub' && !/^\S+@\S+\.\S+$/.test(el.email.value.trim())) {
+    e.preventDefault(); mailError(true); el.email.focus(); return;
   }
-  seg.addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-cur]'); if (!b || b.dataset.cur === st.cur) return;
-    st.cur = b.dataset.cur; seg.dataset.v = st.cur;
-    seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.cur === st.cur)));
-    drawPay();
-  });
-  // the panel keeps the height of its tallest state (₽, with the e-mail), so «Оплатить» never moves on a click
-  function fitHeight() {
-    const keep = { cur: st.cur, period: st.period };
-    form.style.minHeight = '';
-    Object.assign(st, { cur: 'rub', period: 1 }); drawPay();
-    const h = form.offsetHeight;
-    Object.assign(st, keep); drawPay();
-    form.style.minHeight = matchMedia('(min-width: 861px)').matches ? h + 'px' : ''; // a phone has the button below anyway
-  }
-  fitHeight();
-  let rz, lastW = innerWidth; // width only: a phone's keyboard and toolbar change the height while typing
-  addEventListener('resize', () => { if (innerWidth === lastW) return; lastW = innerWidth; clearTimeout(rz); rz = setTimeout(fitHeight, 150); });
-
-  // «Оплатить»: the same GET the old pages send, so the server needs no change
-  //   € (Stripe): /money_stripe?paysite=1[&siterecur=1]
-  //   ₽ (Т-Банк): /money2?email=…&paysite=1[&recur=1][&paymonth12=1]
-  form.addEventListener('submit', (e) => {
+  el.email.value = el.email.value.trim();
+  /*<demo>*/
+  if (!LIVE) {
     e.preventDefault();
-    const p = new URLSearchParams();
-    let url;
-    if (st.cur === 'eur') {
-      url = '/money_stripe'; p.set('paysite', '1'); if (st.autopay) p.set('siterecur', '1');
-    } else {
-      const m = $('#mail');
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m.value.trim())) { $('#mail-f').classList.add('bad'); m.setAttribute('aria-describedby', 'mail-e'); m.focus(); return; }
-      url = '/money2'; p.set('email', m.value.trim()); p.set('paysite', '1');
-      if (st.period === 12) p.set('paymonth12', '1'); else if (st.autopay) p.set('recur', '1');
-    }
-    const go = $('.go'); go.disabled = true;
-    /*<demo>*/ if (!LIVE) { go.querySelector('span').textContent = `Демо: ${url}?${p}`.replace(/email=[^&]+/, 'email=…'); setTimeout(() => drawPay(), 2600); return; } /*</demo>*/
-    location.href = `${url}?${p}`;
-  });
+    const p = new URLSearchParams(new FormData(form));
+    el.status.textContent = `Демо: здесь откроется ${form.getAttribute('action')}?${decodeURIComponent(p.toString())}`;
+    return;
+  }
+  /*</demo>*/
+  el.status.textContent = 'Открываем страницу оплаты…';
+});
 
-  fx.mountAll(document);
+function show(d) {
+  st.price = { eur: d.eur, rub: d.rub };
+  if (d.email && !el.email.value) el.email.value = d.email;
+  const active = d.paidUntil && d.paidUntil >= d.today;
+  const auto = d.autopay === true ? ' Автоплатёж подключён.' : d.autopay === false && active ? ' Автоплатёж не подключён.' : '';
+  el.state.textContent = active ? `Ваш Premium оплачен до ${longDate(d.paidUntil)}.${auto}`
+    : d.paidUntil ? `Ваш Premium закончился ${longDate(d.paidUntil)}. Рубли принимает Т-Банк, евро принимает Stripe.`
+    : 'Premium сейчас не оплачен. Рубли принимает Т-Банк, евро принимает Stripe.';
+  sync();
 }
 
-start();
+sync();
+document.documentElement.dataset.ready = '1';
+/*<demo>*/
+if (!LIVE) show(loadDemo());
+/*</demo>*/
+if (LIVE) {
+  loadLive().then((d) => { if (!d.me) location.href = '/login?back=' + encodeURIComponent(location.pathname); else show(d); }).catch(() => {});
+}
 </script>
 </body>
 </html>
