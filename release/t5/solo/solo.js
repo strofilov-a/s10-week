@@ -1,4 +1,4 @@
-/* S10 «Моя неделя» · release eb0edf957a: everything on one page.
+/* S10 «Моя неделя» · release d586d94fce: everything on one page.
    Today and this week · the paces · the master plan (your saved versions, the library, or a new one from a prompt) laid
    over the dates to the race · «Заполнить календарь» for the whole plan · «Запланировать неделю» for one week (calc3).
    It reads and writes the logged-in user's data through the site's own API. */
@@ -70,7 +70,7 @@
     get(`/apiweb/task.php?action=main&id=${id}`).catch(() => ({})),
     get(`/apiweb/userparam.php?action=get&id=${id}&param[]=studentMainStart`).catch(() => ({})),
     get(`/apiweb/planresults.php?action=list&id=${id}&limit=31`).catch(() => []),
-    get(`/apiweb/userparam.php?action=get&param[]=studentPlans${id}`).catch(() => ({})),
+    get(`/apiweb/userparam.php?action=get&id=${id}&param[]=studentPlans${id}`).catch(() => ({})),
     get('/apiweb/userparam.php?action=get&param[]=planTemplates').catch(() => ({})),
     get(`/apiweb/calc.php?id=${id}`).catch(() => null),
   ]);
@@ -584,7 +584,7 @@
   async function storePlan({ asNew = false, filled = null, undo: undoRec, name = '' } = {}) {
     const p = plan(); if (!p) return null;
     let list = versions;
-    try { const r = await get(`/apiweb/userparam.php?action=get&param[]=studentPlans${id}`); list = parseList(r.param?.[`studentPlans${id}`]); } catch { /* keep what we have */ }
+    try { const r = await get(`/apiweb/userparam.php?action=get&id=${id}&param[]=studentPlans${id}`); list = parseList(r.param?.[`studentPlans${id}`]); } catch { /* keep what we have */ }
     const first = p.plan.weeks.slice().sort((a, b) => a.week - b.week)[0];
     const keepId = !asNew && sel.src === 'version' ? p.id : null, old = keepId ? list.find((v) => v.id === keepId) : null;
     const f0 = old?.filled, f = filled ? { at: new Date().toISOString(), from: f0?.from && f0.from < filled.from ? f0.from : filled.from, to: f0?.to && f0.to > filled.to ? f0.to : filled.to } : f0 || null;
@@ -606,7 +606,7 @@
   // changes the saved list (re-read first, so a version the coach saved meanwhile is kept)
   async function editVersions(fn) {
     let list = versions;
-    try { const r = await get(`/apiweb/userparam.php?action=get&param[]=studentPlans${id}`); list = parseList(r.param?.[`studentPlans${id}`]); } catch { /* keep what we have */ }
+    try { const r = await get(`/apiweb/userparam.php?action=get&id=${id}&param[]=studentPlans${id}`); list = parseList(r.param?.[`studentPlans${id}`]); } catch { /* keep what we have */ }
     const next = fn(list);
     const fd = new FormData(); fd.append('action', 'set'); fd.append('id', id); fd.append(`param[studentPlans${id}]`, JSON.stringify(next));
     await post('/apiweb/userparam.php', fd);

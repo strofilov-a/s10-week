@@ -15,9 +15,16 @@
 <!-- <link rel="canonical" href="https://s10.run/money"> once the page is installed -->
 <meta name="site-kind" content="software">
 <meta name="page-type" content="software">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wdth,wght@85..100,400..700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- IBM Plex from pay/fonts (OFL, @fontsource 5.3.0): no Google Fonts, which load badly from Russia -->
+<link rel="preload" href="fonts/ibm-plex-sans-cyrillic-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-display: swap; font-weight: 100 700; font-stretch: 85% 100%; src: url(fonts/ibm-plex-sans-cyrillic-standard-normal.woff2) format('woff2-variations'), url(fonts/ibm-plex-sans-cyrillic-standard-normal.woff2) format('woff2'); unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116; }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-display: swap; font-weight: 400; src: url(fonts/ibm-plex-mono-cyrillic-400-normal.woff2) format('woff2'); unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116; }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-display: swap; font-weight: 500; src: url(fonts/ibm-plex-mono-cyrillic-500-normal.woff2) format('woff2'); unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116; }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-display: swap; font-weight: 100 700; font-stretch: 85% 100%; src: url(fonts/ibm-plex-sans-latin-standard-normal.woff2) format('woff2-variations'), url(fonts/ibm-plex-sans-latin-standard-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-display: swap; font-weight: 400; src: url(fonts/ibm-plex-mono-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-display: swap; font-weight: 500; src: url(fonts/ibm-plex-mono-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+</style>
 <link rel="stylesheet" href="assets/system.css">
 <link rel="stylesheet" href="assets/ui/cards.css">
 <link rel="stylesheet" href="assets/motion/motion.css">
@@ -314,6 +321,11 @@ html[data-ground] { --ground-bg: #c8d6ee; --ground-surface: #dbe5f6; --ground-in
   .pay__status { margin: 0; min-height: 22px; font-size: var(--t-small); color: var(--muted); overflow-wrap: anywhere; }
   .pay__fine { margin: 0; font-size: var(--t-small); line-height: 1.5; color: var(--muted); }
   .pay__fine a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .pay__cur label:has(:disabled), .pay__cur label:has(:disabled):hover { color: color-mix(in oklab, var(--muted) 50%, var(--bg)); cursor: default; }
+  /* when this account pays elsewhere (a coach, a club, autopay on, nothing payable here) the card says where instead of the form */
+  .payalt { display: grid; gap: 20px; }
+  .payalt p { margin: 0; max-width: none; font-size: var(--t-body, 17px); line-height: 1.55; }
+  .payalt .btn { width: 100%; }
   #paystate { min-height: 3em; }
   [hidden] { display: none !important; }
   @media (max-width: 639px) {
@@ -454,6 +466,7 @@ html[data-ground] { --ground-bg: #c8d6ee; --ground-surface: #dbe5f6; --ground-in
           <form class="pay" id="payform" method="get" action="/money2" novalidate>
             <input type="hidden" name="paysite" value="1">
             <input type="hidden" name="paymonth12" value="1" id="pay12" disabled>
+            <input type="hidden" name="en" value="1" id="en" disabled>
             <fieldset>
               <div class="pay__cur" role="radiogroup" aria-label="Валюта">
                 <label><input type="radio" form="payaux" name="cur" value="rub" checked>Рубли · Т-Банк</label>
@@ -480,6 +493,10 @@ html[data-ground] { --ground-bg: #c8d6ee; --ground-surface: #dbe5f6; --ground-in
             <p class="pay__status" role="status" data-form-status id="paystatus"></p>
             <p class="pay__fine">Деньги за Premium не возвращаются. Автопродление в рублях идёт по <a href="/tilda/85144/offer_tinkoff">соглашению</a> с Т-Банком.</p>
           </form>
+          <div class="payalt" id="payalt" hidden>
+            <p id="payalt-text"></p>
+            <a class="btn btn--primary" id="payalt-link" href="/money"><span id="payalt-label">Перейти к оплате</span><svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+          </div>
         </div>
         </div>
       </div>
@@ -826,61 +843,105 @@ const money = (v, cur) => cur === 'rub' ? `${num(v)} ₽` : `${num(v, Number.isI
 const RU_DATE = /(\d{1,2})\s+([а-яё]+)\s+(\d{4})/i;
 const ruDate = (s) => { const m = RU_DATE.exec(s || ''); const i = m ? MON.indexOf(m[2].toLowerCase()) : -1; return i < 0 ? null : `${m[3]}-${String(i + 1).padStart(2, '0')}-${m[1].padStart(2, '0')}`; };
 
+const firstNum = (s) => { const m = /\d[\d\s]*(?:[.,]\d+)?/.exec(s || ''); return m ? parseFloat(m[0].replace(/\s/g, '').replace(',', '.')) : null; };
+
+/* Live data. The paid-until date comes from /apiapp/me (JSON, any language). Prices, autopay and whether the form is
+   there come from the old pages' markup, not their wording, which follows the user's language:
+   /money2 (Т-Банк, ₽) and /money_stripe?en=1 (Stripe, €; en=1 skips the redirect of Russian users to /money2).
+   Opening either page gives an account with no paysite yet a trial (money2.php:47, money_stripe.php:31), as the
+   site's own /money does; for such an account only the page the site itself routes to is opened, once. */
 async function loadLive() {
-  const j = (u) => fetch(u, { credentials: 'include' }).then((r) => r.json());
-  const page = (u) => fetch(u, { credentials: 'include' }).then((r) => r.ok ? r.text() : '').then((t) => new DOMParser().parseFromString(t, 'text/html')).catch(() => null);
+  const opt = { credentials: 'include' };
+  const j = (u) => fetch(u, opt).then((r) => r.text()).then((t) => JSON.parse(t.slice(t.search(/[{[]/))));  // /apiapp may print PHP notices first
+  const page = (u) => fetch(u, opt).then(async (r) => ({ path: new URL(r.url, location.href).pathname, doc: r.ok ? new DOMParser().parseFromString(await r.text(), 'text/html') : null })).catch(() => ({ path: '', doc: null }));
   const me = await j('/apiweb/student/self/info/').catch(() => null);
   if (!me?.id) return { me: null };
-  const today = iso(new Date(((me.nowmsk || Date.now() / 1000) + 3 * 3600) * 1000));
-  const [eurDoc, rubDoc] = await Promise.all([page('/money_stripe'), page('/money2')]);
-  const text = (d) => (d?.body?.textContent || '').replace(/\s+/g, ' ');
-  const T = text(eurDoc), R = text(rubDoc);
-  const paidUntil = ruDate((/оплачено до ([^.]*?\d{4})/i.exec(T) || /оплачено до ([^.]*?\d{4})/i.exec(R) || [])[1]);
-  const autopay = /автоматический платеж не подключен/i.test(T + R) ? false : /автоматический платеж подключен/i.test(T + R) ? true : null;
-  const eurM1 = parseFloat(((/Стоимость сервисов\s*([\d.,]+)\s*EUR/i.exec(T) || [])[1] || '9').replace(',', '.'));
-  const rubM1 = +((/1 месяц\s*-\s*([\d\s]+)\s*руб/i.exec(R) || [])[1] || '750').replace(/\s/g, '');
-  const rubM12 = +((/12 месяцев\s*-\s*([\d\s]+)\s*руб/i.exec(R) || [])[1] || '9000').replace(/\s/g, '');
-  const email = rubDoc?.querySelector('input[name=email]')?.value || '';
-  return { me, today, paidUntil, autopay, eur: { m1: eurM1 }, rub: { m1: rubM1, m12: rubM12 }, email };
+  const d = { me, today: iso(new Date(((me.nowmsk || Date.now() / 1000) + 3 * 3600) * 1000)), paidUntil: null, email: '', rub: null, eur: null, kind: 'pay' };
+  if (me.role === 'trainer') return { ...d, kind: 'coach' };
+  const app = await j('/apiapp/me').catch(() => null);
+  const ts = app?.subscriptionExpiredAt;
+  if (ts) d.paidUntil = iso(new Date((ts + 3 * 3600) * 1000));
+  d.email = app?.email || '';
+  const pages = app && !ts ? [await page('/money_stripe')] : await Promise.all([page('/money2'), page('/money_stripe?en=1')]);
+  for (const p of pages) {
+    if (p.path.startsWith('/clubPayment')) return { ...d, kind: 'club' };
+    if (p.path === '/money2') d.rub = readRub(p.doc);
+    if (p.path === '/money_stripe') d.eur = readEur(p.doc, d.email);
+  }
+  d.email ||= d.rub?.email || '';
+  if (!app) d.paidUntil = d.rub?.paidUntil || d.eur?.paidUntil || null;
+  if (d.rub?.autopay || d.eur?.autopay) d.kind = 'autopay';
+  else if (!d.rub?.payable && !d.eur?.payable && !d.eur?.needEmail) d.kind = 'elsewhere';
+  return d;
+}
+/* money2.twig: <p><b>Стоимость сервисов N …</b> … <span class="label-success">paysite</span>, then the site's form
+   (paysite=1, paymonth12, recur, email) unless autopay is on (then «?paysiterecur=off») or payment is locked. */
+function readRub(doc) {
+  if (!doc) return null;
+  const until = doc.querySelector('.label-success'), head = until?.closest('p');
+  const m1 = firstNum(head?.querySelector('b')?.textContent);
+  const form = doc.querySelector('input[name=paysite]')?.closest('form');
+  return { m1, payable: !!form && m1 > 0, year: !!form?.querySelector('button[name=paymonth12]'), email: form?.querySelector('input[name=email]')?.value || '',
+    autopay: !!doc.querySelector('a[href*="paysiterecur=off"]'), paidUntil: ruDate(until?.textContent) };
+}
+/* money_stripe.twig: <p>… <b>paysite</b> <b>… N.NN EUR …</b></p>, then the form (paysite=1, siterecur) when the
+   profile has an email, a link to the profile when it has none, «siterecuroff=off» while the subscription is on. */
+function readEur(doc, email) {
+  if (!doc) return null;
+  const head = [...doc.querySelectorAll('p')].find((p) => /\d\s*EUR/.test(p.textContent));
+  const m1 = firstNum((/(\d+(?:[.,]\d+)?)\s*EUR/.exec(head?.textContent || '') || [])[1]);
+  const form = doc.querySelector('input[name=paysite]')?.closest('form');
+  return { m1, payable: !!form && m1 > 0, needEmail: !form && m1 > 0 && !email && !doc.querySelector('a[href*="siterecuroff=off"]'),
+    autopay: !!doc.querySelector('a[href*="siterecuroff=off"]'), paidUntil: ruDate(head?.querySelector('b')?.textContent) };
 }
 
 /*<demo>*/
 function loadDemo() {
-  const free = Q.has('free');
-  return { today: '2026-11-11', me: { id: 1000000001, firstName: 'Спортсмен', lastName: 'Демо', isPremium: !free },
-    paidUntil: free ? '2026-10-12' : '2027-02-03', autopay: false, eur: { m1: 9 }, rub: { m1: 750, m12: 9000 }, email: 'athlete@example.com' };
+  const free = Q.has('free'), s = Q.get('state');
+  const kind = ['coach', 'club', 'autopay', 'elsewhere'].includes(s) ? s : 'pay';
+  return { today: '2026-11-11', me: { id: 1000000001, firstName: 'Спортсмен', lastName: 'Демо', isPremium: !free, role: kind === 'coach' ? 'trainer' : 'student' },
+    paidUntil: free ? '2026-10-12' : '2027-02-03', email: Q.has('nomail') ? '' : 'athlete@example.com', kind,
+    rub: { m1: 750, payable: true, year: true, autopay: kind === 'autopay' }, eur: { m1: 9, payable: !Q.has('nomail'), needEmail: Q.has('nomail'), autopay: false } };
 }
 /*</demo>*/
 
 const form = $('#payform'), aux = $('#payaux');
-const el = { auto: $('#auto'), autonote: $('#autonote'), email: $('#email'), err: $('#email-err'), mailbox: $('#mailbox'), stripe: $('#stripenote'),
-  sum: $('#sum'), p1: $('#p1'), p12: $('#p12'), pay12: $('#pay12'), status: $('#paystatus'), state: $('#paystate') };
+const el = { auto: $('#auto'), autonote: $('#autonote'), email: $('#email'), err: $('#email-err'), mailbox: $('#mailbox'), maillabel: $('#mailbox label'), stripe: $('#stripenote'),
+  sum: $('#sum'), p1: $('#p1'), p12: $('#p12'), pay12: $('#pay12'), en: $('#en'), status: $('#paystatus'), state: $('#paystate'), head: $('#pay-h'),
+  alt: $('#payalt'), altText: $('#payalt-text'), altLink: $('#payalt-link'), altLabel: $('#payalt-label') };
 const radio = (name, v) => document.querySelector(`input[form=payaux][name=${name}][value="${v}"]`);
 const stored = (() => { try { return localStorage.getItem('s10pay.cur'); } catch { return null; } })();
 const ruUser = /^ru\b/i.test(navigator.language || '') || /^(Europe\/(Moscow|Kaliningrad|Samara|Volgograd|Saratov|Astrakhan|Ulyanovsk|Kirov)|Asia\/(Yekaterinburg|Omsk|Novosibirsk|Krasnoyarsk|Irkutsk|Chita|Yakutsk|Vladivostok|Magadan|Kamchatka|Tomsk|Barnaul|Novokuznetsk|Sakhalin))$/.test(Intl.DateTimeFormat().resolvedOptions().timeZone || '');
 const st = { cur: ['rub', 'eur'].includes(Q.get('cur')) ? Q.get('cur') : ['rub', 'eur'].includes(stored) ? stored : ruUser ? 'rub' : 'eur',
-  period: 1, price: { eur: { m1: 9 }, rub: { m1: 750, m12: 9000 } } };
+  period: 1, price: { rub: 750, eur: 9 }, can: { rub: true, eur: true }, year: true, eurMail: false };
+const mailRe = /^\S+@\S+\.\S+$/;
 
 /* One place sets everything the choice changes: the action, the field names, what is sent. Rows keep their height. */
 function sync() {
-  const rub = st.cur === 'rub';
-  if (!rub) st.period = 1;
+  if (!st.can[st.cur] && st.can[st.cur === 'rub' ? 'eur' : 'rub']) st.cur = st.cur === 'rub' ? 'eur' : 'rub';
+  const rub = st.cur === 'rub', mail = rub || st.eurMail;
+  if (!rub || !st.year) st.period = 1;
+  radio('cur', 'rub').disabled = !st.can.rub;
+  radio('cur', 'eur').disabled = !st.can.eur;
   radio('cur', st.cur).checked = true;
   radio('period', st.period).checked = true;
-  radio('period', 12).disabled = !rub;
+  radio('period', 12).disabled = !rub || !st.year;
   const year = st.period === 12;
   form.action = rub ? '/money2' : '/money_stripe';
+  el.en.disabled = rub;
   el.auto.name = rub ? 'recur' : 'siterecur';
   el.auto.disabled = year;
   if (year) el.auto.checked = false;
   el.autonote.textContent = year ? 'Для оплаты за год автопродления нет' : 'Следующий месяц оплатится сам';
   el.pay12.disabled = !year;
-  el.email.disabled = !rub;
-  el.mailbox.hidden = !rub;
-  el.stripe.hidden = rub;
-  el.p1.textContent = money(st.price[st.cur].m1, st.cur);
-  el.p12.textContent = rub ? `${money(st.price.rub.m12, 'rub')} одним платежом` : 'Только в рублях';
-  el.sum.textContent = money(year ? st.price.rub.m12 : st.price[st.cur].m1, st.cur);
+  el.email.disabled = !mail;
+  el.mailbox.hidden = !mail;
+  el.maillabel.textContent = rub ? 'Почта · её просит Т-Банк' : 'Почта · её просит Stripe, мы сохраним её в профиле';
+  el.err.textContent = `Нужна почта: без неё ${rub ? 'Т-Банк' : 'Stripe'} не примет платёж`;
+  el.stripe.hidden = mail;
+  el.p1.textContent = money(st.price[st.cur], st.cur);
+  el.p12.textContent = !rub ? 'Только в рублях' : st.year ? `${money(st.price.rub * 12, 'rub')} одним платежом` : 'Только помесячно';
+  el.sum.textContent = money(year ? st.price.rub * 12 : st.price[st.cur], st.cur);
   el.status.textContent = '';
 }
 function mailError(on) {
@@ -896,11 +957,10 @@ document.addEventListener('change', (e) => {
   sync();
 });
 el.email.addEventListener('input', () => mailError(false));
-form.addEventListener('submit', (e) => {
-  if (st.cur === 'rub' && !/^\S+@\S+\.\S+$/.test(el.email.value.trim())) {
-    e.preventDefault(); mailError(true); el.email.focus(); return;
-  }
-  el.email.value = el.email.value.trim();
+form.addEventListener('submit', async (e) => {
+  const rub = st.cur === 'rub', mail = el.email.value.trim();
+  if ((rub || st.eurMail) && !mailRe.test(mail)) { e.preventDefault(); mailError(true); el.email.focus(); return; }
+  el.email.value = mail;
   /*<demo>*/
   if (!LIVE) {
     e.preventDefault();
@@ -910,17 +970,47 @@ form.addEventListener('submit', (e) => {
   }
   /*</demo>*/
   el.status.textContent = 'Открываем страницу оплаты…';
+  if (!rub && st.eurMail) {
+    // Stripe takes the email from the profile, and only /money2 saves one (money2.php:36), so save it there first.
+    e.preventDefault();
+    el.status.textContent = 'Сохраняем почту и открываем Stripe…';
+    await fetch('/money2?email=' + encodeURIComponent(mail), { credentials: 'include' }).catch(() => null);
+    form.submit();
+  }
 });
 
 function show(d) {
-  st.price = { eur: d.eur, rub: d.rub };
+  const has = { rub: !!d.rub?.payable, eur: !!(d.eur?.payable || d.eur?.needEmail) };
+  st.price = { rub: d.rub?.m1 || 750, eur: d.eur?.m1 || 9 };
+  st.can = has;
+  st.year = !!d.rub?.year && st.price.rub === 750;   // money2.php:91 charges 750 × 12 whatever price the page shows
+  st.eurMail = !!d.eur?.needEmail;
   if (d.email && !el.email.value) el.email.value = d.email;
+  const until = d.paidUntil ? longDate(d.paidUntil) : '';
   const active = d.paidUntil && d.paidUntil >= d.today;
-  const auto = d.autopay === true ? ' Автоплатёж подключён.' : d.autopay === false && active ? ' Автоплатёж не подключён.' : '';
-  el.state.textContent = active ? `Ваш Premium оплачен до ${longDate(d.paidUntil)}.${auto}`
-    : d.paidUntil ? `Ваш Premium закончился ${longDate(d.paidUntil)}. Рубли принимает Т-Банк, евро принимает Stripe.`
-    : 'Premium сейчас не оплачен. Рубли принимает Т-Банк, евро принимает Stripe.';
+  const by = [has.rub && 'рубли принимает Т-Банк', has.eur && 'евро принимает Stripe'].filter(Boolean).join(', ');
+  const paid = active ? `Ваш Premium оплачен до ${until}.` : d.paidUntil ? `Ваш Premium закончился ${until}.` : 'Premium сейчас не оплачен.';
+  const alt = {
+    coach: ['У тренеров Premium включён всегда, платить за него не нужно.', 'Ученики оплачивают Premium сами. Их платежи и оплату тренировок показывает страница «Платежи».', 'Открыть «Платежи»', '/money2'],
+    club: ['Ваш Premium оплачивается через клуб.', 'Оплата идёт на странице клуба: там цена и срок для его участников.', 'Оплатить через клуб', '/clubPayment'],
+    autopay: [`${active ? paid + ' ' : ''}Автоплатёж подключён: следующий месяц оплатится сам.`, 'Пока автоплатёж подключён, платить вручную не нужно. Отключить его можно на странице автоплатежа.', 'Управлять автоплатежом', d.rub?.autopay ? '/money2' : '/money_stripe?en=1'],
+    elsewhere: [d.today ? paid : 'Не получилось загрузить данные оплаты.', 'Для вашего аккаунта оплата открывается на странице S10.', 'Перейти к оплате', '/money'],
+  }[d.kind];
+  form.hidden = !!alt;
+  el.alt.hidden = !alt;
+  if (alt) {
+    [el.state.textContent, el.altText.textContent, el.altLabel.textContent, el.altLink.href] = alt;
+    // the page's «Оплатить Premium» buttons (nav, hero, closing, the phone bar) lead to this card: say what it holds
+    const cta = { coach: 'Платежи учеников', club: 'Оплата через клуб', autopay: 'Автоплатёж', elsewhere: 'Перейти к оплате' }[d.kind];
+    document.querySelectorAll('a.btn--primary[href="#pay"]').forEach((a) => { if (a.firstChild?.nodeType === 3) a.firstChild.nodeValue = cta; });
+    if (d.kind === 'coach') el.head.textContent = 'Premium для тренеров включён';
+    if (d.kind === 'club') el.head.textContent = 'Premium через клуб';
+  } else {
+    el.head.textContent = `Месяц Premium за ${[has.rub && money(st.price.rub, 'rub'), has.eur && money(st.price.eur, 'eur')].filter(Boolean).join(' или ')}`;
+    el.state.textContent = `${paid} ${by[0].toUpperCase() + by.slice(1)}.`;
+  }
   sync();
+  document.documentElement.dataset.loaded = d.kind;
 }
 
 sync();
@@ -929,7 +1019,8 @@ document.documentElement.dataset.ready = '1';
 if (!LIVE) show(loadDemo());
 /*</demo>*/
 if (LIVE) {
-  loadLive().then((d) => { if (!d.me) location.href = '/login?back=' + encodeURIComponent(location.pathname); else show(d); }).catch(() => {});
+  loadLive().then((d) => { if (!d.me) location.href = '/login?back=' + encodeURIComponent(location.pathname); else show(d); })
+    .catch(() => show({ today: '', paidUntil: null, kind: 'elsewhere' }));
 }
 </script>
 </body>

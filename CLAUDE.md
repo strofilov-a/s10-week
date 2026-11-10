@@ -9,6 +9,9 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 
 ## Who does what
 
+- Nothing new has gone to the developer since release `4a45d50219` (owner, 10.11.2026). The next delivery is ONE package
+  with the payment page and the achievements: `sh ~/CLAUDE CODE/инструменты/собрать-пакет.sh` →
+  `~/CLAUDE CODE/релизы/s10-deploy-<date>.zip` (`www/` for the web root, `beside-www/`, `docs/`, one README).
 - The S10 developer only embeds the page into the site once: `solo.html` served at `/solo/plan` the way `/calc3` is
   served, `solo.js` at `/t5/solo/solo.js`, a menu item. We hand him the `release/` folder as a zip (`npm run zip`): the
   production `t5/solo/solo.js` with the demo cut out, `solo.html` with a fresh `?v=`, `solo-start.html`, and the brief.
@@ -40,16 +43,17 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 | `landing-v2/` | Second take on the same page after a taste review (direction «one motif»: the race-day circle flies from the hero into 6 December; colour fields, «Что умеет Solo» as a held scene of six features, the paces slider, two plan fields). Jost + Golos Text. One palette: 1t, taste's correction of the owner's pacific · tomato · mustard (stone ground, deep teal ink; owner's choice 03.11.2026). Built into `release/solo-start.html` for `/solo/start`. On touch screens (owner, 09.11.2026: the flight shook on the phone, twice) nothing follows the scroll by script: the circle stays in the hero and goes up with the page, 6 December pops in on a timer when the calendar comes into view (IntersectionObserver, `.cal-sec.pop`), and the showcase/footer drifts are off; with a mouse the orb still flies, screen-fixed under Lenis. On phones the circle is whole (56vw) at the right under the hero text, the 6 in its middle (Golos Text's 6 sits .03em low). The hero clips its sides so a circle past the edge never widens a touch screen's page. The pinned calendar fits a phone screen under the top bar (heading on one line, shorter rows; on a short phone the week figures go). The closing «Начать» arch keeps its text a third of the radius in from the corners. https://strofilov-a.github.io/s10-week/landing-v2/ |
 | `landing-v2-colors/` | Temporary: landing-v2 with the six-palette picker (owner's 1, 3, 4 and taste's 1t, 3t, 4t), to play with; not part of the release. Delete when done. https://strofilov-a.github.io/s10-week/landing-v2-colors/ |
 | `landing-v2-violet/` | Temporary: landing-v2 in the owner's violet #C03EE0 · pink #E03EAF · raspberry #E03E5E on white (deep plum ink derived from the violet; inspector needs `--allow palette-purple`), to compare; not part of the release. https://strofilov-a.github.io/s10-week/landing-v2-violet/ |
-| `pay/` | Draft of a new Premium payment page to replace `/money_stripe` (owner, 09.11.2026: «дорого красиво, как у Stripe»; 10.11.2026: rebuilt with taste-skill 2.5.1 so that «Оплатить» is pressed, then recoloured in S10's colours with the site's blue header and logo, skeleton kept). One `index.html` + `assets/` (only the taste kit files the page loads, unchanged, MIT; never edit them, page CSS overrides instead) + `share.jpg`, `favicon.svg`. Kind software, IBM Plex Sans/Mono (Google Fonts still), accent and action #004aad, pill buttons; the nav «Оплатить Premium» is white on the blue bar. Sections: hero (workout analysis window on fluted glass) → `#pay` (what is in Premium + the form: ₽ Т-Банк / € Stripe, 1 or 12 months, autopay, email for ₽) → `#analysis` → `#charts` (four chart cards) → `#solo` (pinned chapters: Solo, bot, coach) → founder quote with 33 000+ athletes, 410 coaches, 100+ podcasts → FAQ (answers open) → closing; a fixed action bar on phones. Only facts verified on s10.run; 12 months = 12 × 750 ₽, no discount claimed. Live on s10.run it reads `/money_stripe` and `/money2` as HTML (paid-until, prices, autopay, email) and «Оплатить» sends the old pages' GET: `/money_stripe?paysite=1[&siterecur=1]`, `/money2?paysite=1[&recur=1][&paymonth12=1]&email=…`. Demo elsewhere (`?free`, `?cur=rub`, `?cur=eur`), where the button only shows the URL. Switching currency or period moves nothing. taste gate: PASS with three waivers (`.taste-skill/waivers.json`, git-ignored: hero-lines, the white nav button ×2). Not in the release yet. https://strofilov-a.github.io/s10-week/pay/ |
+| `pay/` | The new Premium payment page for `/pay/`, beside the old `/money_stripe` and `/money2` (owner, 09.11.2026: «дорого красиво, как у Stripe»; 10.11.2026: rebuilt with taste-skill 2.5.1 so that «Оплатить» is pressed, then recoloured in S10's colours with the site's blue header and logo, skeleton kept). One `index.html` + `assets/` (only the taste kit files the page loads, unchanged, MIT; never edit them, page CSS overrides instead) + `fonts/` (IBM Plex Sans variable and Mono 400/500, Cyrillic + Latin, from @fontsource 5.3.0: no Google Fonts) + `share.jpg`, `favicon.svg`. Kind software, accent and action #004aad, pill buttons; the nav «Оплатить Premium» is white on the blue bar. Sections: hero → `#pay` (what is in Premium + the form: ₽ Т-Банк / € Stripe, 1 or 12 months, autopay, email) → `#analysis` → `#charts` → `#solo` → founder quote → FAQ → closing; a fixed action bar on phones. Live data (checked against the site's code 10.11.2026, `сайт-s10.run/карта/05`): paid-until from `/apiapp/me` `subscriptionExpiredAt` (JSON, any language; PHP notices before it are skipped); prices, autopay and whether a form is there from the markup of `/money2` and `/money_stripe?en=1` (`en=1` skips the redirect of Russian users to /money2), never from their wording; opening those pages writes a trial `paysite` when it is empty, so for such an account only `/money_stripe` (as the site routes) is opened, once. «Оплатить»: `/money2?paysite=1[&recur=1][&paymonth12=1]&email=…`, `/money_stripe?paysite=1&en=1[&siterecur=1]`; with no email in the profile € first saves it through `/money2?email=` (Stripe takes the profile's). 12 months only when the month is 750 ₽ (money2.php:91 charges 750 × 12 whatever it shows). Coaches, clubs, autopay on, or nothing payable: the form gives way to a card saying where to go (`#payalt`; the page's «Оплатить Premium» buttons take its label). Demo elsewhere (`?free`, `?cur=rub|eur`, `?state=coach|club|autopay|elsewhere`, `?nomail`). Built into `release/pay/` with the demo cut. taste gate: PASS with three waivers (`.taste-skill/waivers.json`, git-ignored). https://strofilov-a.github.io/s10-week/pay/ |
 | `deploy/solo.html` | The page shell for s10.run (copied from the `/calc3` template: `/t5` Roboto fonts, icons, cookie consent). |
 | `deploy/ЗАДАНИЕ.md` | The one-page brief for the S10 developer (copied into `release/` as `README.md`). |
-| `deploy/build.cjs` | `npm run build`: cuts every demo-marked block (`/*<demo>*/…/*</demo>*/`) out of `solo.js` into `release/`, stamps `?v=` with a hash of the code, checks no demo is left and that it parses. Mark any new demo-only code so. Also builds `release/solo-start.html` from `landing-v2/` with its stage, GSAP and Lenis inlined from node_modules (no CDN: jsDelivr is unreliable from Russia). |
+| `deploy/build.cjs` | `npm run build`: cuts every demo-marked block (`/*<demo>*/…/*</demo>*/`) out of `solo.js` into `release/`, stamps `?v=` with a hash of the code, checks no demo is left and that it parses. Mark any new demo-only code so. Also builds `release/solo-start.html` from `landing-v2/` with its stage, GSAP and Lenis inlined from node_modules (no CDN: jsDelivr is unreliable from Russia) and Jost + Golos Text inlined as data: URLs from @fontsource (no Google Fonts either), and `release/pay/` from `pay/` with the demo cut. |
 | `release/` | What goes to the S10 developer, committed; CI fails if it differs from a fresh build. |
 | `deploy/live.json`, `deploy/live.cjs` | What s10.run serves (hash of each file, release id); `npm run live` checks the site and records a new release once it is up. |
 | `deploy/zip.cjs`, `deploy/files.cjs` | `npm run zip` → `dist/solo_release_<id>.zip` (git-ignored); the file list, hashes and release id shared by build, live and zip. |
 | `tests/release.cjs` | Runs the release build at `/solo/plan` against a stand-in of the site's API (the demo snapshot), writes recorded. |
 | `tests/landing.cjs` | Runs `release/solo-start.html` at `/solo/start` with every outside request blocked: scenes live, the circle lands, actions go to the login, paces follow the goal. |
 | `tests/check.cjs` | Browser checks against the demo (see Testing). |
+| `tests/pay.cjs` | `release/pay` at http://s10.run:<port>/pay/ (Chromium maps s10.run to a local stand-in, so LIVE is on and the site's redirects are real): markup after the site's money2/money_stripe templates, ru and en, autopay, locked, zero and 500 ₽ prices, no email, coach, club, no paysite yet. |
 | `.github/workflows/check.yml` | Runs `tests/check.cjs` on every push and pull request. |
 | `README.md` | Feature and API overview (English). |
 
@@ -57,7 +61,8 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 
 - `LIVE = /(^|\.)s10\.run$/.test(location.hostname)`. In demo mode `get`/`post` answer from `window.S10_FIXTURES` and
   imitate the server (the diary even pages like the real API). Nothing leaves the browser in demo mode.
-- «Today» is the Moscow date from `student/self/info.nowmsk` (the site counts days in Moscow time).
+- «Today» is the Moscow date of `student/self/info.nowmsk`, which is plain unix time (`time()`, p/react.php:120): the page
+  adds 3 h before taking the date.
 - Rendering is plain template strings into one root (`#s10-week`); state lives in closures; `render()` redraws.
 
 ## Endpoints (all existing; `ID` = profile id, or `?id=` when a coach opens an athlete)
@@ -70,14 +75,19 @@ Reads:
   `loadRange(from, to)` follows the cursor; `loadedWeeks` caches covered weeks.
   Day: `{date, type, comment, target, main6, location, prediction, tracks:[{type:'run', km, …}]}`.
 - `GET /apiweb/userparam.php?action=get&id=ID&param[]=studentMainStart` + `GET /apiweb/planresults.php?action=list&id=ID&limit=31` — S10 pace forecast.
-- `GET /apiweb/userparam.php?action=get&param[]=studentPlans<ID>` — saved plan versions (the list calc5 keeps).
+- `GET /apiweb/userparam.php?action=get&id=ID&param[]=studentPlans<ID>` — saved plan versions (the list calc5 keeps). The
+  `&id=` matters: without it userparam reads the LOGGED-IN user's row, so a coach opening an athlete read his own row
+  while the write (with `id`) went to the athlete's (fixed 10.11.2026).
 - `GET /apiweb/userparam.php?action=get&param[]=planTemplates` — the logged-in user's OWN calc4 library (empty for most athletes; tab hidden when empty).
-- `GET /apiweb/calc.php?id=ID` — limits, phase, `dselect` = start days of S10 running weeks (Wednesday for the owner).
+- `GET /apiweb/calc.php?id=ID` — limits, phase, `dselect` = `{1: this week's Wednesday, 2: next week's}` for everyone
+  (calc.php:210; `dselect=N` in a request takes only 1 or 2).
 - `GET /apiweb/tasktemplates.php`; `GET /apiweb/calc.php?id=ID&dselect=N&step=2&…` — templates and the one-week schedule (calc3).
 
 Writes (only on a button, the diary ones after a confirmation):
 - `POST /apiweb/task.php?id=ID&action=update`, FormData `tasks` = JSON `[{d, task, prekm, typtrain, main6, location, prediction}]`
   (calc3's payload). Accepted 32 days in one request on the live site; we still send one Mon–Sun week per request.
+  Every written or deleted day queues a Telegram message to the athlete (task.php:53,97): a 32-day fill = 32 messages.
+  An empty `task` DELETEs the row; `main6: 0` changes nothing (only 1 is acted on).
   `main6` = 1 only for the main race day; the main race day is never rewritten by a fill. Ordinary days sent with
   `main6: 0` (as calc3 does) left the main race intact on the live site; what `main6: 0` would do to the race day itself
   is untested, which is why that day is never sent.
@@ -200,14 +210,14 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # demo checks (104), the release build and its checks (12), the promo page (35)
+npm test                                     # demo checks (104), the release build and its checks (13), the promo page (35), the payment page (22)
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same on every push and pull request, and fails if the committed
 `release/` is not the build of the current source.
 
 Live checks on s10.run (how to inject read-only, what has been verified on the owner's account): the `s10-live-check`
-skill.
+skill. How the site works (APIs, tables, payments): `~/CLAUDE CODE/сайт-s10.run/карта/README.md`.
 
 Never write to the owner's real diary or profile without his explicit yes in the chat.
 
