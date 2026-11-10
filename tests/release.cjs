@@ -34,7 +34,7 @@ async function site(page, mod = (x) => x) {
     if (u.includes('planresults.php')) return json(route, FX.results);
     if (u.includes('/student?')) return json(route, { diaryTasksInfo: FX.diary.diaryTasksInfo, diaryTasksisMoreExist: 0 });
     if (u.includes('tasktemplates.php')) return json(route, FX.templates);
-    if (u.includes('param[]=studentPlans')) return json(route, { param: { [`studentPlans${FX.me.id}`]: JSON.stringify(FX.versions) } });
+    if (u.includes('param[]=studentPlans')) { (writes.reads ||= []).push(u); return json(route, { param: { [`studentPlans${FX.me.id}`]: JSON.stringify(FX.versions) } }); }
     if (u.includes('param[]=planTemplates')) return json(route, { param: { planTemplates: JSON.stringify(FX.library) } });
     if (u.includes('calc.php')) return json(route, FX.base);
     return route.fulfill({ status: 404, body: '' });
@@ -50,7 +50,8 @@ srv.listen(0, '127.0.0.1', async () => {
   const src = fs.readFileSync(path.join(REL, 't5', 'solo', 'solo.js'), 'utf8');
   check('release: no demo code or words left', !/\b(LIVE|FX|S10_FIXTURES|demo\w*)\b|[Дд]емо/.test(src));
 
-  { const [p] = await open(); const t = (await p.innerText('body')).replace(/\s+/g, ' ');
+  { const [p, w0] = await open(); const t = (await p.innerText('body')).replace(/\s+/g, ' ');
+    check('plan versions are read from the profile they are written to (&id=, as a coach opening an athlete needs)', (w0.reads || []).length && w0.reads.every((u) => /[?&]id=\d+/.test(u)), (w0.reads || []).join(' '));
     check('athlete with data: page, race, no demo banner, Telegram link', t.includes('До старта') && t.includes('Valencia') && !/[Дд]емо/.test(t) && !!(await p.$('.w-foot a[href="https://t.me/+wP4aOZ4910I2MTk6"]')) && !(await p.$('.w-dlg')));
     check('links stay on the site (logo «/», calc3 relative)', (await p.$eval('.w-wm', (a) => a.getAttribute('href'))) === '/');
     check('no errors', !p.errs.length, p.errs.join('; ')); await p.close(); }
