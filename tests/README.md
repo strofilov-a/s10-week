@@ -17,3 +17,8 @@ GitHub Actions (`.github/workflows/check.yml`) runs the same checks on every pus
 
 `release.cjs` runs the production build (`release/`, no demo) at `/solo/plan` with the site's endpoints answered from the
 demo snapshot: the new athlete's path to «Заполнить календарь», with every write recorded.
+
+`kazan.cjs` checks the Kazan marathon mode: on the demo (`?kazan`) the plan, its parser, the goal, the volume and the
+long runs; on the release build at `/solo/kazan` (a stand-in of the API that keeps what is written) the soft entry, the
+main-race question, the versions, the browser keys and the logged-out block. `REACT=1` (in `npm run react`) runs its
+release part on `<SoloKazan />` from `react-src/`, plus unmount and remount.

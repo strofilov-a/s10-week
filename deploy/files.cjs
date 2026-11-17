@@ -4,7 +4,7 @@ const crypto = require('crypto');
 
 const FILES = [
   { file: 't5/solo/solo.js', url: '/t5/solo/solo.js' },
-  { file: 'solo.html', url: '/solo/plan' },
+  { file: 'solo.html', url: '/solo/plan', also: '/solo/kazan' }, // also: served at a second address too (the brief's table only)
   { file: 'solo-start.html', url: '/solo/start' },
 ];
 const hash = (buf) => crypto.createHash('sha256').update(buf).digest('hex').slice(0, 12);

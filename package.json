@@ -4,18 +4,29 @@
   "description": "S10 «Моя неделя» page; package.json only for the browser checks",
   "scripts": {
     "serve": "python3 -m http.server 8766 --bind 127.0.0.1",
-    "test": "node --check solo.js && node tests/check.cjs && node deploy/build.cjs && node tests/release.cjs && node tests/landing.cjs && node tests/pay.cjs",
+    "test": "node --check solo.js && node tests/check.cjs && node deploy/build.cjs && node tests/release.cjs && node tests/landing.cjs && node tests/pay.cjs && node tests/links.cjs && node tests/kazan.cjs",
     "build": "node deploy/build.cjs",
     "zip": "npm test && node deploy/zip.cjs",
-    "live": "node deploy/live.cjs"
+    "live": "node deploy/live.cjs",
+    "react": "node deploy/react-src.cjs && webpack --config tests/react/webpack.config.cjs && REACT=1 node tests/release.cjs && REACT=1 node tests/landing.cjs && REACT=1 node tests/kazan.cjs"
   },
   "devDependencies": {
     "@fontsource-variable/golos-text": "5.3.0",
     "@fontsource-variable/ibm-plex-sans": "5.3.0",
     "@fontsource-variable/jost": "5.3.0",
     "@fontsource/ibm-plex-mono": "5.3.0",
+    "@types/react": "17.0.83",
+    "@types/react-dom": "17.0.25",
+    "css-loader": "6.11.0",
     "gsap": "^3.15.0",
     "lenis": "^1.3.26",
-    "playwright": "^1.64.1"
+    "playwright": "^1.64.1",
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
+    "style-loader": "3.3.4",
+    "ts-loader": "9.5.1",
+    "typescript": "4.9.5",
+    "webpack": "5.97.1",
+    "webpack-cli": "5.1.4"
   }
 }

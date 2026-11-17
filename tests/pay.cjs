@@ -1,8 +1,7 @@
 // Checks the Premium payment page as it ships (release/pay, the demo cut out) live, as on s10.run: the page is opened at http://s10.run:<port>/pay/
 // served by a local stand-in of the site, so LIVE is on. /money2 and /money_stripe answer with markup like the pages
-// the site serves, in Russian or English, with autopay on or
-// off, a locked or zero price, no email; /money_stripe redirects Russian users to /money2 unless ?en=1, as
-// the site does. Nothing leaves the machine.
+// the site serves, in Russian or English, with autopay on or off, a locked or zero price, no email; /money_stripe
+// redirects Russian users to /money2 unless ?en=1, as the site does. Nothing leaves the machine.
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const PAY = path.resolve(__dirname, '..', 'release', 'pay');   // what ships: run after `npm run build`
@@ -48,6 +47,7 @@ const srv = http.createServer((q, r) => {
     const f = path.join(PAY, pth.slice(5) || 'index.html');
     return fs.existsSync(f) && fs.statSync(f).isFile() ? send(200, TYPES[path.extname(f)] || 'application/octet-stream', fs.readFileSync(f)) : send(404, 'text/plain', '');
   }
+  if (pth === '/apiweb/student/self/info/' && o.loggedOut) return send(200, 'application/json', 'null');
   if (pth === '/apiweb/student/self/info/') return send(200, 'application/json', JSON.stringify({ id: 1000000001, firstName: 'Атлет', role: o.role, isPremium: true, nowmsk: Date.parse('2026-11-11T09:00:00Z') / 1000 }));
   if (pth === '/apiapp/me') {
     const ts = o.paysite ? Date.parse(o.paysite + 'T00:00:00+03:00') / 1000 : null;
@@ -63,11 +63,14 @@ const srv = http.createServer((q, r) => {
 });
 let BASE = '';
 
+let LAST = null; // the cases that read the state only never close their page: close it here, so pages do not pile up
 async function open(b, o = {}) {
+  if (LAST && !LAST.isClosed()) await LAST.close();
   O = { lang: 'ru', ru: true, price: 750, eur: 9, recur: false, lock: false, email: 'athlete@example.com', paysite: '2026-12-10', role: 'student', club: false, notice: false, q: '', ...o };
   HITS = [];
   const hits = HITS;
   const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
+  LAST = p;
   p.errs = []; p.on('pageerror', (e) => p.errs.push(e.message));
   await p.route((url) => url.hostname !== 's10.run', (route) => route.abort());
   await p.goto(BASE + '/pay/' + O.q);
@@ -153,6 +156,16 @@ srv.listen(0, '127.0.0.1', async () => {
     await p.click('.pay__cur label:has(input[value=rub])'); await p.click('#payform button[type=submit]'); await wait(200);
     check('₽ without email: stays, shows the error', !(await p.isHidden('#email-err')) && new URL(p.url()).pathname === '/pay/');
     await p.close(); }
+
+  { // logged out: to the login and back here; the site's login returns only to a full https://s10.run/… address
+    O = { ...O, loggedOut: true, lang: 'ru', ru: true }; HITS = [];
+    const p = await b.newPage();
+    await p.route((url) => url.hostname !== 's10.run', (route) => route.abort());
+    const nav = p.waitForRequest((r) => r.isNavigationRequest() && r.url().includes('/login'), { timeout: 6000 }).catch(() => null);
+    await p.goto(BASE + '/pay/?cur=eur');
+    const r = await nav, back = r ? new URL(r.url()).searchParams.get('back') : '';
+    check('logged out: to /login with the full address back (/pay/ and its query)', back === BASE + '/pay/?cur=eur', r && r.url());
+    await p.close(); O = {}; }
 
   await b.close();
   const failed = results.filter((x) => !x).length;

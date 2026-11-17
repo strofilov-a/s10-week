@@ -1,10 +1,16 @@
-/* S10 «Моя неделя» · release d586d94fce: everything on one page.
+/* S10 «Моя неделя» · release ba2b5104ef: everything on one page.
    Today and this week · the paces · the master plan (your saved versions, the library, or a new one from a prompt) laid
    over the dates to the race · «Заполнить календарь» for the whole plan · «Запланировать неделю» for one week (calc3).
    It reads and writes the logged-in user's data through the site's own API. */
 (async () => {
   /* ================= data source: the site's own API ================= */
   const ORIGIN = location.origin;
+  // the page's mode: 'kazan' at /solo/kazan (one race, the plan built in, a goal picker instead of the plan choice), else
+  // 'solo'; one line on purpose: the React build replaces it as a whole
+  const MODE = /\/solo\/kazan\/?$/.test(location.pathname) ? 'kazan' : 'solo';
+  // the Kazan marathon (the date is provisional: the organiser has not announced it, calendars say 30.04–02.05.2027);
+  // scale = each goal's share of the plan's volume (easy runs and long runs)
+  const KAZAN = { name: 'Казань', location: 'KAZAN', d: '2027-05-02', km: 42.2, goals: ['3:00:00', '3:30:00', '4:00:00'], scale: { '3:00:00': 1, '3:30:00': 0.85, '4:00:00': 0.7 } };
   const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
   const last = (a) => a[a.length - 1];
   async function get(u) {
@@ -53,14 +59,38 @@
   };
   const wLabel = (k) => { const a = d8(k), b = d8(add(k, 6)); return a.getUTCMonth() === b.getUTCMonth() ? `${a.getUTCDate()}–${b.getUTCDate()} ${MON[b.getUTCMonth()]}` : `${a.getUTCDate()} ${MONS[a.getUTCMonth()]} – ${b.getUTCDate()} ${MONS[b.getUTCMonth()]}`; };
   const hms = (t) => String(t || '').replace(/^0(\d):/, '$1:');
-  const store = { get(k, d) { try { const v = localStorage.getItem('s10week.' + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('s10week.' + k, JSON.stringify(v)); } catch { /* storage blocked */ } } };
+  // a pace as the site, calc5 or a person writes it: «4:30», «04:30», «0:04:30», «4.30», «430» → seconds, or null
+  const paceSecOf = (v) => { const m = String(v == null ? '' : v).trim().replace(/[.,]/g, ':').match(/^(?:0{1,2}:)?(\d{1,2}):?(\d{2})$/); const s = m ? +m[1] * 60 + +m[2] : 0; return m && +m[2] < 60 && s > 0 ? s : null; };
+  const fmtPace = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  // the four paces (5, 10, 21, 42) in one form, or null when any is missing or unreadable, so a workout never reads NaN:NaN
+  // (planresults.t is {"err": "Нет данных…"} when the site cannot forecast; a coach may fill one pace only)
+  const fourPaces = (src) => { const P = {}; for (const k of [5, 10, 21, 42]) { const v = paceSecOf(src?.[k]); if (!v) return null; P[k] = fmtPace(v); } return P; };
+  // the browser's keys: «s10week.<key>», in the Kazan mode «s10week.kazan.<key>» (its plan, layout, paces, span, undo never
+  // touch Solo's; the goal stays at s10week.kazan.goal.<ID>, where it was before the prefix)
+  const store = { get(k, d) { try { const v = localStorage.getItem(store.key(k)); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(store.key(k), JSON.stringify(v)); } catch { /* storage blocked */ } }, key: (k) => (MODE === 'kazan' ? 's10week.kazan.' : 's10week.') + k };
+
+  // «1 неделя», «2 недели», «5 недель», «21 неделя»
+  const weeksWord = (n) => { const a = n % 100, b = n % 10; return n + ' ' + (a >= 11 && a <= 14 ? 'недель' : b === 1 ? 'неделя' : b >= 2 && b <= 4 ? 'недели' : 'недель'); };
+  // the line before the Kazan start (KAZAN.d) by the browser's clock, the date in Moscow time (UTC+3); '' once it is past
+  const kazanCountdown = (nowMs) => { const d = Math.round((Date.parse(KAZAN.d + 'T00:00:00Z') - Date.UTC(...new Date(nowMs + 3 * 36e5).toISOString().slice(0, 10).split('-').map((v, i) => i === 1 ? v - 1 : +v))) / 864e5);
+    return d < 0 ? '' : d === 0 ? 'старт сегодня' : d <= 6 ? 'старт на этой неделе' : 'до старта ' + weeksWord(Math.ceil(d / 7)); };
+  // a day with its month in full («1 мая»); the Kazan race day with its year («2 мая 2027»): every date of the race comes
+  // from KAZAN.d, so a new date is that one line
+  const dayLong = (s) => { const [, m, d] = s.split('-'); return `${+d} ${MON[m - 1]}`; };
+  const kazanDay = () => `${dayLong(KAZAN.d)} ${KAZAN.d.slice(0, 4)}`;
 
   /* ================= load ================= */
   const me = await get('/apiweb/student/self/info/').catch(() => null);
   if (!me?.id) { // not logged in: the API answers null
     const box = document.createElement('main');
     box.style.cssText = 'font:16px/1.5 Roboto,system-ui,sans-serif;max-width:560px;margin:0 auto;padding:48px 24px;color:#111';
-    box.innerHTML = '<h1 style="font-size:24px;font-weight:500;margin:0 0 8px">Моя неделя</h1><p style="margin:0">Чтобы увидеть свою неделю и план до старта, <a href="/login" style="color:#1a4be0">войдите в S10</a>.</p>';
+    if (MODE === 'kazan') { // the marathon plan's visitor: no server time, so the browser's clock in Moscow time
+      const left = kazanCountdown(Date.now());
+      box.innerHTML = '<h1 style="font-size:24px;font-weight:500;margin:0 0 8px">Подготовка к Казанскому марафону</h1><p style="margin:0">' + kazanDay() + (left ? ' · ' + left : '') + '</p><p style="margin:0">Цель на выбор: 3:00, 3:30 или 4:00</p><p style="margin:0">План с вашими темпами — сразу в календаре S10</p><p style="margin:0 0 16px">Premium S10</p><a href="/login?back=' + encodeURIComponent(location.href) + '" style="display:inline-block;background:#1a4be0;color:#fff;text-decoration:none;border-radius:8px;padding:10px 20px">Войти и начать</a>';
+      document.body.appendChild(box); document.title = 'Подготовка к Казанскому марафону · S10.run';
+      return 'S10 «Казань»: нужен вход';
+    }
+    box.innerHTML = '<h1 style="font-size:24px;font-weight:500;margin:0 0 8px">Моя неделя</h1><p style="margin:0">Чтобы увидеть свою неделю и план до старта, <a href="/login?back=' + encodeURIComponent(location.href) + '" style="color:#1a4be0">войдите в S10</a>.</p>';
     document.body.appendChild(box); document.title = 'Моя неделя · S10.run';
     return 'S10 «Моя неделя»: нужен вход';
   }
@@ -80,17 +110,59 @@
   const nameOf = (r) => { const l = r?.location || ''; return l && l === l.toUpperCase() ? l.charAt(0) + l.slice(1).toLowerCase() : l; }; // VALENCIA → Valencia, for display only
   // «Отсутствует» in the start window: no race date, the plan runs from the next S10 running week (syncRace); kept in the
   // browser and, once a plan is stored, with the active version, so other devices know it too
-  let noRace = !main.main && (store.get(`noRace.${id}`, false) || !!versions.find((v) => v.active)?.student?.noRace);
+  let noRace = MODE !== 'kazan' && !main.main && (store.get(`noRace.${id}`, false) || !!versions.find((v) => v.active)?.student?.noRace);
   // race = the main race set on the site, or null; raceMon/raceEnd anchor the plan to dates: the race week, or without a
   // race the plan's own last week
   let race = null, raceName = '', raceMon = null, raceEnd = null;
   const setEnd = (mon) => { raceMon = mon; raceEnd = mon ? add(mon, 6) : null; };
-  const setRace = (r) => { race = r; raceName = nameOf(r); setEnd(r ? monday(r.d) : null); };
-  setRace(main.main || null);
+  const setRace = (r) => { race = r; raceName = r && MODE === 'kazan' ? KAZAN.name : nameOf(r); setEnd(r ? monday(r.d) : null); };
+  // the Kazan mode: the race is always Kazan with the goal picked on the page (kazanGoal below), whatever main
+  // race the diary has; that one (main.main) is only asked about before a fill
+  // a Kazan plan is one with kind 'kazan' (the built-in one, a stored version), on either page. The Kazan mode opens the
+  // active version if it is Kazan, else the latest Kazan version, else the built-in plan; that version's start wins over
+  // the browser's, as Solo's active version does
+  const isK = (p) => p?.kind === 'kazan';
+  const kzV = MODE === 'kazan' ? versions.find((v) => isK(v) && v.active) || versions.find(isK) || null : null;
+  // the diary's main race is already the Kazan marathon: a marathon on one of the race's possible days, KAZAN.d or the two
+  // days before (calendars say 30.04–02.05.2027). Then the page's race day is that day, not KAZAN.d (the same week, so the
+  // plan lies the same), the fill never writes over it and a new goal goes to it; otherwise «Заполнить календарь» first
+  // asks to make Kazan the main race (kazanAsk: 'ask' while the question is shown, 'busy' while the race day is written)
+  const isKazanRace = (r) => !!r && (+r.prekm === 42 || +r.prekm === 42.2) && r.d >= add(KAZAN.d, -2) && r.d <= KAZAN.d;
+  let kazanMain = MODE === 'kazan' && isKazanRace(main.main) ? main.main : null, kazanAsk = '';
+  // the goal the picker opens at: the Kazan version's (every device the same), else this browser's, else the diary's
+  // Kazan goal (the nearest of the three: 3:20 → 3:30), else 3:30. A tap on the picker is kept only in the browser
+  // (Solo writes only on a button), as {g, at}: it wins over the version's goal while it is newer than the version's save,
+  // so a reload keeps it until a fill or a save stores it. An older plain «3:30:00» there reads as {g} with no time
+  const kzSec = (t) => { const p = String(t || '').trim().split(':'); return p.length >= 2 && p.length <= 3 && p.every((x) => /^\d+$/.test(x)) ? (p.length === 2 ? [...p, '0'] : p).reduce((a, x) => a * 60 + +x, 0) : 0; };
+  const nearGoal = (t) => { const s = kzSec(t); return s ? KAZAN.goals.reduce((b, g) => (Math.abs(kzSec(g) - s) < Math.abs(kzSec(b) - s) ? g : b)) : null; };
+  const goalB = (() => { const v = MODE === 'kazan' ? store.get(`goal.${id}`, null) : null, b = typeof v === 'string' ? { g: v, at: null } : v; return KAZAN.goals.includes(b?.g) ? b : null; })();
+  const goalV = KAZAN.goals.includes(kzV?.student?.kazanGoal) ? kzV.student.kazanGoal : null;
+  const goalBNewer = !!goalB?.at && !!kzV && Date.parse(goalB.at) > Date.parse(kzV.savedAt);
+  let kazanGoal = MODE === 'kazan' ? (goalBNewer ? goalB.g : goalV || goalB?.g || nearGoal(kazanMain?.prediction) || '3:30:00') : null;
+  const kazanRace = () => ({ d: kazanMain?.d || KAZAN.d, prekm: '42.2', location: KAZAN.location, prediction: kazanGoal, task: 'гонка' });
+  const goalHms = (g) => String(g || '').split(':').map((x) => x.padStart(2, '0')).join(':'); // «3:30:00» → «03:30:00», as the site keeps a goal
+  // the plan week (−24…−1) the athlete started the Kazan plan in: frozen at the first fill that writes, stored with the
+  // version as `student.kazanStart`; a goal switch or «Вернуть как было» keeps it (the real start does not change)
+  let kazanStart = Number.isInteger(kzV?.student?.kazanStart) ? kzV.student.kazanStart : null;
+  setRace(MODE === 'kazan' ? kazanRace() : main.main || null);
   const startId = +(startParam.param?.studentMainStart || 0);
-  const paceRow = results.find((r) => r.i === startId) || results.find((r) => r.prehms) || results[0] || null;
-  const PACE_S10 = paceRow?.t ? Object.fromEntries(Object.entries(paceRow.t).map(([k, v]) => [k, hms(v)])) : null;
+  const rowPaces = (r) => (r?.t && !r.t.err ? fourPaces(r.t) : null);
+  // the main start's forecast, else the first race with a goal, else the latest result; only one the site could count
+  const paceRow = [results.find((r) => r.i === startId), results.find((r) => r.prehms), results[0]].find(rowPaces) || results.find(rowPaces) || null;
+  const PACE_S10 = rowPaces(paceRow);
   const today = iso(new Date(((me.nowmsk || Date.now() / 1000) + 3 * 3600) * 1000)); // the site counts days in Moscow time
+  // AI generations (a new plan, «Перестроить с ИИ»): GEN_LIMIT a day per person (owner, 11.11.2026). The count is kept in the
+  // logged-in user's profile (userparam soloGen = {d: Moscow day, n}), so it holds on every device. The generator itself
+  // (calc4's generate.php) has no limit of its own: only a limit there would stop someone calling it directly.
+  const GEN_LIMIT = 5;
+  let genUse = await get(`/apiweb/userparam.php?action=get&id=${me.id}&param[]=soloGen`).then((r) => JSON.parse(r?.param?.soloGen || 'null')).catch(() => null) || { d: '', n: 0 };
+  const genLeft = () => Math.max(0, GEN_LIMIT - (genUse.d === today ? +genUse.n || 0 : 0));
+  const genNote = () => (genLeft() ? `Осталось ${genLeft()} из ${GEN_LIMIT} на сегодня.` : `Лимит генераций на сегодня исчерпан: ${GEN_LIMIT} из ${GEN_LIMIT}. Завтра снова ${GEN_LIMIT}.`);
+  function spendGen() {
+    genUse = { d: today, n: (genUse.d === today ? +genUse.n || 0 : 0) + 1 };
+    const fd = new FormData(); fd.append('action', 'set'); fd.append('id', me.id); fd.append('param[soloGen]', JSON.stringify(genUse));
+    post('/apiweb/userparam.php', fd).catch(() => {});
+  }
   // S10 plans in running weeks; calc.php gives their start days (dselect), on s10.run usually Wednesdays
   const runStart = (() => { const ds = Object.values(calcBase?.dselect || {}).map((v) => v.date).filter(Boolean).sort(); let d = ds.find((x) => x > today); if (!d && ds.length) { d = last(ds); while (d <= today) d = add(d, 7); } return d || add(today, 1); })();
   const days = new Map();
@@ -118,26 +190,213 @@
   const horizon = () => { const a = add(wk, 13); return raceEnd && raceEnd > a ? raceEnd : a; };
   { const h = horizon(), c = add(monday(today), 41); await loadRange(add(monday(today), -READY.days), h > c ? h : c); } // 6 weeks back (readiness), this week, every day to the race (or 6 weeks)
 
+  // the owner's Kazan marathon plan (plans/kazan-2027.md, copied byte for byte), 24 weeks, parsed by parseTemplateMd
+  const KAZAN_PLAN_MD = `# Шаблон плана
+
+- Дистанция: Марафон · 42.2 км
+- Недель: 24
+- Промпт: Марафон, опытные марафонцы 40–60 лет, начальный объём 60–80 км в неделю, цель 3:00 ± 10 минут
+
+## Неделя -24 | База | 4.2 км
+
+- Интервальная | 10 по 1 минуте по усилию T10 через 1 минуту трусцой, разминка/заминка | 9 км
+- Повторная | 8 по 200 м в крутую гору, вниз пешком или трусцой. Усилие сильное, но не максимальное. Разминка/заминка + 6 ускорений по 100 м | 8 км
+- Длительная | 16 км спокойно по T42+50 | 16 км
+
+## Неделя -23 | База | 5.5 км
+
+- Интервальная | 10 по 60 секунд в гору с уклоном 5-8%, вниз трусцой. Темп не задаётся, усилие как на T5. Разминка/заминка | 9 км
+- Интервальная | 2 км по T42 + 4 по 200 м по T10 через 200 м трусцой. Короткие разминка/заминка | 7 км
+- Длительная | 20 км спокойно по T42+50 | 20 км
+
+## Неделя -22 | База | 10.2 км
+
+- Интервальная | Фартлек 40 минут. 10 ускорений от 1 до 3 минут, длину выбирайте по ходу. Между ними трусца столько, сколько нужно. Темп не задаётся | 10 км
+- Повторная | 9 по 200 м по T5-22 через 3 мин отдыха. Разминка 3 км + 6 свободных ускорений по 100 метров, заминка 2 км. | 7 км
+- Длительная | 22 км спокойно по T42+50 | 22 км
+
+## Неделя -21 | База | 10.6 км
+
+- Интервальная | 4 по 400 м по T5 через 200 м трусцой, разминка/заминка | 6.2 км
+- Развивающая | 5 км непрерывно по T21, разминка/заминка | 9 км
+- Длительная | 24 км. Первые 20 км по T42+50, последние 4 км по T42 | 24 км
+
+## Неделя -20 | База | 2.6 км
+
+- Интервальная | 10 по 1 минуте по усилию T10 через 1 минуту трусцой, разминка/заминка | 9 км
+- Интервальная | 10 по 100 через 100 в полсилы. Последите за техникой и ритмом | 8 км
+- Длительная | 20 км спокойно по T42+50 | 20 км
+
+## Неделя -19 | База | 9 км
+
+- Интервальная | 15 по 200 м по T5-12 через 200 м трусцой. Разминка 2 км + 5 свободных ускорений по 100 метров, заминка 2 км. | 10 км
+- Развивающая | 6 км непрерывно по T42, разминка/заминка | 10 км
+- Длительная | 25 км спокойно по T42+50 | 25 км
+
+## Неделя -18 | База | 18.8 км
+
+- Интервальная | 12 по 400 м по T5-7 через 200 м трусцой. Разминка 2 км + 5 свободных ускорений по 100 метров, заминка 2 км. | 12 км
+- Развивающая | 8 км непрерывно по T42, разминка/заминка | 12 км
+- Длительная | 26 км. Первые 20 км по T42+45, последние 6 км по T42 | 26 км
+
+## Неделя -17 | ПАНО | 13 км
+
+- Интервальная | 4 по 2 км по T10+5 через 600 м трусцой, разминка/заминка | 14 км
+- Развивающая | 5 км непрерывно по T21, разминка/заминка | 9 км
+- Длительная | 28 км ровно по T42+40 | 28 км
+
+## Неделя -16 | ПАНО | 15 км
+
+- Развивающая | 6 по 1 км по T21-5 через 200 м трусцой, разминка/заминка | 11 км
+- Интервальная | 3 по 3 км по T10+10 через 800 м трусцой, разминка/заминка | 15 км
+- Длительная | 30 км ровно по T42+40 | 30 км
+
+## Неделя -15 | ПАНО | 8.4 км
+
+- Интервальная | Фартлек 40 минут. 10 ускорений от 1 до 3 минут, длину выбирайте по ходу. Между ними трусца столько, сколько нужно. Темп не задаётся | 10 км
+- Интервальная | 10 по 100 через 100 в полсилы. Последите за техникой и ритмом | 8 км
+- Длительная | 22 км спокойно по T42+50 | 22 км
+
+## Неделя -14 | ПАНО | 14 км
+
+- Развивающая | 3 по 2 км по T21 через 500 м трусцой, разминка/заминка | 11 км
+- Развивающая | 8 км непрерывно, попеременно 1 км по T21 и 1 км по T42+20, разминка/заминка | 12 км
+- Длительная | 25 км спокойно по T42+50 | 25 км
+
+## Неделя -13 | ПАНО | 22 км
+
+- Развивающая | 2 по 4 км по T21 через 1 км трусцой, разминка/заминка | 13 км
+- Развивающая | 10 км непрерывно, попеременно 1 км по T21 и 1 км по T42+20, разминка/заминка | 14 км
+- Длительная | 24 км. Первые 20 км по T42+50, последние 4 км по T42 | 24 км
+
+## Неделя -12 | ПАНО | 29 км
+
+- Развивающая | 3 по 3 км по T21+3 через 500 м трусцой, разминка/заминка | 14 км
+- Развивающая | 12 км непрерывно, попеременно 1 км по T21 и 1 км по T42+20, разминка/заминка | 16 км
+- Длительная | 28 км. Первые 20 км по T42+45, последние 8 км по T42 | 28 км
+
+## Неделя -11 | ПАНО | 30 км
+
+- Развивающая | 10 км непрерывно по T21+10, разминка/заминка | 14 км
+- Развивающая | 10 км непрерывно по T42, разминка/заминка | 14 км
+- Длительная | 25 км. Первые 10 км по T42+45, потом 2 по 5 км по T42 через 1 км трусцой, последние 4 км трусцой | 25 км
+
+## Неделя -10 | ПАНО | 8 км
+
+- Развивающая | 8 км непрерывно по T21+8, разминка/заминка | 12 км
+- Интервальная | 10 по 100 через 100 в полсилы. Последите за техникой и ритмом | 8 км
+- Длительная | 20 км спокойно по T42+50 | 20 км
+
+## Неделя -9 | Race Specific | 29 км
+
+- Развивающая | 3 по 4 км по T42 через 1 км трусцой, разминка/заминка | 18 км
+- Развивающая | 5 км непрерывно по T21, разминка/заминка | 9 км
+- Длительная | 28 км. Первые 10 км по T42+45, потом 3 по 4 км по T42 через 1 км трусцой, последние 4 км трусцой | 28 км
+
+## Неделя -8 | Race Specific | 33 км
+
+- Развивающая | 2 по 6 км по T42 через 1 км трусцой, разминка/заминка | 17 км
+- Развивающая | 6 по 1 км по T21-5 через 200 м трусцой, разминка/заминка | 11 км
+- Длительная | 30 км. Первые 12 км по T42+45, потом 15 км непрерывно по T42, последние 3 км трусцой | 30 км
+
+## Неделя -7 | Race Specific | 34 км
+
+- Развивающая | 12 км непрерывно по T42, разминка/заминка | 16 км
+- Развивающая | 3 по 2 км по T21 через 500 м трусцой, разминка/заминка | 11 км
+- Длительная | 30 км. Первые 10 км по T42+45, потом 2 по 8 км по T42 через 1 км трусцой, последние 3 км трусцой | 30 км
+
+## Неделя -6 | Race Specific | 37 км
+
+- Развивающая | 14 км непрерывно по T42, разминка/заминка | 18 км
+- Развивающая | 8 км непрерывно по T21+8, разминка/заминка | 12 км
+- Длительная | 32 км. Первые 12 км по T42+45, потом 3 по 5 км по T42 через 1 км трусцой, остаток трусцой | 32 км
+
+## Неделя -5 | Race Specific | 16 км
+
+- Развивающая | 10 км непрерывно, попеременно 1 км по T21 и 1 км по T42+20, разминка/заминка | 14 км
+- Интервальная | 10 по 100 через 100 в полсилы. Последите за техникой и ритмом | 8 км
+- Длительная | 26 км. Первые 20 км по T42+45, последние 6 км по T42 | 26 км
+
+## Неделя -4 | Race Specific | 33 км
+
+- Развивающая | 5 по 1 км по T21-5 через 60 секунд трусцой, разминка/заминка | 10 км
+- Развивающая | 10 км непрерывно по T42, разминка/заминка | 14 км
+- Длительная | 32 км. Первые 10 км по T42+45, потом 18 км непрерывно по T42, последние 4 км трусцой | 32 км
+
+## Неделя -3 | Taper | 22 км
+
+- Развивающая | 2 по 6 км по T42 через 1 км трусцой, разминка/заминка | 17 км
+- Развивающая | 3 по 2 км по T21 через 500 м трусцой, разминка/заминка | 11 км
+- Длительная | 24 км. Первые 20 км по T42+50, последние 4 км по T42 | 24 км
+
+## Неделя -2 | Taper | 14 км
+
+- Развивающая | 8 км непрерывно по T42, разминка/заминка | 12 км
+- Интервальная | 10 по 100 через 100 в полсилы. Последите за техникой и ритмом | 8 км
+- Длительная | 16 км. Первые 10 км по T42+50, последние 6 км по T42 | 16 км
+
+## Неделя -1 | Taper | 45 км
+
+- Интервальная | 2 км по T42 + 4 по 200 м по T10 через 200 м трусцой. Короткие разминка/заминка | 7 км
+- Длительная | Потрусите как пойдёт, бег без обязательств | 0 км
+- Соревнование | Марафон 42.2 км по T42 | 42.2 км
+`;
+
+  // plan text in the owner's template: "## Неделя -24 | База | 4.2 км", then "- Интервальная | описание | 9 км".
+  // A week's km = the header km + the slots, except week -1 (only the slots: its header km is not run).
+  function parseTemplateMd(text) {
+    const weeks = [], errors = []; let cur = null;
+    const num = (x) => parseFloat(String(x).replace(',', '.'));
+    String(text).split('\n').forEach((raw, n) => {
+      const s = raw.trim(); if (!s || s.startsWith('#') && !/^##\s*Неделя/.test(s) || /^-\s*(Дистанция|Недель|Промпт)\s*:/.test(s)) return;
+      const h = s.match(/^##\s*Неделя\s+(-\d+)\s*\|\s*([^|]+)\|\s*([\d.,]+)\s*км/);
+      if (h) { cur = { week: parseInt(h[1], 10), phase: h[2].trim(), km: num(h[3]), slots: [] }; weeks.push(cur); return; }
+      const m = s.match(/^-\s*([^|]+)\|\s*(.+)\|\s*([\d.,]+)\s*км\s*$/);
+      const type = m && m[1].trim().toLowerCase();
+      if (!m || !cur || !TYPE_BY_NAME[type] || isNaN(num(m[3]))) { errors.push(n + 1); return; }
+      cur.slots.push({ type, desc: m[2].trim(), km: num(m[3]) });
+    });
+    weeks.forEach((w) => { w.km = Math.round((w.week === -1 ? 0 : w.km) * 100 + w.slots.reduce((a, x) => a + x.km * 100, 0)) / 100; });
+    return { weeks: weeks.sort((x, y) => x.week - y.week), errors };
+  }
+  // the Kazan plan as laid: only a clean parse with exactly the weeks -24…-1 (the owner's file is checked by tests; a
+  // broken edit shows no plan rather than a wrong one); the template's `phase` read where Solo's plans have `period`
+  function kazanWeeksOf(text) {
+    const r = parseTemplateMd(text), n = r.weeks.length;
+    if (r.errors.length || n !== 24 || r.weeks.some((w, i) => w.week !== i - n)) return null;
+    return r.weeks.map((w) => ({ ...w, period: w.phase }));
+  }
+  const KAZAN_WEEKS = MODE === 'kazan' ? kazanWeeksOf(KAZAN_PLAN_MD) : null;
+  // the plan of the Kazan mode, named by the goal («Казань 3:30»)
+  const kazanPlan = () => (KAZAN_WEEKS ? { id: 'kazan', kind: 'kazan', name: planName(), distance: 'Марафон · 42.2 км', plan: { weeks: KAZAN_WEEKS } } : null);
+
   /* ================= the chosen plan and the paces ================= */
-  // sel: { src: 'version' | 'library' | 'new', id } ; the newly generated plan lives in memory until it is saved
+  // sel: { src: 'version' | 'library' | 'new' | 'kazan', id } ; the newly generated plan lives in memory until it is saved;
+  // 'kazan' = the built-in Kazan plan (Kazan mode), until a fill or a re-plan stores it as a version
   let fresh = null;
   let sel = store.get(`plan.${id}`, null);
-  const findPlan = (s) => !s ? null : s.src === 'version' ? versions.find((v) => v.id === s.id) : s.src === 'library' ? library.find((v) => v.id === s.id) : s.src === 'new' ? fresh : null;
+  const findPlan = (s) => !s ? null : s.src === 'version' ? versions.find((v) => v.id === s.id) : s.src === 'library' ? library.find((v) => v.id === s.id) : s.src === 'new' ? fresh : s.src === 'kazan' ? kazanPlan() : null;
   const activeV = versions.find((v) => v.active);
   if (activeV) sel = { src: 'version', id: activeV.id }; // the plan the calendar was filled from, on any device
   if (!findPlan(sel)) sel = versions[0] ? { src: 'version', id: versions[0].id } : library[0] ? { src: 'library', id: library[0].id } : null;
-  const plan = () => findPlan(sel);
-  const studentPaces = (p) => p?.student?.t42 ? { 5: hms(p.student.t5), 10: hms(p.student.t10), 21: hms(p.student.t21), 42: hms(p.student.t42), ...(p.student.easy ? { easy: p.student.easy } : {}) } : null;
+  if (MODE === 'kazan') sel = kzV ? { src: 'version', id: kzV.id } : { src: 'kazan', id: 'kazan' }; // never a Solo version, so a save never overwrites one
+  // the selected plan; in the Kazan mode a re-planned or stored Kazan plan once there is one, else the built-in one
+  const plan = () => findPlan(sel) || (MODE === 'kazan' ? kazanPlan() : null);
+  const studentPaces = (p) => { const s = p?.student, P = s && fourPaces({ 5: s.t5, 10: s.t10, 21: s.t21, 42: s.t42 }); return P ? { ...P, ...(s.easy ? { easy: s.easy } : {}) } : null; };
   let paceSrc = store.get(`paceSrc.${id}`, null);
   let PACE_OWN = store.get(`paceOwn.${id}`, null);
   let paceGuess = store.get(`paceGuess.${id}`, false); // own paces from the start window as filled in (the goal's or the defaults), not edited by hand
+  // the Kazan mode's paces: from the goal (source 'goal') until the athlete sets their own on «Мои темпа»
+  const fromGoal = () => MODE === 'kazan' && !(paceSrc === 'own' && PACE_OWN);
+  const goalLabel = () => `от цели ${kazanGoal.replace(/:00$/, '')}`;
   function activePaces() {
+    if (fromGoal()) return pacesFromGoal(42.195, hmsSec(kazanGoal));
     if (paceSrc === 'own' && PACE_OWN) return PACE_OWN;
     if (paceSrc === 's10' && PACE_S10) return PACE_S10;
     return studentPaces(plan()) || PACE_S10 || PACE_OWN;
   }
-  const paceLabel = () => (paceSrc === 'own' && PACE_OWN) ? 'свои' : (paceSrc === 's10' && PACE_S10) ? `прогноз S10${raceName ? ` (${raceName})` : ''}` : studentPaces(plan()) ? `из плана «${plan().name}»` : PACE_S10 ? `прогноз S10${raceName ? ` (${raceName})` : ''}` : 'не заданы';
-  let PACE = activePaces();
+  const paceLabel = () => fromGoal() ? goalLabel() : (paceSrc === 'own' && PACE_OWN) ? 'свои' : (paceSrc === 's10' && PACE_S10) ? `прогноз S10${raceName ? ` (${raceName})` : ''}` : studentPaces(plan()) ? `из плана «${plan().name}»` : PACE_S10 ? `прогноз S10${raceName ? ` (${raceName})` : ''}` : 'не заданы';
+  let PACE = null; // activePaces(), set once the pace helpers below are defined
   let layout = store.get('layout', ['easy', 'easy', 'w1', 'rest', 'w2', 'easy', 'long']); // Mon..Sun
   let volume = null; // start volume, km per week; null = as in the plan
   // a saved version carries the athlete's settings: first-week volume, which day holds which workout, paces
@@ -151,10 +410,10 @@
 
   /* ================= workout text ================= */
   const PRE = /[ТT]\s*(42|21|10|5)(?:\s*([+\-−])\s*(\d+))?/g;
-  const toSec = (s) => { const [m, x] = String(s).split(':').map(Number); return m * 60 + x; };
+  const toSec = (s) => { const v = paceSecOf(s); return v == null ? NaN : v; };
   const fmtSec = (s) => { const r = Math.round(s); return Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); }; // taste-skill-ignore: a pace, not a counter
   // «4:48», «4.48», «448» → seconds, or null
-  const paceSec = (v) => { const m = String(v || '').trim().replace(/[.,]/g, ':').match(/^(\d{1,2}):?(\d{2})$/); return m && +m[2] < 60 ? +m[1] * 60 + +m[2] : null; };
+  const paceSec = paceSecOf;
   // a new athlete's paces when there are none: someone who already runs 3 times a week, 5–7 km, without a plan. 5 km in
   // 30:00 is the middle of recreational results; longer distances by Riegel (k = 1.06, the spread of S10's own forecasts),
   // rounded (owner's choice 01.11.2026): 10 km ~1:02:30, half ~2:17, marathon ~4:48. Easy runs for this level are
@@ -174,11 +433,18 @@
   }
   const hmsSec = (t) => String(t).split(':').reduce((a, x) => a * 60 + +x, 0);
   const pacesOk = (P) => !!P && [5, 10, 21, 42].every((k) => paceSec(P[k]));
+  // the Kazan mode in a browser that never chose a pace source: paces stored with the Kazan version that are not its
+  // goal's are the athlete's own (set on another device), so they are shown and a fill here keeps them
+  if (MODE === 'kazan' && paceSrc == null && kzV) {
+    const P = studentPaces(kzV), G = pacesFromGoal(42.195, hmsSec(goalV || '3:30:00'));
+    if (P && ([5, 10, 21, 42].some((k) => paceSec(P[k]) !== paceSec(G[k])) || (P.easy && P.easy !== G.easy))) { PACE_OWN = P; paceSrc = 'own'; }
+  }
+  PACE = activePaces();
   // the start window, for a new athlete only: asks for what is missing (a main race, paces) and nothing else
   const newOnb = (needRace, needPace, manual = false) => ({ race: needRace, pace: needPace, manual, d: '', dist: DISTANCES[0], name: '', goal: '', P: { ...NEWBIE_PACES }, touched: false, busy: false, err: '', focused: false });
-  let onb = isSelf && ((!race && !noRace) || !pacesOk(PACE)) ? newOnb(!race && !noRace, !pacesOk(PACE)) : null;
+  let onb = MODE !== 'kazan' && isSelf && ((!race && !noRace) || !pacesOk(PACE)) ? newOnb(!race && !noRace, !pacesOk(PACE)) : null;
   if (onb?.pace && race?.prediction && +race.prekm) onb.P = pacesFromGoal(+race.prekm, hmsSec(race.prediction)); // a race already set on the site
-  const plain = (t) => (PACE ? String(t).replace(PRE, (m, d, sg, n) => { let s = toSec(PACE[d]); if (sg) s += (sg === '+' ? 1 : -1) * +n; return fmtSec(s); }) : String(t))
+  const plain = (t) => (PACE ? String(t).replace(PRE, (m, d, sg, n) => { let s = toSec(PACE[d]); if (!(s > 0)) return m; if (sg) s += (sg === '+' ? 1 : -1) * +n; return fmtSec(s); }) : String(t))
     .replace(/(\d)\s*[xх×]\s*(\d)/g, '$1×$2').replace(/(\d)(км|м)(?=[\s,;.]|$)/g, '$1 $2').replace(/\s{2,}/g, ' ').trim();
   const isPaceOnly = (t) => /^\s*\d{1,2}:\d{2}(\s*[-–]\s*\d{1,2}:\d{2})?\s*$/.test(t || '');
   // display only: diary texts like "4 км разминка 3×2000 м 4:00-4:05 отдых 400 м 2200 м заминка" become
@@ -290,7 +556,7 @@
     const fr = results.find((r) => r.d === race.d && +r.prehms);
     if (past) { f0 = riegel(+past.realhms, KM_OF(past.distance), D); src = `по старту ${nameOf(past) || ''} ${dayLbl(past.d)}: ${fmtTime(+past.realhms, KM_OF(past.distance))} на ${n1(+past.distance)} км`.replace('  ', ' '); }
     else if (fr) { f0 = +fr.prehms; src = 'по прогнозу S10'; }
-    else if (pacesOk(PACE) && !(paceSrc === 'own' && paceGuess)) { const k = D >= 30 ? 42 : D >= 15 ? 21 : D >= 7.5 ? 10 : 5; f0 = paceSec(PACE[k]) * D; src = `по вашему темпу T${k}`; }
+    else if (pacesOk(PACE) && !(paceSrc === 'own' && paceGuess) && !fromGoal()) { const k = D >= 30 ? 42 : D >= 15 ? 21 : D >= 7.5 ? 10 : 5; f0 = paceSec(PACE[k]) * D; src = `по вашему темпу T${k}`; }
     if (!f0) return { goal, D, none: true, guess: pacesOk(PACE) };
     const q = T?.q || 0, fNow = f0 * (1 + q);
     const lvl = Math.max(0, Math.min(1, (riegel(fNow, D, 42.195) - CH.fast) / (CH.slow - CH.fast)));
@@ -328,16 +594,67 @@
   // week −1 is the race week; week −n starts n−1 weeks before it
   const weekMon = (w) => add(raceMon, (w + 1) * 7);
   const firstKm = (p) => p?.plan?.weeks?.slice().sort((a, b) => a.week - b.week)[0]?.km || 0;
-  const scaleK = (p) => { const f = firstKm(p); return volume && f ? volume / f : 1; };
+  // the plan's scale: the first-week volume typed by the athlete; in the Kazan mode without one, the goal's share
+  // (KAZAN.scale), so a re-plan, which works in plan km divided by this, stays consistent there too
+  // a Kazan plan's goal: the page's in the Kazan mode (it follows the picker), else the one stored with the version
+  const kGoal = (p) => { const g = MODE === 'kazan' ? kazanGoal : p?.student?.kazanGoal; return KAZAN.goals.includes(g) ? g : '3:30:00'; };
+  const scaleK = (p) => { const f = firstKm(p); return volume && f ? volume / f : isK(p) ? KAZAN.scale[kGoal(p)] : 1; };
   const easyText = () => (PACE ? easyRange(PACE).map(fmtSec).join('-') : 'Лёгкий бег');
+  // a long run's text scaled with its length (the Kazan mode): «26 км. Первые 20 км …, последние 6 км …» ×0.7 →
+  // «18 км. Первые 14 км …, последние 4 км …». The head becomes the new length: the «N км» the text opens with (a
+  // re-plan changes a long run's km and keeps its text, so the parts are scaled from that N), else the first «N км»
+  // equal to the length. Every other «N км» is scaled (whole km, at least 1), «K по N км» scales N and keeps K. Parts
+  // count K×N, «через M км» right after it (K−1)×M, any other N. Parts that added up to the head add up to the new
+  // length (the difference goes to the last part); parts that left an «остаток» unnamed are only cut back if they would
+  // run past it, and the first part gives up what keeps that «остаток» (or «остальное») at least 1 km. «Первые/последние
+  // 1 км» then read «первый/последний 1 км».
+  function scaleLongDesc(desc, totalKm, f) {
+    const km = Math.round(totalKm * f), RE = /(?<![\d.,])(?:(\d+)(\s+по\s+)(\d+(?:[.,]\d+)?)|(через\s+)(\d+(?:[.,]\d+)?)|(\d+(?:[.,]\d+)?))(\s*км)/g;
+    const num = (x) => parseFloat(String(x).replace(',', '.'));
+    const toks = []; let rep = 0;
+    String(desc).replace(RE, (all, k, po, n, via, m, n1) => { toks.push({ v: num(n ?? m ?? n1), mult: n != null ? +k : m != null && rep ? rep - 1 : 1 }); rep = n != null ? +k : 0; return all; });
+    if (!toks.length || !totalKm) return { desc, km };
+    const head = /^\s*\d/.test(desc) && toks[0].mult === 1 && toks[0].v > 0 ? 0 : toks.findIndex((t) => t.mult === 1 && t.v === totalKm);
+    const H = head >= 0 ? toks[head].v : totalKm, g = H === totalKm ? f : km / H, parts = toks.filter((t, i) => i !== head);
+    parts.forEach((t) => { t.out = Math.max(1, Math.round(t.v * g)); });
+    if (head >= 0) toks[head].out = km;
+    const sum = (key) => parts.reduce((a, t) => a + t[key] * t.mult, 0), whole = Math.abs(sum('v') - H) < 1e-9;
+    // the difference to the last part; what its 1 km floor leaves over, to the parts before it
+    for (let j = parts.length - 1; j >= 0; j--) {
+      const diff = km - sum('out'); if (whole ? !diff : diff >= 0) break;
+      if (parts[j].mult) parts[j].out = Math.max(1, parts[j].out + Math.round(diff / parts[j].mult));
+    }
+    if (!whole && /(^|[^А-Яа-яЁё])(остат|остальн)/i.test(desc) && parts[0]?.mult === 1) { const over = sum('out') - (km - 1); if (over > 0) parts[0].out = Math.max(1, parts[0].out - over); }
+    let i = 0;
+    const out = String(desc).replace(RE, (all, k, po, n, via, m, n1, unit) => { const v = toks[i++].out; return n != null ? `${k}${po}${v}${unit}` : m != null ? `${via}${v}${unit}` : `${v}${unit}`; })
+      .replace(/(?<![А-Яа-яЁё])([Пп])ервые(\s+1\s*км)/g, '$1ервый$2').replace(/(?<![А-Яа-яЁё])([Пп])оследние(\s+1\s*км)/g, '$1оследний$2');
+    return { desc: out, km };
+  }
+  // the Kazan mode's soft entry: an athlete who starts later than week −21 gets the first plan week at 75% and the next at
+  // 90% (easy runs and the long run; the key workouts stay). Until the first fill the start is the one that fill would
+  // write from (the next S10 running week for «2 беговые недели», tomorrow for «До старта»), so the plan tab and the
+  // preview show what will be written; from the first fill on, the stored `kazanStart`
+  const SOFT = { late: -21, k: [0.75, 0.9] };
+  const weekOf = (d) => Math.round((d8(monday(d)) - d8(raceMon)) / 6048e5) - 1; // the plan week of a date
+  let softSpan = null; // the fill span fillPreview(span) lays for, when it is not the chosen one
+  // a Kazan plan's frozen start: the page's in the Kazan mode, else the one stored with the version (Solo opening it)
+  const kzFrozen = (p) => (MODE === 'kazan' ? kazanStart : Number.isInteger(p?.student?.kazanStart) ? p.student.kazanStart : null);
+  const kazanStartNow = (p) => kzFrozen(p) ?? weekOf((softSpan || fillSpan) === '2w' ? runStart : add(today, 1));
+  const soft = (n, p) => { if (!isK(p) || !raceMon) return 1; const s = kazanStartNow(p); return s <= SOFT.late ? 1 : n === s ? SOFT.k[0] : n === s + 1 ? SOFT.k[1] : 1; };
+  // the scale of one plan week as laid: the plan's scale, times the soft entry for that week (1 outside the Kazan mode);
+  // a re-plan turns plan km into laid km and back with it, so its «было» and its new weeks match the laid ones
+  const weekK = (p, n) => scaleK(p) * soft(n, p);
   function layWeek(w, p) {
-    const mon = weekMon(w.week), k = scaleK(p);
-    const target = Math.round(w.km * k);
-    const slots = w.slots.map((s) => ({ t: TYPE_BY_NAME[s.type] || 0, desc: s.desc, km: +s.km })).filter((s) => race || s.t !== 6); // no race: the race slot is not laid
-    const raceSlot = slots.find((s) => s.t === 6);
+    const kz = isK(p), mon = weekMon(w.week), k = weekK(p, w.week);
+    let slots = w.slots.map((s) => ({ t: TYPE_BY_NAME[s.type] || 0, desc: s.desc, km: +s.km, real: !!s.real })).filter((s) => race || s.t !== 6); // no race: the race slot is not laid
+    const raceSlot = slots.find((s) => s.t === 6), raceWeek = !!(raceSlot && race && monday(race.d) === mon);
+    // the Kazan mode: the long run follows the goal's volume, its text too; one the AI re-plan wrote (`real`: its text in
+    // the athlete's own km, its km divided back by k) is laid at its own km with its text as written; in the race week a
+    // 0 km slot (week −1's «Потрусите как пойдёт») is no workout, its day is rest
+    if (kz) slots = slots.filter((s) => !raceWeek || s.km || s.t === 6).map((s) => (s.t !== 5 ? s : s.real ? { ...s, km: Math.round(s.km * k) } : { ...s, ...scaleLongDesc(s.desc, s.km, k) }));
     const roles = layout.slice();
     let raceDow = -1;
-    if (raceSlot && race && monday(race.d) === mon) {
+    if (raceWeek) {
       // race week: nothing after the race, rest the day before, the two works on the earliest free days before that
       raceDow = dow(race.d);
       for (let i = 0; i < 7; i++) {
@@ -353,6 +670,8 @@
     const out = [];
     const work = { w1: slots[0], w2: slots[1], long: slots.find((s) => s.t === 5) || slots[2], race: raceSlot };
     const used = roles.map((r) => (work[r] ? work[r].km : 0)).reduce((a, b) => a + b, 0);
+    // the Kazan race week: no easy runs, the week is its laid slots (the header's 45 km is not run)
+    const target = kz && raceWeek ? Math.round(used * 10) / 10 : Math.round(w.km * k);
     const easyIdx = roles.map((r, i) => (r === 'easy' ? i : -1)).filter((i) => i >= 0);
     const rest = Math.max(0, target - used);
     // easy runs of at least 6 km on every easy day, unless the week's volume has no room for that: then only as many
@@ -370,11 +689,14 @@
   }
   const sameDay = (x, t) => !!x && +x.type === +t.typtrain && +x.target === +t.prekm && String(x.comment || '').trim() === String(t.task).trim();
   let keepExisting = true;
+  // the Kazan mode never writes over a race in the diary (the previous main race, an ordinary race after «Да»), even
+  // with «Не трогать…» unticked
+  const kzRaceDay = (x) => MODE === 'kazan' && +x?.type === 6;
   let fillSpan = store.get('fillSpan', '2w'); // '2w': tomorrow + 14 days, so the athlete can adjust before the next fill; 'race': to the race
   function fillPreview(span = fillSpan) {
     const p = plan(); if (!p || !raceMon) return null;
-    const weeks = p.plan.weeks.slice().sort((a, b) => a.week - b.week).map((w) => layWeek(w, p));
-    const base = weeks.flatMap((w) => w.days).filter((t) => t.d > today && (!race || t.d !== race.d)); // the main race day stays as set on «Настройка плана»
+    softSpan = span; let weeks; try { weeks = p.plan.weeks.slice().sort((a, b) => a.week - b.week).map((w) => layWeek(w, p)); } finally { softSpan = null; }
+    const base = weeks.flatMap((w) => w.days).filter((t) => t.d > today && (!race || t.d !== race.d) && !kzRaceDay(days.get(t.d))); // the main race day stays as set on «Настройка плана»
     const same = (t) => sameDay(days.get(t.d), t);
     const pick = (from, until) => {
       const all = base.filter((t) => t.d >= from && t.d <= until);
@@ -428,6 +750,7 @@
 
   /* ================= state of the panels ================= */
   let mode = 'view', PL = null, flash = '', shownFlash = '';
+  let raceAsk = ''; // «Сбросить»: 'ask' while the question before the race day leaves the diary is shown, 'busy' while it is written
   let tab = store.get('tab', 'week');
   let chooser = !plan(), chooserTab = versions.length ? 'version' : library.length ? 'library' : 'new';
   // the master plan's length: the weeks to the race, or two weeks without one
@@ -450,7 +773,9 @@
   // the profile (and in the browser as a fallback). Each day: [date, before: type, km, text, place, forecast (type null =
   // the day was empty), after: type, km, text hash] — a day changed after the fill is left alone.
   const fp = (t) => { let h = 5381; for (const c of String(t || '').trim()) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; return h.toString(36); };
-  const lastUndo = () => versions.find((v) => v.active)?.undo || store.get(`undo.${id}`, null);
+  // the Kazan mode offers only a Kazan version's undo (with Solo's version active, its undo is Solo's to offer); with no
+  // active version (the profile save failed), the browser's copy
+  const lastUndo = () => { const a = versions.find((v) => v.active); return MODE === 'kazan' && a && !isK(a) ? null : a?.undo || store.get(`undo.${id}`, null); };
   let openWeek = null;
   const persistSel = () => { store.set(`plan.${id}`, sel && sel.src !== 'new' ? sel : null); };
   const reprice = () => { PACE = activePaces(); };
@@ -554,48 +879,97 @@
   async function fillCalendar() {
     if (!me.isPremium) { fill.err = 'Ставить задачи можно с премиум-подпиской S10.'; return render(); }
     fill.busy = true; fill.err = ''; fill.progress = 'Проверяю дневник…'; render();
+    let goalSet = '';
+    if (goalChangeLine()) { // the main race is Kazan: its goal follows the page's (the confirm box said so)
+      fill.progress = 'Меняю цель на старт…'; render();
+      try { await writeKazanDay({ ...kazanMain, prediction: goalHms(kazanGoal) }); goalSet = fmtGoal(kzSec(kazanGoal), 42.195); }
+      catch (e) { fill = { confirm: false, busy: false, progress: '', err: `Сервер не принял новую цель на старт (${e.message}). В дневнике ничего не изменилось.` }; return render(); }
+    }
     try { await loadRange(add(today, 1), raceEnd || add(today, 1)); } catch { /* the preview below still uses what is loaded */ }
-    const f = fillPreview(); if (!f || !f.write.length) { fill = { confirm: false, busy: false, err: '', progress: '' }; return render(); }
+    const f = fillPreview(); if (!f || !f.write.length) { // nothing else to write: only the goal changed, said in a flash; the plan keeps the goal too
+      if (goalSet) { fill.progress = 'Сохраняю план в профиль…'; render(); let saved = true; try { await storePlan(); } catch { saved = false; } flash = `Цель на старт обновлена: ${goalSet}.${saved ? '' : ' План в профиль сохранить не удалось.'}`; }
+      fill = { confirm: false, busy: false, err: '', progress: '' }; return render();
+    }
     fill.snap = f.write.slice();
     const before = f.write.map((t) => { const x = days.get(t.d); return [t.d, x ? +x.type || 0 : null, x ? +x.target || 0 : 0, x?.comment || '', x?.location || '', x?.prediction || '', +t.typtrain, +t.prekm, fp(t.task)]; });
-    const prevFilled = sel.src === 'version' ? plan()?.filled || null : null;
+    const p0 = plan(), prevFilled = sel.src === 'version' ? p0?.filled || null : null, startNow = isK(p0) && kzFrozen(p0) == null ? kazanStartNow(p0) : null;
     const { done, upto, error } = await writeByWeek(f.write, (i, k) => { fill.progress = `Записываю неделю ${i} из ${k}…`; render(); });
     await loadRange(f.write[0].d, last(f.write).d, true).catch(() => {});
     const a = f.write[0].d, b = last(f.write).d, n = f.write.length;
     const rec = done ? { at: new Date().toISOString(), prevFilled, days: before.slice(0, done) } : null;
     if (rec) store.set(`undo.${id}`, rec);
+    const ks = done ? startNow : null; // the first fill that wrote: the start the days were laid with, frozen
+    if (ks != null && MODE === 'kazan') kazanStart = ks;
     if (error) {
-      if (done) await storePlan({ filled: { from: a, to: upto }, undo: rec }).catch(() => {}); // what did get written is still linked to the plan
+      if (done) await storePlan({ filled: { from: a, to: upto }, undo: rec, kazanStart: ks }).catch(() => {}); // what did get written is still linked to the plan
       fill = { confirm: false, busy: false, progress: '', err: done
         ? `Записано ${done} ${plural(done, 'день', 'дня', 'дней')} из ${n}, по ${dayLbl(upto)}. Дальше сервер не принял задачи (${error.message}). Нажмите «Заполнить календарь» ещё раз, чтобы дописать остальное.`
         : `Сервер не принял задачи (${error.message}). В дневнике ничего не изменилось.` };
       return render();
     }
     fill.progress = 'Сохраняю план в профиль…'; render();
-    let saved = true; try { await storePlan({ filled: { from: a, to: b }, undo: rec }); } catch { saved = false; }
+    let saved = true; try { await storePlan({ filled: { from: a, to: b }, undo: rec, kazanStart: ks }); } catch { saved = false; }
     fill = { confirm: false, busy: false, err: '', progress: '' };
     flash = `${'Календарь заполнен'}: ${n} ${plural(n, 'день', 'дня', 'дней')}, ${range(a, b)}.${saved ? ' План и настройки сохранены в профиле.' : ' План в профиль сохранить не удалось, задачи при этом записаны.'}`;
     flashUndo = flash;
     wk = monday(a);
     render();
   }
+  // the Kazan mode with Kazan the diary's main race: the confirm box's line when a fill will change the race day's goal
+  // («Цель на старт 2 мая сменится: 3:20 → 3:30.»), '' when it will not
+  function goalChangeLine() {
+    if (MODE !== 'kazan' || !kazanMain || goalHms(kazanMain.prediction) === goalHms(kazanGoal)) return '';
+    const was = kzSec(kazanMain.prediction), now = fmtGoal(kzSec(kazanGoal), 42.195);
+    return was ? `Цель на старт ${dayLong(kazanMain.d)} сменится: ${fmtGoal(was, 42.195)} → ${now}.` : `На старт ${dayLong(kazanMain.d)} запишется цель ${now}.`;
+  }
+  // the Kazan mode's main race day: written as «Изменить цель» writes one (its own task, place and distance kept; main6 1
+  // from writeTasks, so the site makes it the main race and the old one an ordinary race), then it is the main race here
+  async function writeKazanDay(r) {
+    const was = days.get(r.d);
+    const day = { ...r, task: String(r.task || was?.comment || '').trim() || 'ГОНКА', prekm: String(r.prekm || was?.target || KAZAN.km), typtrain: 6 }; // an empty task would delete the day
+    await writeTasks([day]);
+    kazanMain = day;
+    days.set(day.d, { ...(was || {}), date: day.d, type: 6, target: +day.prekm, comment: day.task, main6: 1, location: day.location, prediction: day.prediction, tracks: was?.tracks || [] });
+  }
+  // «Да» to «Казанский марафон 2 мая станет главным стартом…»: the race day first, on its own; only then the fill
+  async function kazanMainYes() {
+    if (kazanAsk !== 'ask' || !me.isPremium) return;
+    kazanAsk = 'busy'; fill.busy = true; fill.progress = 'Записываю старт…'; render(); // busy: the span and undo wait for the fill
+    try { await writeKazanDay({ d: KAZAN.d, task: 'ГОНКА', prekm: '42.2', location: 'Казань', prediction: goalHms(kazanGoal) }); }
+    catch (e) { kazanAsk = ''; fill = { confirm: false, busy: false, progress: '', err: `Сервер не принял старт (${e.message}). В дневнике ничего не изменилось, календарь не заполнен.` }; return render(); }
+    kazanAsk = '';
+    return fillCalendar();
+  }
+  const kazanAskHTML = () => {
+    const r = main.main, was = r?.d ? [nameOf(r), dayLbl(r.d)].filter(Boolean).join(', ') : '';
+    return `<div class="w-confirm" role="alertdialog" aria-labelledby="w-km-h"><p id="w-km-h"><b>Казанский марафон ${dayLong(KAZAN.d)} станет главным стартом${was ? ` вместо ${esc(was)}` : ''}</b></p><div class="w-acts"><button class="w-btn" data-act="kmainno" ${kazanAsk === 'busy' ? 'disabled' : ''}>Отмена</button><button class="w-btn primary" data-act="kmainyes" ${kazanAsk === 'busy' ? 'disabled' : ''}>Да</button></div></div>`;
+  };
   // writes the chosen plan with the current settings to the profile and marks it active; re-reads the list first,
   // so a version the coach saved meanwhile in calc5 is kept
-  async function storePlan({ asNew = false, filled = null, undo: undoRec, name = '' } = {}) {
+  // A Kazan plan is stored as one Kazan version (kind 'kazan'), updated in place: named by the goal at store time (a
+  // re-planned one keeps its «· перестроен …»), with the goal and the frozen start; its volume only when typed by hand
+  // In the Kazan mode a version becomes active only once the diary's main race is Kazan (kazanMain): Solo lays the active
+  // version to its main race, so before that a save keeps the active version as it was. `into`: the version to update.
+  async function storePlan({ asNew = false, filled = null, undo: undoRec, name = '', kazanStart: ks0 = null, into = null } = {}) {
+    if (!me.isPremium) return null; // owner 11.11.2026: without Premium no plan goes into the profile
     const p = plan(); if (!p) return null;
     let list = versions;
     try { const r = await get(`/apiweb/userparam.php?action=get&id=${id}&param[]=studentPlans${id}`); list = parseList(r.param?.[`studentPlans${id}`]); } catch { /* keep what we have */ }
     const first = p.plan.weeks.slice().sort((a, b) => a.week - b.week)[0];
-    const keepId = !asNew && sel.src === 'version' ? p.id : null, old = keepId ? list.find((v) => v.id === keepId) : null;
+    const kz = isK(p), kzLatest = () => (list.find((v) => isK(v) && v.active) || list.filter(isK).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)))[0])?.id || null;
+    const keepId = asNew ? null : into || (sel.src === 'version' ? sel.id : kz ? kzLatest() : null), old = keepId ? list.find((v) => v.id === keepId) : null;
+    const act = !(MODE === 'kazan' && kz && !kazanMain);
+    const ks = !kz ? null : MODE === 'kazan' ? kazanStart : ks0 ?? (Number.isInteger(p.student?.kazanStart) ? p.student.kazanStart : null);
     const f0 = old?.filled, f = filled ? { at: new Date().toISOString(), from: f0?.from && f0.from < filled.from ? f0.from : filled.from, to: f0?.to && f0.to > filled.to ? f0.to : filled.to } : f0 || null;
     const v = {
-      ...(old || {}), id: keepId || Math.random().toString(36).slice(2, 16),
-      name: name || old?.name || planName() || `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${p.plan.weeks.length} нед.`, savedAt: new Date().toISOString(),
+      ...(old || {}), id: keepId || Math.random().toString(36).slice(2, 16), ...(kz ? { kind: 'kazan' } : {}),
+      name: name || (MODE === 'kazan' && kz ? kzName(old?.name) : '') || old?.name || planName() || `${(p.name || 'План').replace(/ · \d+ нед\.$/, '')} · ${p.plan.weeks.length} нед.`, savedAt: new Date().toISOString(),
       templateId: old?.templateId || (sel.src === 'library' ? p.id : p.templateId || null), distance: p.distance || null, plan: { weeks: p.plan.weeks },
-      student: { ...(old?.student || {}), raceDate: race?.d || null, noRace: !race && noRace ? true : undefined, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], easy: PACE?.easy, volume: String(volume || firstKm(p)), layout: layout.slice() },
+      student: { ...(old?.student || {}), raceDate: race?.d || null, noRace: !race && noRace ? true : undefined, planStart: weekMon(first.week), t5: PACE?.[5], t10: PACE?.[10], t21: PACE?.[21], t42: PACE?.[42], easy: PACE?.easy, volume: kz && !volume ? undefined : String(volume || firstKm(p)), layout: layout.slice(), ...(kz ? { kazanGoal: kGoal(p), ...(ks != null ? { kazanStart: ks } : {}) } : {}) },
       active: true, filled: f, undo: undoRec === undefined ? old?.undo || null : undoRec,
     };
-    const next = [v, ...list.filter((x) => x.id !== v.id).map((x) => { const { active, ...rest } = x; return rest; })];
+    if (!act) delete v.active;
+    const next = [v, ...list.filter((x) => x.id !== v.id).map((x) => { if (!act) return x; const { active, ...rest } = x; return rest; })];
     const fd = new FormData(); fd.append('action', 'set'); fd.append('id', id); fd.append(`param[studentPlans${id}]`, JSON.stringify(next));
     await post('/apiweb/userparam.php', fd);
     versions = next.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))); sel = { src: 'version', id: v.id }; persistSel(); fresh = null;
@@ -636,9 +1010,17 @@
     store.set(`undo.${id}`, null);
     const v = versions.find((x) => x.active && x.undo);
     if (u.replan) { // a re-plan: its version stops being active, the one active before is again, the plan selected before comes back
-      await editVersions((list) => list.map((x) => { if (x.id === v?.id) { const { active, ...rest } = x; return { ...rest, undo: null }; } return x.id === u.prevActive ? { ...x, active: true } : x; })).catch(() => {});
+      // a Kazan re-plan updated the one Kazan version in place: its weeks, name and settings come back into it (the frozen
+      // start stays: the real start does not change); any other re-plan's version stays, inactive
+      const pv = u.prevVersion, tid = pv ? pv.id || v?.id : null;
+      await editVersions((list) => list.map((x) => {
+        if (x.id === tid) { const { active, ...rest } = x, ks = x.student?.kazanStart; return { ...rest, name: pv.name, plan: pv.plan, student: { ...(pv.student || x.student || {}), ...(Number.isInteger(ks) ? { kazanStart: ks } : {}) }, filled: pv.filled || null, undo: null, ...(x.id === u.prevActive ? { active: true } : {}) }; }
+        if (x.id === v?.id) { const { active, ...rest } = x; return { ...rest, undo: null }; }
+        return x.id === u.prevActive ? { ...x, active: true } : x;
+      })).catch(() => {});
       const back = u.prevSel && findPlan(u.prevSel) ? u.prevSel : u.prevActive ? { src: 'version', id: u.prevActive } : sel;
-      sel = back; persistSel(); if (sel?.src === 'version') applyVersion(plan());
+      sel = back; persistSel();
+      if (sel?.src === 'version') applyVersion(plan()); else if (u.prevVolume !== undefined) volume = u.prevVolume; // a plan that was never stored (the built-in Kazan one): its volume from the record
       if (u.prevPace) { paceSrc = u.prevPace.src; PACE_OWN = u.prevPace.own; store.set(`paceSrc.${id}`, paceSrc); store.set(`paceOwn.${id}`, PACE_OWN); }
       reprice();
     } else if (v) await patchVersion(v.id, { undo: null, filled: u.prevFilled || null }).catch(() => {});
@@ -653,16 +1035,17 @@
   const undoHTML = (where) => {
     const u = lastUndo(); if (!undo.confirm || undo.where !== where || !undoable(u)) return '';
     const ds = u.days.map((r) => r[0]).sort(), n = ds.length;
-    return `<div class="w-confirm" role="alertdialog" aria-labelledby="w-un-h"><p id="w-un-h">${n ? `<b>Вернуть ${n} ${plural(n, 'день', 'дня', 'дней')} как было до заполнения?</b> ${range(ds[0], last(ds))}. Дни, которые вы или тренер поменяли после заполнения, останутся как есть.` : `<b>Вернуть прежний план${u.prevPace ? ' и темпа' : ''}?</b> В дневнике ничего не поменяется.`}</p><div class="w-acts"><button class="w-btn" data-act="undono">Отмена</button><button class="w-btn primary" data-act="undoyes" ${undo.busy ? 'disabled' : ''}>${undo.busy ? esc(undo.progress || 'Возвращаю…') : 'Вернуть'}</button></div></div>`;
+    return `<div class="w-confirm" role="alertdialog" aria-labelledby="w-un-h"><p id="w-un-h">${n ? `<b>Вернуть ${n} ${plural(n, 'день', 'дня', 'дней')} как было до заполнения?</b> ${range(ds[0], last(ds))}. Дни, которые вы или тренер поменяли после заполнения, останутся как есть.` : `<b>Вернуть прежний план${u.prevPace ? ' и темпа' : ''}?</b> В дневнике ничего не поменяется.`}${MODE === 'kazan' && kazanMain ? ' Главным стартом останется Казанский марафон.' : ''}</p><div class="w-acts"><button class="w-btn" data-act="undono">Отмена</button><button class="w-btn primary" data-act="undoyes" ${undo.busy ? 'disabled' : ''}>${undo.busy ? esc(undo.progress || 'Возвращаю…') : 'Вернуть'}</button></div></div>`;
   };
   async function saveVersion() {
-    try { const v = await storePlan({ asNew: true }); if (v) flash = `Версия «${v.name}» сохранена в вашем профиле. Её видно и на странице «План ученика».`; }
+    try { const v = await storePlan({ asNew: MODE !== 'kazan' }); if (v) flash = `Версия «${v.name}» сохранена в вашем профиле. Её видно и на странице «План ученика».`; }
     catch (e) { flash = `Версию не удалось сохранить (${e.message}).`; }
     render();
   }
   async function runGenerate() {
     if (!gen.prompt.trim()) { gen.err = 'Опишите бегуна и цель: результаты, объём, сколько тренировок в неделю, какие дни.'; return render(); }
-    gen.busy = true; gen.err = ''; gen.lines = 0; render();
+    if (!genLeft()) { gen.err = genNote(); return render(); }
+    gen.busy = true; gen.err = ''; gen.lines = 0; spendGen(); render();
     try {
       const text = await generatePlanText({ distance: gen.distance, weeks: gen.weeks, prompt: gen.prompt.trim() }, (t) => { const n = t.split('\n').length; if (n !== gen.lines) { gen.lines = n; const s = root.querySelector('#w-gen-status'); if (s) s.textContent = `Модель пишет план… ${n} ${plural(n, 'строка', 'строки', 'строк')}`; } });
       const parsed = parsePlanText(text);
@@ -693,8 +1076,8 @@
   }
   // stage 2: volume, a missed key workout, paces
   function replanByRules() {
-    const p = plan(), k = scaleK(p), nm = nextMonday(), fut = sortedWeeks(p).filter((w) => weekMon(w.week) >= nm);
-    const maxweek = +calcBase?.param?.maxweek?.v || 0, maxlong = +calcBase?.param?.maxlong?.v || 0;
+    const p = plan(), nm = nextMonday(), fut = sortedWeeks(p).filter((w) => weekMon(w.week) >= nm);
+    const maxweek = +calcBase?.param?.maxweek?.v || 0, maxlong = +calcBase?.param?.maxlong?.v || 0, maxlongP = (n) => (isK(p) && maxlong ? Math.floor(maxlong / weekK(p, n) * 10) / 10 : maxlong);
     const reasons = [], weeksNew = p.plan.weeks.map((w) => ({ ...w, slots: w.slots.map((s) => ({ ...s })) })), rows = [];
     const { pk, rk, r } = lastWeeksKm();
     // volume: under 80% of the plan for two weeks, the next weeks start from what was run (+10%) and grow 10% a week
@@ -704,12 +1087,13 @@
     if (pk && volWeeks.length && (r < RP.low || r > RP.high)) {
       let prevT = null, prevP = null;
       volWeeks.forEach((w, i) => {
-        const P = Math.round(w.km * k);
+        const kw = weekK(p, w.week), P = Math.round(w.km * kw);
         let T = r < RP.low ? Math.min(P, Math.max(Math.round(RP.floor * P), Math.round(rk / 2 * RP.ramp * RP.ramp ** i))) : Math.round(Math.min(P * RP.up, maxweek || Infinity));
         if (prevT != null && P < prevP) T = Math.min(T, Math.round(prevT * P / prevP));
         if (r > RP.high) T = Math.max(T, P); // more run than planned: never less than the plan, even over the S10 limit
-        const o = weeksNew.find((x) => x.week === w.week); o.km = Math.round(T / k * 10) / 10;
-        o.slots.forEach((s) => { if (TYPE_BY_NAME[String(s.type).toLowerCase()] !== 5) return; if (r < RP.low && T < P) s.km = Math.max(1, Math.round(+s.km * Math.max(RP.longMin, T / P))); if (maxlong && +s.km > maxlong) s.km = maxlong; });
+        const o = weeksNew.find((x) => x.week === w.week); o.km = Math.round(T / kw * 10) / 10;
+        // the Kazan mode lays long runs at km × the week's k, so S10's long-run limit is compared in plan km (maxlong / k)
+        o.slots.forEach((s) => { if (TYPE_BY_NAME[String(s.type).toLowerCase()] !== 5) return; if (r < RP.low && T < P) s.km = Math.max(1, Math.round(+s.km * Math.max(RP.longMin, T / P))); const cap = maxlongP(w.week); if (cap && +s.km > cap) s.km = cap; });
         if (T !== P) rows.push({ week: w.week, mon: weekMon(w.week), was: P, now: T });
         prevT = T; prevP = P;
       });
@@ -757,9 +1141,10 @@
   }
   // stage 3: the generator rewrites the weeks from next Monday, told what was run
   async function replanByAI() {
-    const p = plan(), k = scaleK(p), nm = nextMonday(), fut = sortedWeeks(p).filter((w) => weekMon(w.week) >= nm);
+    const p = plan(), k = (n) => weekK(p, n), nm = nextMonday(), fut = sortedWeeks(p).filter((w) => weekMon(w.week) >= nm);
     if (!fut.length) { rp = { by: 'ai', err: 'В плане не осталось недель после этой: перестраивать нечего.', reasons: [] }; return render(); }
-    rp = { by: 'ai', busy: true, lines: 0, reasons: [], err: '' }; render();
+    if (!genLeft()) { rp = { by: 'ai', err: genNote(), reasons: [] }; return render(); }
+    rp = { by: 'ai', busy: true, lines: 0, reasons: [], err: '' }; spendGen(); render();
     const R = training(), C = chance(R), { pk, rk } = lastWeeksKm(), maxweek = calcBase?.param?.maxweek?.v, maxlong = calcBase?.param?.maxlong?.v;
     const prompt = [
       race ? `Главный старт: ${KM_NAME[+race.prekm] || `${n1(+race.prekm)} км`} ${dayLbl(race.d)}${raceName ? `, ${raceName}` : ''}${race.prediction ? `, цель ${hms(race.prediction)}` : ''}.` : 'Старта нет, план без даты старта.',
@@ -768,7 +1153,7 @@
       R ? `За последние 6 недель: ${R.parts.map((q) => `${q.label.toLowerCase()} ${Math.round(q.score * 100)}% (${q.text})`).join('; ')}.` : '',
       pk ? `За последние 2 недели пробежано ${n1(rk)} из ${n1(pk)} км.` : '',
       C?.fNow ? `Текущая форма: около ${fmtTime(C.fNow, C.D)}${C.goal ? `, цель ${fmtGoal(C.goal, C.D)}` : ''}.` : '',
-      `Объём оставшихся недель в нынешнем плане: ${fut.map((w) => Math.round(w.km * k)).join(', ')} км.`,
+      `Объём оставшихся недель в нынешнем плане: ${fut.map((w) => Math.round(w.km * k(w.week))).join(', ')} км.`,
       maxweek || maxlong ? `Лимиты: объём до ${maxweek || '—'} км в неделю, длительная до ${maxlong || '—'} км.` : '',
     ].filter(Boolean).join(' ').replace(/ /g, ' ');
     try {
@@ -776,8 +1161,12 @@
       const parsed = parsePlanText(text), got = new Map(parsed.weeks.map((w) => [w.week, w]));
       if (!fut.some((w) => got.has(w.week))) throw new Error('в ответе нет нужных недель');
       // the generator's km are the athlete's own; the page scales a plan by the first-week volume, so they are divided back
-      const weeksNew = p.plan.weeks.map((w) => { const g = weekMon(w.week) >= nm && got.get(w.week); return g ? { ...g, km: Math.round(g.km / k * 10) / 10 } : w; });
-      const rows = fut.filter((w) => got.has(w.week)).map((w) => ({ week: w.week, mon: weekMon(w.week), was: Math.round(w.km * k), now: Math.round(got.get(w.week).km) }));
+      // in the Kazan mode the long run is scaled when laid, so its km is divided back too; `real` (stored with the
+      // version) keeps its text as written, already in the athlete's km
+      // (each week by its own k: a soft-entry week is laid smaller, so its km are divided back by that)
+      const back = (s, kw) => (isK(p) && TYPE_BY_NAME[String(s.type).toLowerCase()] === 5 ? { ...s, km: Math.round(s.km / kw * 10) / 10, real: true } : s);
+      const weeksNew = p.plan.weeks.map((w) => { const g = weekMon(w.week) >= nm && got.get(w.week), kw = k(w.week); return g ? { ...g, km: Math.round(g.km / kw * 10) / 10, slots: g.slots.map((s) => back(s, kw)) } : w; });
+      const rows = fut.filter((w) => got.has(w.week)).map((w) => ({ week: w.week, mon: weekMon(w.week), was: Math.round(w.km * k(w.week)), now: Math.round(got.get(w.week).km) }));
       rp = { by: 'ai', weeksNew, rows, moves: [], paces: null, opts: { vol: true }, prompt,
         reasons: [`Модель перестроила ${rows.length} ${plural(rows.length, 'неделю', 'недели', 'недель')} с учётом сделанного за 6 недель${parsed.errors.length ? ` (строк с ошибками: ${parsed.errors.length})` : ''}. Проверьте недели: ключевые тренировки в них новые.`] };
     } catch (e) { rp = { by: 'ai', reasons: [], err: `План не перестроился: ${e.message}. Попробуйте ещё раз или перестройте по правилам.` }; }
@@ -816,19 +1205,26 @@
     await loadRange(add(today, 1), raceEnd || add(today, 1), true).catch(() => {}); // the diary as it is now: a day the coach changed meanwhile stays
     // undo goes back to the version that is active now (the plan in the diary), whichever one is selected
     const act = versions.find((v) => v.active) || null, f = replanPreview(rp), prevActive = act?.id || null, prevFilled = act?.filled || null;
+    const cur = plan(), startNow = isK(cur) && kzFrozen(cur) == null ? kazanStartNow(cur) : null; // a Kazan plan never filled: the start its days were laid with
     const before = f.write.map((t) => { const x = days.get(t.d); return [t.d, x ? +x.type || 0 : null, x ? +x.target || 0 : 0, x?.comment || '', x?.location || '', x?.prediction || '', +t.typtrain, +t.prekm, fp(t.task)]; });
     const res = f.write.length ? await writeByWeek(f.write, (i, n) => { rp.progress = `Записываю неделю ${i} из ${n}…`; render(); }) : { done: 0, error: null };
     if (f.write.length) await loadRange(f.write[0].d, last(f.write).d, true).catch(() => {});
     if (res.error && !res.done) { rp.busy = false; rp.err = `Сервер не принял задачи (${res.error.message}). В дневнике ничего не изменилось.`; return render(); }
     // a re-plan always leaves an undo record, even with nothing written: the plan selected before it, the active version and
     // the paces go back with the days; the browser's copy is replaced too, so an older fill's record is not offered here
-    const pacesNew = rp.opts.pace && rp.paces, rec = { at: new Date().toISOString(), replan: true, prevFilled, prevActive, prevSel: sel ? { ...sel } : null, prevPace: pacesNew ? { src: paceSrc, own: PACE_OWN } : null, days: before.slice(0, res.done) };
+    // a Kazan plan is re-planned into its one Kazan version (the built-in plan: a new one); the record keeps what that
+    // version was (the built-in plan's weeks and name when there was none), so «Вернуть как было» puts it back
+    const kzOld = isK(cur) ? versions.find((v) => isK(v) && v.active) || versions.find(isK) || null : null;
+    const prevVersion = !isK(cur) ? null : kzOld ? { id: kzOld.id, name: kzOld.name, plan: kzOld.plan, student: kzOld.student || null, filled: kzOld.filled || null } : { id: null, name: cur.name, plan: cur.plan, student: null, filled: null };
+    const pacesNew = rp.opts.pace && rp.paces, rec = { at: new Date().toISOString(), replan: true, prevFilled, prevActive, prevSel: sel ? { ...sel } : null, prevVolume: volume, prevPace: pacesNew ? { src: paceSrc, own: PACE_OWN } : null, days: before.slice(0, res.done), ...(prevVersion ? { prevVersion } : {}) };
     store.set(`undo.${id}`, rec);
     if (pacesNew) { PACE_OWN = rp.paces; paceSrc = 'own'; store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); }
     rp.progress = 'Сохраняю план в профиль…'; render();
     const by = rp.by, n = res.done, a = f.write[0]?.d, b = f.write[res.done - 1]?.d;
+    const ks = res.done ? startNow : null; // days written: the start is frozen, as a fill freezes it
+    if (ks != null && MODE === 'kazan') kazanStart = ks;
     fresh = f.plan; sel = { src: 'new', id: 'new' }; volume = f.volume;
-    let saved = true; try { await storePlan({ asNew: true, name: f.plan.name, filled: prevFilled ? { from: prevFilled.from, to: prevFilled.to } : null, undo: rec }); } catch { saved = false; }
+    let saved = true; try { await storePlan({ asNew: !isK(cur), into: kzOld?.id || null, name: f.plan.name, filled: prevFilled ? { from: prevFilled.from, to: prevFilled.to } : null, undo: rec, kazanStart: ks }); } catch { saved = false; }
     rp = null;
     flash = `${''}План перестроен${by === 'ai' ? ' с ИИ' : ''}${n ? `: ${n} ${plural(n, 'день', 'дня', 'дней')} в дневнике переписано, ${range(a, b)}` : ', в дневнике ничего не меняли: новые недели встанут при следующем заполнении'}${res.error ? `. Дальше сервер не принял задачи (${res.error.message})` : ''}.${saved ? ` План сохранён в профиле как «${f.plan.name}».` : ' План в профиль сохранить не удалось.'}`;
     flashUndo = rec ? flash : '';
@@ -836,7 +1232,8 @@
   }
   function replanHTML() {
     const p = plan(); if (!p || !raceMon) return '';
-    if (!rp) return `<div class="w-rp"><div class="w-acts"><button class="w-btn" data-act="rprules">Перестроить по правилам</button><button class="w-btn" data-act="rpai">Перестроить с ИИ</button></div></div>`;
+    if (!rp && MODE === 'kazan' && !kazanMain) return '<div class="w-rp"><p class="w-muted">Перестроить можно, когда Казань станет главным стартом</p></div>'; // Solo would lay it to another race
+    if (!rp) return `<div class="w-rp"><div class="w-acts"><button class="w-btn" data-act="rprules">Перестроить по правилам</button><button class="w-btn" data-act="rpai" ${genLeft() ? '' : 'disabled'} title="${genNote()}">Перестроить с ИИ</button></div><p class="w-muted w-gen-left">ИИ: ${genNote()}</p></div>`;
     const title = rp.by === 'ai' ? 'Перестройка с ИИ' : 'Перестройка по правилам';
     if (rp.busy && !rp.weeksNew) return `<div class="w-rp"><h3>${title}</h3><p id="w-rp-status" role="status">Модель пишет план…</p></div>`;
     if (!rp.weeksNew) return `<div class="w-rp"><h3>${title}</h3>${rp.err ? `<p class="w-err" role="alert">${esc(rp.err)}</p>` : ''}<div class="w-acts"><button class="w-btn" data-act="rpcancel">Закрыть</button></div></div>`;
@@ -872,7 +1269,7 @@
           <label class="w-f w-f-wide w-ask"><span>Расскажите о себе и цели</span><textarea data-g="prompt" rows="3" aria-describedby="w-ask-hint" placeholder="Марафон 6 декабря на 3:20. 5 км 18:59, полумарафон 1:38. Сейчас ~40 км в неделю, 6 тренировок, четверг отдых, среда стадион, воскресенье длительная.">${esc(gen.prompt)}</textarea><small id="w-ask-hint">Сколько бегаете сейчас и как часто, лучшие результаты, какие дни свободны. По этому описанию модель составит план.</small></label>
           <label class="w-f"><span>Дистанция</span><select data-g="distance">${DISTANCES.map((d) => `<option ${d === gen.distance ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
           <label class="w-f w-f-s"><span>Недель</span><input data-g="weeks" class="num" inputmode="numeric" value="${gen.weeks}"></label>
-          <div class="w-go"><button class="w-btn primary" data-act="gen" ${gen.busy ? 'disabled' : ''}>${gen.busy ? 'Генерирую…' : 'Сгенерировать план'}</button><span class="w-muted" id="w-gen-status">${gen.busy ? 'Модель думает…' : `${gen.weeks} ${plural(gen.weeks, 'неделя', 'недели', 'недель')}${race ? ' до старта' : ''}. Генерация занимает до минуты.`}</span></div>
+          <div class="w-go"><button class="w-btn primary" data-act="gen" ${gen.busy || !genLeft() ? 'disabled' : ''}>${gen.busy ? 'Генерирую…' : 'Сгенерировать план'}</button><span class="w-muted" id="w-gen-status">${gen.busy ? 'Модель думает…' : `${gen.weeks} ${plural(gen.weeks, 'неделя', 'недели', 'недель')}${race ? ' до старта' : ''}. Генерация занимает до минуты. ${genNote()}`}</span></div>
           ${gen.err ? `<p class="w-err" role="alert">${esc(gen.err)}</p>` : ''}
         </div>`}
     </div>`;
@@ -895,18 +1292,19 @@
   }
   function planCard() {
     const p = plan();
-    const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${!race && raceEnd ? `<span class="w-muted num">без старта, по ${dayLbl(raceEnd)}</span>` : race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
+    const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(MODE === 'kazan' && isK(p) ? kzName(p.name) : p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${!race && raceEnd ? `<span class="w-muted num">без старта, по ${dayLbl(raceEnd)}</span>` : race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p && MODE !== 'kazan' ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
     if (!race && !noRace) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">Главный старт не выбран. ${isSelf ? '<button class="w-link" data-act="onbopen">Укажите его здесь</button> или на' : 'Выберите его на'} странице <a href="${''}/calc3?id=${id}">«Настройка плана»</a>, и план ляжет на даты до него.</p></section>`;
+    if (!p && MODE === 'kazan') return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План к Казанскому марафону не прочитался. Напишите нам в чат «Моя неделя» в Telegram, ссылка внизу страницы.</p></section>`;
     if (!p) return `<section class="w-card" aria-labelledby="w-plan2-h">${head}<p class="w-note">План ещё не выбран. Возьмите версию, которую сохранил тренер, или сделайте новый по описанию: это займёт около минуты.</p>${chooserHTML()}</section>`;
-    const f = fillPreview(), src = sel.src === 'version' ? (p.active ? `в вашем профиле${p.filled?.to ? `, в календаре по ${dayLbl(p.filled.to)}` : ''}` : 'ваша версия') : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
+    const f = fillPreview(), src = MODE === 'kazan' && sel.src !== 'version' ? 'ещё не в профиле' : sel.src === 'version' ? (p.active ? `в вашем профиле${p.filled?.to ? `, в календаре по ${dayLbl(p.filled.to)}` : ''}` : 'ваша версия') : sel.src === 'library' ? 'из библиотеки' : 'новый, не сохранён';
     const ws = f.weeks, first = ws[0], lastW = last(ws);
     const curMon = monday(today);
     return `<section class="w-card" aria-labelledby="w-plan2-h">${head}
-      ${chooser ? chooserHTML() : ''}
+      ${chooser && MODE !== 'kazan' ? chooserHTML() : ''}
       <div class="w-step">
         <div class="w-pmeta"><span class="w-muted num">${src} · ${ws.length} ${plural(ws.length, 'неделя', 'недели', 'недель')} · ${range(first.mon, add(lastW.mon, 6))} · темпа ${esc(paceLabel())}</span></div>
         <div class="w-pset">
-          <label class="w-f w-f-s"><span>Объём первой недели</span><span class="w-inl"><input data-p="volume" class="num" inputmode="numeric" value="${volume || firstKm(p)}"> км</span></label>
+          <label class="w-f w-f-s"><span>Объём первой недели</span><span class="w-inl"><input data-p="volume" class="num" inputmode="numeric" value="${volume || (isK(p) ? Math.round(firstKm(p) * KAZAN.scale[kGoal(p)]) : firstKm(p))}"> км</span></label>
           <div class="w-f w-f-wide"><span>Дни недели</span><div class="w-roles">${layout.map((r, i) => `<label class="w-role"><small>${DN[i]}</small><select data-p="role" data-i="${i}" aria-label="${DNF[i]}">${Object.entries(ROLE).map(([k, l]) => `<option value="${k}" ${r === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div></div>
         </div>
       </div>
@@ -920,7 +1318,7 @@
             <span class="w-wworks">${works.map((d) => `<span>${glyph(LEVEL[d.typtrain], d.typtrain === 6)}${SHORT[d.typtrain]} ${n1(d.prekm)}</span>`).join('')}</span>
             <span class="num w-wkm">${n1(w.total)} км</span>${past ? '<span class="w-pill neutral">Прошла</span>' : now ? '<span class="w-pill now">Сейчас</span>' : '<span class="w-pill-sp"></span>'}
           </button>
-          ${isOpen ? `<ol class="w-wdays">${w.days.map((d) => { const ex = days.get(d.d); const isMain = !!race && d.d === race.d; const keep = !isMain && keepExisting && d.d > today && isRun(ex);
+          ${isOpen ? `<ol class="w-wdays">${w.days.map((d) => { const ex = days.get(d.d); const isMain = !!race && d.d === race.d; const keep = !isMain && d.d > today && (keepExisting && isRun(ex) || kzRaceDay(ex));
             return `<li class="${d.d <= today ? 'gone' : ''}"><span class="w-wdd"><b>${DN[dow(d.d)]}</b><small class="num">${dayLbl(d.d)}</small></span>
               <div class="w-wdb"><span class="w-name ${d.typtrain ? '' : 'w-muted'}">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}${keep ? `<span class="w-muted">В дневнике уже стоит: ${esc(TYPES[ex.type] || 'тренировка').toLowerCase()} ${n1(+ex.target || 0)} км, её не трогаем</span>` : ''}${isMain ? '<span class="w-muted">Главный старт: он уже в дневнике, страница его не меняет</span>' : ''}</div>
               <span class="num w-wdk">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`; }).join('')}</ol>` : ''}
@@ -931,19 +1329,19 @@
           ${fillModes(f)}
           ${(() => { const u = lastUndo(); if (!undoable(u)) return ''; const ds = u.days.map((r) => r[0]).sort(); return `<span class="w-undo">${ds.length ? `Последнее заполнение: ${range(ds[0], last(ds))}` : 'План перестроен'} · <button class="w-link" data-act="undoask" data-where="card">Вернуть как было</button></span>`; })()}</div>
         <button class="w-btn w-fsave" data-act="pversion">Сохранить версию</button>
-        <div class="w-acts w-fgo">${me.isPremium ? `<button class="w-btn primary" data-act="fillask" ${f.write.length && !fill.busy && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button>` : `<a class="w-btn primary" data-act="buy" href="${SITE}/money">Оформить Premium</a>`}</div>
+        <div class="w-acts w-fgo">${me.isPremium ? `<button class="w-btn primary" data-act="fillask" ${(f.write.length || goalChangeLine()) && !fill.busy && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button>` : `<a class="w-btn primary" data-act="buy" href="${SITE}/money">Оформить Premium</a>`}</div>
         ${pacesOk(PACE) ? '' : '<p class="w-note w-prem">Задайте темпа на вкладке «Мои темпа»: без них в задания встанут T5…T42 вместо минут на километр.</p>'}
         ${me.isPremium ? '' : `<p class="w-note w-prem">Заполнять календарь можно с Premium: 750 ₽ в месяц или 9 €. План сохранится в вашем профиле: после оплаты вернитесь сюда и нажмите «Заполнить календарь».</p>`}
       </div>
-      ${fill.confirm && (fill.snap || f.write.length) ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h"><b>Записать ${(fill.snap || f.write).length} ${plural((fill.snap || f.write).length, 'день', 'дня', 'дней')} в дневник?</b> ${range((fill.snap || f.write)[0].d, last(fill.snap || f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'} План и настройки сохранятся в вашем профиле.</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}
+      ${fill.confirm && kazanAsk ? kazanAskHTML() : fill.confirm && ((fill.snap || f.write).length || goalChangeLine()) ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h">${(fill.snap || f.write).length ? `<b>Записать ${(fill.snap || f.write).length} ${plural((fill.snap || f.write).length, 'день', 'дня', 'дней')} в дневник?</b> ${range((fill.snap || f.write)[0].d, last(fill.snap || f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'}${goalChangeLine() ? ` ${goalChangeLine()}` : ''}` : `<b>Записать новую цель в дневник?</b> ${goalChangeLine()}`} План и настройки сохранятся в вашем профиле.</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}
       ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}
       ${undoHTML('card')}${undo.err ? `<p class="w-note w-err" role="alert">${esc(undo.err)}</p>` : ''}
     </section>`;
   }
   function pacesCard() {
     const P = PACE;
-    const opts = [studentPaces(plan()) ? ['plan', `Из плана «${plan().name}»`] : null, PACE_S10 ? ['s10', `Прогноз S10${race?.prediction ? `, ${raceName} ${hms(race.prediction)}` : ''}`] : null, ['own', 'Свои']].filter(Boolean);
-    const cur = (paceSrc === 'own' && PACE_OWN) ? 'own' : (paceSrc === 's10' && PACE_S10) ? 's10' : studentPaces(plan()) ? 'plan' : PACE_S10 ? 's10' : 'own';
+    const opts = MODE === 'kazan' ? [['goal', goalLabel().replace(/^о/, 'О')], ['own', 'Свои']] : [studentPaces(plan()) ? ['plan', `Из плана «${plan().name}»`] : null, PACE_S10 ? ['s10', `Прогноз S10${race?.prediction ? `, ${raceName} ${hms(race.prediction)}` : ''}`] : null, ['own', 'Свои']].filter(Boolean);
+    const cur = fromGoal() ? 'goal' : (paceSrc === 'own' && PACE_OWN) ? 'own' : (paceSrc === 's10' && PACE_S10) ? 's10' : studentPaces(plan()) ? 'plan' : PACE_S10 ? 's10' : 'own';
     return `<section class="w-card" aria-labelledby="w-pace-h">
       <div class="w-ch"><h2 id="w-pace-h">Темпа для заданий, мин/км</h2><label class="w-inl w-muted">Откуда <select data-p="pacesrc" aria-label="Откуда брать темпа">${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label></div>
       <div class="w-paces num">${[['5', 'темп на 5 км'], ['10', 'темп на 10 км'], ['21', 'полумарафон'], ['42', 'марафон']].map(([k, l]) => `<label><span><b>T${k}</b><small>${l}</small></span><input data-p="pace" data-k="${k}" value="${P?.[k] || ''}" inputmode="numeric" aria-label="T${k}, мин/км" placeholder="4:30"></label>`).join('')}</div>
@@ -1187,6 +1585,46 @@
   };
   // «Сохранить старт» writes the main race the way calc3 does (a task with main6 = 1); «Отсутствует» keeps the plan
   // without a race date; the paces go to «Мои темпа» as the athlete's own
+  // owner, 11.11.2026: beside the main race «Добавить цель» (the start window with the race in it, for the goal) and
+  // «Сбросить» (the race leaves the diary: on S10 the main race is the race day's task, so that day is deleted, after a
+  // question; the plan stays, without a race date)
+  const goalActs = () => {
+    if (!isSelf || !race) return '';
+    if (raceAsk) return `<div class="w-confirm w-goal-ask" role="alertdialog" aria-labelledby="w-ra-h"><p id="w-ra-h"><b>Убрать главный старт ${esc([raceName, dayLbl(race.d)].filter(Boolean).join(', '))} из дневника?</b> День старта удалится из дневника S10, план останется без даты старта. Сайт пришлёт в Telegram сообщение об удалённой задаче.</p>
+      <div class="w-acts"><button class="w-btn primary" data-act="raceresetyes" ${raceAsk === 'busy' ? 'disabled' : ''}>${raceAsk === 'busy' ? 'Убираю…' : 'Убрать старт'}</button><button class="w-btn" data-act="raceresetno">Отмена</button></div></div>`;
+    return `<span class="w-goal-acts"><button class="w-link" data-act="goaladd">${race.prediction ? 'Изменить цель' : 'Добавить цель'}</button> · <button class="w-link" data-act="racereset">Сбросить</button></span>`;
+  };
+  // the Kazan mode: the goal picked here instead of «Добавить цель» / «Сбросить» (one race only); it moves the race's
+  // goal, the version's name, the paces while they come from the goal, and the chance
+  const kazanPicker = () => `<div class="w-kgoal"><span class="w-lb">Цель</span><div class="w-seg" role="group" aria-label="Цель на марафон">${KAZAN.goals.map((g) => `<button type="button" class="num" data-act="kgoal" data-g="${g}" aria-pressed="${g === kazanGoal}">${g.replace(/:00$/, '')}</button>`).join('')}</div></div>`;
+  function setKazanGoal(g) {
+    if (MODE !== 'kazan' || !KAZAN.goals.includes(g) || g === kazanGoal) return;
+    kazanGoal = g; store.set(`goal.${id}`, { g, at: new Date().toISOString() }); // the browser's until a fill or a save
+    volume = null; // the goal sets the volume: a first-week volume typed for the old goal goes
+    setRace(kazanRace()); rp = null; // a re-plan proposal was made for the old goal
+    reprice(); if (PL?.base) { PL.rows = null; pickWorks(); }
+    render();
+  }
+  function openGoal() {
+    onb = newOnb(true, false, true);
+    if (race) { // the race as it is, so only the goal has to be typed; saving it again replaces the same day without a question
+      onb.d = race.d; onb.name = raceName || race.location || ''; onb.replace = race.d;
+      onb.dist = DISTANCES.find((x) => Math.abs(parseFloat(x.match(/([\d.]+) км/)[1]) - KM_OF(race.prekm)) < 0.2) || onb.dist;
+      onb.goal = race.prediction ? hms(race.prediction).replace(/^0?0:/, '') : '';
+    }
+    render();
+  }
+  async function resetRace() {
+    const r = race; if (!r) return;
+    raceAsk = 'busy'; render();
+    try { await writeTasks([{ d: r.d, task: '', prekm: 0, typtrain: 0 }]); } // an empty task deletes the day (task.php)
+    catch (e) { raceAsk = ''; flash = `Старт не удалось убрать (${e.message}). Попробуйте ещё раз.`; return render(); }
+    const was = days.get(r.d);
+    days.set(r.d, { date: r.d, type: 0, target: 0, comment: '', main6: 0, tracks: was?.tracks || [] });
+    setRace(null); noRace = true; store.set(`noRace.${id}`, true); syncRace(); raceAsk = ''; rp = null;
+    flash = 'Главный старт убран из дневника. План теперь без даты старта; новый старт и цель — кнопкой «Добавить цель».';
+    render();
+  }
   async function finishOnb(withRace) {
     const o = onb; o.err = '';
     let P = null;
@@ -1210,7 +1648,9 @@
         o.err = `На ${dayLbl(o.d)} в дневнике уже стоит: ${String(ex.comment || TYPES[+ex.type] || 'задача').slice(0, 60)}${+ex.target ? `, ${n1(+ex.target)} км` : ''}. Нажмите «Сохранить старт» ещё раз, и вместо неё встанет старт.`;
         return render();
       }
-      const r = { d: o.d, task: 'ГОНКА', prekm: String(km), typtrain: 6, location: o.name.trim(), prediction: goal }, prev = race;
+      // the same race with a new goal («Изменить цель»): the day keeps its own task, place and distance as the site has them
+      const same = race && race.d === o.d && Math.abs(KM_OF(race.prekm) - KM_OF(km)) < 0.2 && o.name.trim() === (raceName || race.location || '');
+      const r = same ? { ...race, typtrain: 6, prediction: goal } : { d: o.d, task: 'ГОНКА', prekm: String(km), typtrain: 6, location: o.name.trim(), prediction: goal }, prev = race;
       setRace(r); // writeTasks sends main6 = 1 for the race day, as calc3 does
       try { await writeTasks([r]); } catch (e) { setRace(prev); o.busy = false; o.err = `Старт не сохранился (${e.message}). Попробуйте ещё раз, выберите его на странице «Настройка плана» или нажмите «Отсутствует».`; return render(); }
       noRace = false; store.set(`noRace.${id}`, false);
@@ -1251,6 +1691,8 @@
     const D = KM_OF(race.prekm), what = raceName || KM_NAME[+race.prekm] || `${n1(+race.prekm)} км`;
     return race.prediction ? `${what} ${fmtGoal(hmsSec(race.prediction), D)}` : what;
   }
+  // the Kazan mode's name of a Kazan version: the goal now («Казань 3:00»), a re-planned one keeps «· перестроен <date>»
+  const kzName = (was) => `${planName()}${String(was || '').match(/ · перестроен [^·]*$/)?.[0] || ''}`;
   const topBar = (open) => `<div class="w-topin">
       <button class="w-menub" data-act="menu" aria-expanded="${open}" aria-label="${open ? 'Закрыть меню' : 'Меню S10'}"><i></i><i></i><i></i></button>
       <a class="w-wm" href="${SITE}/" aria-label="S10.run, главная">${LOGO}</a>
@@ -1269,14 +1711,14 @@
     <main class="w-main" ${onb || menuOpen ? 'inert' : ''}>
       ${colorsOpen ? colorsPanel() : ''}
       <div class="w-head">
-        <h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>
+        ${MODE === 'kazan' ? `<h1 class="w-h1k"><span class="w-nw">Казанский марафон,</span> <span class="w-nw">${kazanDay()}</span></h1>` : `<h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>`}
       </div>
       <div class="w-duo">
       <section class="w-card w-hero" aria-label="Сегодня и итоги недели">
         <div class="w-hero-l">${todayCard(W)}
           ${daysToRace != null // owner, 09.11.2026: under today's workout, the race and its goal larger, the days small
-            ? `<div class="w-goal"><span class="w-lb num">До старта ${daysToRace} ${plural(daysToRace, 'день', 'дня', 'дней')}</span><span class="w-race num">${[raceName, dayLbl(race.d), `${race.prekm} км`, race.prediction && `цель ${hms(race.prediction)}`].filter(Boolean).map((x) => `<span class="w-nw">${esc(x)}</span>`).join(', ')}</span></div>`
-            : `<div class="w-goal"><span class="w-lb">Главный старт</span><span class="s num">${noRace ? 'нет, план без даты старта' : 'не выбран'}${isSelf ? ` · <button class="w-link" data-act="onbopen">указать</button>` : ''}</span></div>`}</div>
+            ? `<div class="w-goal"><span class="w-lb num">До старта ${daysToRace} ${plural(daysToRace, 'день', 'дня', 'дней')}</span><span class="w-race num">${[raceName, dayLbl(race.d), `${race.prekm} км`, MODE !== 'kazan' && race.prediction && `цель ${hms(race.prediction)}`].filter(Boolean).map((x) => `<span class="w-nw">${esc(x)}</span>`).join(', ')}</span>${MODE === 'kazan' ? kazanPicker() : goalActs()}</div>`
+            : `<div class="w-goal"><span class="w-lb">Главный старт</span><span class="s num">${noRace ? 'нет, план без даты старта' : 'не выбран'}${isSelf ? ` · <button class="w-link" data-act="goaladd">Добавить цель</button>` : ''}</span></div>`}</div>
         <div class="w-stats">
           <div class="w-stat w-stat-wide"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span>
             ${W.plan ? `<div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${pct}%"></i></div><div class="w-track-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)} км</span></div>` : '<span class="s">на этой неделе ничего не запланировано</span>'}</div>
@@ -1454,8 +1896,8 @@
   .w-seg,.w-tabs{display:inline-flex;flex-wrap:wrap;border:1px solid var(--control);border-radius:6px;overflow:hidden;justify-self:start}
   .w-seg button,.w-tabs button{height:36px;padding:0 16px;border:0;background:var(--field);cursor:pointer;color:var(--muted);font-size:14px}
   .w-seg button+button,.w-tabs button+button{border-left:1px solid var(--control)}
-  .w-seg button[aria-checked="true"],.w-tabs button[aria-selected="true"]{background:var(--accent-bg);color:var(--accent);font-weight:500}
-  .w-seg button:not([aria-checked="true"]):hover,.w-tabs button:not([aria-selected="true"]):hover{background:var(--soft);color:var(--text)}
+  .w-seg button[aria-checked="true"],.w-seg button[aria-pressed="true"],.w-tabs button[aria-selected="true"]{background:var(--accent-bg);color:var(--accent);font-weight:500}
+  .w-seg button:not([aria-checked="true"]):not([aria-pressed="true"]):hover,.w-tabs button:not([aria-selected="true"]):hover{background:var(--soft);color:var(--text)}
   .w-works{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
   .w-work{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--soft);min-width:0}
   .w-wh,.w-ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
@@ -1489,6 +1931,8 @@
   .w-hint{margin-top:4px}.w-hint>span{display:block}
   .w-undo{color:var(--muted);font-size:13px;margin-top:6px}.w-undo .w-link,.w-flash .w-link{font-size:inherit;padding:0}
   .w-main>.w-confirm{margin:0}
+  .w-kgoal{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-top:10px}.w-kgoal .w-seg button{min-width:72px;padding:0 12px}.w-head h1.w-h1k{white-space:normal}
+  .w-goal-acts{font-size:14px;color:var(--faint)}.w-goal .w-confirm.w-goal-ask{margin:8px 0 0}
   .w-sum b{font-size:24px;font-weight:500;line-height:1.2}
   .w-acts{display:flex;gap:10px;flex-wrap:wrap}
   .w-chk{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-top:6px;cursor:pointer}
@@ -1608,7 +2052,7 @@
   document.getElementById('s10-week-css')?.remove();
   const style = document.createElement('style'); style.id = 's10-week-css'; style.textContent = css; document.head.appendChild(style);
   const root = document.createElement('div'); root.id = 's10-week'; root.className = document.getElementById('root') ? 'w-app w-over' : 'w-app'; document.body.appendChild(root);
-  document.title = 'Моя неделя · S10.run';
+  document.title = MODE === 'kazan' ? 'Казанский марафон · S10.run' : 'Моя неделя · S10.run';
   root.addEventListener('click', async (e) => {
     const a = e.target.closest('[data-act]');
     if (a) {
@@ -1620,6 +2064,11 @@
       if (act === 'flash') { flash = ''; return render(); }
       if (act === 'onbok' || act === 'onbnone') return finishOnb(act === 'onbok');
       if (act === 'onbopen') { onb = newOnb(true, false, true); return render(); }
+      if (act === 'goaladd') return openGoal();
+      if (act === 'kgoal') return setKazanGoal(a.dataset.g);
+      if (act === 'racereset') { raceAsk = 'ask'; return render(); }
+      if (act === 'raceresetno') { raceAsk = ''; return render(); }
+      if (act === 'raceresetyes') { if (raceAsk !== 'busy') await resetRace(); return; }
       if (act === 'onbcancel') { onb = null; return render(); }
       if (act === 'wgen') return generateWeek();
       if (act === 'wsave') return saveWeek();
@@ -1632,7 +2081,7 @@
       if (act === 'calback') { const from = calRange()[0]; calFrom = add(from, -28); a.disabled = true; await loadRange(calFrom, add(from, -1)).catch(() => {}); render(); root.querySelector('[data-act=calback]')?.focus({ preventScroll: true }); return; }
       if (act === 'ready') { tab = 'plan'; store.set('tab', tab); mode = 'view'; PL = null; syncURL(true); render(); root.querySelector('#w-ready-h')?.scrollIntoView({ block: 'start' }); return; }
       if (act === 'calall') { calAll = true; return render(); }
-      if (act === 'span') { fillSpan = a.dataset.k; store.set('fillSpan', fillSpan); fill.confirm = false; return render(); }
+      if (act === 'span') { if (fill.busy) return; fillSpan = a.dataset.k; store.set('fillSpan', fillSpan); fill.confirm = false; if (kazanAsk === 'ask') kazanAsk = ''; return render(); }
       if (act === 'colors') { colorsOpen = !colorsOpen; return render(); }
       if (act === 'pal') { palId = a.dataset.id; store.set('palette', palId); applyPalette(); return render(); }
       if (act === 'pchoose') { chooser = !chooser; return render(); }
@@ -1641,17 +2090,20 @@
       if (act === 'gen') return runGenerate();
       if (act === 'wopen') { const w = +a.dataset.w; openWeek = openWeek === w ? NaN : w; return render(); }
       if (act === 'fillask') { fill.confirm = true; fill.err = ''; undo.confirm = false; return render(); }
-      if (act === 'undoask') { undo = { ...undo, confirm: true, where: a.dataset.where || 'card', err: '' }; fill.confirm = false; return render(); }
+      if (act === 'undoask') { if (fill.busy) return; undo = { ...undo, confirm: true, where: a.dataset.where || 'card', err: '' }; fill.confirm = false; if (kazanAsk === 'ask') kazanAsk = ''; return render(); }
       if (act === 'undono') { undo.confirm = false; return render(); }
       if (act === 'undoyes') return undoFill();
       if (act === 'fillno') { fill.confirm = false; return render(); }
-      if (act === 'fillyes') return fillCalendar();
-      if (act === 'buy') { e.preventDefault(); if (a.dataset.busy) return; a.dataset.busy = '1'; if (plan() && isSelf) await storePlan({ asNew: sel.src !== 'version' }).catch(() => {}); location.href = a.href; return; }
+      // the Kazan mode: while the diary's main race is not Kazan, the fill first asks to make it the main race
+      if (act === 'fillyes') { if (MODE === 'kazan' && !kazanMain && me.isPremium && !fill.busy) { kazanAsk = 'ask'; return render(); } return fillCalendar(); }
+      if (act === 'kmainyes') return kazanMainYes();
+      if (act === 'kmainno') { if (kazanAsk === 'ask') { kazanAsk = ''; fill.confirm = false; } return render(); }
+      if (act === 'buy') return; // owner 11.11.2026: without Premium the plan is not stored, the link simply goes to /money
       if (act === 'rprules') { rp = replanByRules(); return render(); }
       if (act === 'rpai') return replanByAI();
       if (act === 'rpcancel') { rp = null; return render(); }
       if (act === 'rpapply') return applyReplan();
-      if (act === 'pversion') return saveVersion();
+      if (act === 'pversion') { if (!me.isPremium) { location.href = `${SITE}/money`; return; } return saveVersion(); } // without Premium: to the payment page, nothing stored
       return;
     }
     const b = e.target.closest('button[data-w]'); if (!b) return;

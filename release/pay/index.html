@@ -1001,7 +1001,7 @@ sync();
 document.documentElement.dataset.ready = '1';
 
 if (LIVE) {
-  loadLive().then((d) => { if (!d.me) location.href = '/login?back=' + encodeURIComponent(location.pathname); else show(d); })
+  loadLive().then((d) => { if (!d.me) location.href = '/login?back=' + encodeURIComponent(location.href); /* the site's login returns only to a full https://s10.run/… address */ else show(d); })
     .catch(() => show({ today: '', paidUntil: null, kind: 'elsewhere' }));
 }
 </script>

@@ -24,6 +24,11 @@ the long run and the days to the race; under it three tabs (Неделя / Пл�
   (display only; nothing written to the diary changes).
 - The tab and the week are in the address (`?tab=plan`, `?week=2026-10-19`), so links open the same view and «назад» works.
 
+**Kazan** (`/solo/kazan`; demo `?kazan`): the same page in a mode for the Kazan marathon on 2 May 2027. The race is
+fixed and the owner's 24-week plan is built in; instead of the plan choice the athlete picks the goal 3:00 / 3:30 / 4:00,
+which sets the paces and the volume of easy runs and long runs. Before a fill the page asks to make Kazan the main race.
+Its version is stored with `kind: 'kazan'`, its browser keys are `s10week.kazan.…`. Details: `CLAUDE.md`, «Kazan mode».
+
 Colours: palette №3 «Лист, синяя и красная ручка» is the fixed default. Grey page with white cards; blue #1a4be0 marks the wordmark, the tabs, today, links and the volume scale; red #d62b1f is the main buttons and the load bars next to each workout. Add `?colors` to the URL to bring back the picker with all 20 three-colour schemes.
 
 ## Files
@@ -47,6 +52,7 @@ Colours: palette №3 «Лист, синяя и красная ручка» is t
    answers 500), so the route has to come before the club's; `/solo` itself stays the club page.
 3. Open it logged in. A coach can view an athlete with `?id=<athlete id>`.
 4. Add «Моя неделя» to the site menu.
+5. (17.11.2026) Serve the same `solo.html` at `/solo/kazan`, also before the club's route.
 
 For each new release: `npm run zip`, send the zip; the developer replaces the files its README marks as changed (`?v=`
 in `solo.html` is already bumped). Then `npm run live` confirms the site serves it. `solo.js` must be served from

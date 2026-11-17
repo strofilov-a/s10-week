@@ -8,8 +8,12 @@ const FILE = path.resolve(__dirname, '..', 'release', 'solo-start.html');
 const LOGIN = 'https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan';
 
 const results = []; const check = (n, ok, i = '') => { results.push(!!ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${i ? `  (${i})` : ''}`); };
+const REACT = !!process.env.REACT; // the same checks on react-src/ as the developers' app would run it (tests/react)
 const srv = http.createServer((q, r) => {
-  if (new URL(q.url, 'http://x').pathname !== '/solo/start') { r.writeHead(404); return r.end(); }
+  const p = new URL(q.url, 'http://x').pathname;
+  if (REACT && p === '/app.js') { r.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' }); return r.end(fs.readFileSync(path.join(__dirname, 'react', 'dist', 'app.js'))); }
+  if (REACT && p === '/solo/start') { r.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return r.end('<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html,body{margin:0}</style></head><body><div id="app"></div><script src="/app.js"></script></body></html>'); }
+  if (p !== '/solo/start') { r.writeHead(404); return r.end(); }
   r.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); r.end(fs.readFileSync(FILE));
 });
 
@@ -27,7 +31,7 @@ const srv = http.createServer((q, r) => {
     await page.waitForTimeout(800);
 
     check(`${name}: the title`, (await page.textContent('h1')).trim() === 'S10 Solo — план до старта');
-    check(`${name}: the scroll libraries run from the page itself`, await page.evaluate(() => !!(window.gsap && window.ScrollTrigger && window.Stage && window.Stage.live)));
+    check(`${name}: the scroll libraries run from the page itself`, REACT ? await page.evaluate(() => !!(window.__s10 && window.__s10.triggers() > 0 && document.querySelector('.s10-solo-start.js'))) : await page.evaluate(() => !!(window.gsap && window.ScrollTrigger && window.Stage && window.Stage.live)));
     const live = await page.evaluate(() => ['plan', 'how', 'feats'].map((id) => document.getElementById(id).classList.contains('is-live')));
     check(`${name}: the three scroll scenes are live`, live.every(Boolean), live.join(' '));
     const hrefs = await page.evaluate(() => [...document.querySelectorAll('a.btn, a.cta')].map((a) => a.href));
@@ -90,6 +94,16 @@ const srv = http.createServer((q, r) => {
     const over = await page.evaluate((w) => Math.max(document.documentElement.scrollWidth - document.documentElement.clientWidth, innerWidth - w), w);
     check(`${name}: nothing runs off the side`, over <= 0, `${over}px`);
     check(`${name}: no script errors`, !errors.length, errors.join('; '));
+    if (REACT) { // unmount and mount again: no triggers, observers or classes left, and no doubles after a second mount
+      const n1 = await page.evaluate(() => window.__s10.triggers());
+      await page.evaluate(() => window.__s10.unmount()); await page.waitForTimeout(300);
+      const after = await page.evaluate(() => ({ t: window.__s10.triggers(), root: !!document.querySelector('.s10-solo-start'), sb: document.documentElement.style.scrollBehavior, ob: document.body.style.overscrollBehavior }));
+      await page.evaluate(() => { scrollTo(0, 400); dispatchEvent(new Event('resize')); }); await page.waitForTimeout(400);
+      check(`${name}: react: unmount removes every ScrollTrigger, Lenis marks and the page`, after.t === 0 && !after.root && !after.sb && !after.ob && !errors.length, JSON.stringify(after) + errors.join('; '));
+      await page.evaluate(() => { scrollTo(0, 0); window.__s10.mount(); }); await page.waitForTimeout(1000);
+      const again = await page.evaluate(() => ({ t: window.__s10.triggers(), live: ['plan', 'how', 'feats'].every((id) => document.getElementById(id).classList.contains('is-live')), weeks: document.querySelectorAll('#how-weeks .wk').length, days: document.querySelectorAll('#cal-grid .d').length }));
+      check(`${name}: react: mounted again: the same triggers, scenes live, the calendar once`, again.t === n1 && again.live && again.weeks === 12 && again.days === 84 && !errors.length, JSON.stringify(again) + ` first ${n1}`);
+    }
     await page.close();
   }
   await browser.close(); srv.close();

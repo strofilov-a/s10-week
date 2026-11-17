@@ -5,3 +5,5 @@ landing/.taste-skill/
 landing-v2/.taste-skill/
 dist/
 .taste-skill/
+tests/react/dist/
+.superpowers/

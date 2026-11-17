@@ -36,7 +36,9 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 
 | Path | What |
 |---|---|
-| `solo.js` | The whole page: one file, no build, no dependencies. Live on s10.run (by hostname), demo anywhere else. |
+| `solo.js` | The whole page: one file, no build, no dependencies. Live on s10.run (by hostname), demo anywhere else. At `/solo/kazan` (demo: `?kazan`) the Kazan marathon mode (see «Kazan mode»). |
+| `plans/kazan-2027.md` | The owner's 24-week Kazan plan (calc4 export format), embedded byte for byte in `solo.js` as `KAZAN_PLAN_MD`. |
+| `docs/superpowers/specs/2026-11-17-kazan-design.md` | The Kazan design (Russian): owner's answers and builder's decisions of 17.11.2026. |
 | `demo/index.html`, `demo/fixtures.js` | Demo on an anonymised snapshot (31.10.2026). Published on GitHub Pages: https://strofilov-a.github.io/s10-week/demo/ (`?newbie`: as a just-signed-up athlete, afresh each visit; `&free`: no premium; `?free` alone: the usual athlete without premium; `?open=replan`: the plan tab with a rule-based re-plan proposal open) |
 | `index.html` | GitHub Pages root: redirects to `demo/` outside s10.run. |
 | `landing/` | Promo page for S10 Solo (traffic from Instagram/Threads): one `index.html` + `scenes/` (taste-skill scroll stage, GSAP/Lenis from jsdelivr). No photos (owner, 03.11.2026). Every button goes to `/login?back=…/solo/plan`. Three palettes (`?p=1`, `3`, `4`; the blue №2 removed by the owner 03.11.2026; picker until he chooses). https://strofilov-a.github.io/s10-week/landing/ |
@@ -53,8 +55,12 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 | `tests/release.cjs` | Runs the release build at `/solo/plan` against a stand-in of the site's API (the demo snapshot), writes recorded. |
 | `tests/landing.cjs` | Runs `release/solo-start.html` at `/solo/start` with every outside request blocked: scenes live, the circle lands, actions go to the login, paces follow the goal. |
 | `tests/check.cjs` | Browser checks against the demo (see Testing). |
+| `tests/kazan.cjs` | The Kazan mode: the plan and its parser, goal, volume, long runs and race week on the demo; the soft entry, the main-race question, versions, browser keys and logged out on the release build at `/solo/kazan` (a stand-in of the API that keeps what is written). `REACT=1`: the release part on `<SoloKazan />`, plus unmount/remount. |
 | `tests/pay.cjs` | `release/pay` at http://s10.run:<port>/pay/ (Chromium maps s10.run to a local stand-in, so LIVE is on and the site's redirects are real): markup after the site's money2/money_stripe templates, ru and en, autopay, locked, zero and 500 ₽ prices, no email, coach, club, no paysite yet. |
 | `.github/workflows/check.yml` | Runs `tests/check.cjs` on every push and pull request. |
+| `react-src/` | The two pages as React 17 + TypeScript 4.9 sources for the developers' own app (their spec, 11.11.2026, variant «Б»: a wrapper, not a rewrite): `solo-plan/` (`SoloPlan.tsx` → `mountSoloPlan(host, opts)` in `engine.ts`, with `api.ts`, `storage.ts`, `urlState.ts`, `plan.css`; `SoloKazan.tsx` = `<SoloPlan mode="kazan" />` for `/solo/kazan`) and `solo-start/` (`SoloStart.tsx`, `markup.ts`, hand-ported `start.ts` + `stage.ts` with full cleanup, `start.css` scoped to `.s10-solo-start`, `fonts.css`). First built from b82aba6586 (2f8cf31, `--rev=2f8cf31`); since 11.11.2026 (owner's choice) from the current code with every fix, `&id=` included; the README lists the differences from b82aba6586. `README.md` (Russian) is their brief, `CHANGES.md` what changed since the last version sent, `CLAUDE.md` the brief for the Claude on the developer's machine. Sent: V3 (11.11.2026, `~/CLAUDE CODE/релизы/отправлено/2026-11-11 Solo V3/`); V4 with Kazan ready, not sent (`~/CLAUDE CODE/релизы/не отправлено/2026-11-17 Solo V4 Казань/`). |
+| `deploy/react-src.cjs` | Generates `react-src/solo-plan/engine.ts`, `plan.css` and `react-src/solo-start/markup.ts`, `start.css`, `fonts.css` (`--rev=<commit>` to build from an older release; since the Kazan mode it expects the `MODE` line and two login links, so it can no longer build releases older than the Kazan mode, nor b82aba6586): the release script wrapped in a mount function (`MODE` from `opts.mode`, not the address; the store from `storeFor()` with the mode's prefix), requests/storage/address moved to modules, strict-TS marks only (`any`, `!`, `as any`), checked with the TS 4.9 compiler API until clean. `deploy/fonts.cjs`: the promo fonts, shared with build.cjs. |
+| `tests/react/` | The developers' stack in miniature: `harness.tsx` (ReactDOM.render, `window.__s10` unmount/mount), `webpack.config.cjs` (ts-loader, style-loader, css-loader), their `tsconfig.json`. `npm run react`: generate, webpack, then `REACT=1` runs tests/release.cjs (+3 unmount/remount checks), tests/landing.cjs (+6) and tests/kazan.cjs (its release part, +1 unmount/remount) on the bundle; `/solo/kazan` mounts `<SoloKazan />`. |
 | `README.md` | Feature and API overview (English). |
 
 ## How the page works
@@ -159,6 +165,41 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   6:50, linear in between; a pace edited by hand stops the following. Saved as the athlete's own (`easy` too, also in
   `student.easy`). «Заполнить календарь» needs all four paces, so the diary never gets «T5+5» instead of minutes per km.
 
+## Kazan mode (owner, 17.11.2026)
+
+`/solo/kazan` is a page the owner gives a link to: the Kazan marathon, 2 May 2027, with the owner's fixed 24-week plan.
+It is Solo in a mode, not a copy: `MODE` is read once from the address (`/solo/kazan`, demo `?kazan`), every Solo
+feature and fix applies, both modes share the tests. Design: `docs/superpowers/specs/2026-11-17-kazan-design.md`.
+
+- `KAZAN = { name, location, d: '2027-05-02', km: 42.2, goals: 3:00/3:30/4:00, scale: 1 / 0.85 / 0.7 }`, one line of
+  `solo.js`; every date the page shows or checks (the h1, the countdown, the question, the «already Kazan» window)
+  comes from `d`. The date is provisional (the organiser has not announced it; a new date = a new release of that line;
+  a test keeps any other 2027 date out of the code).
+- The race is fixed; the goal picker replaces the plan choice and the generator. It opens at the Kazan version's goal,
+  else this browser's, else the diary's Kazan goal (the nearest of the three), else 3:30. A tap is stored only in the
+  browser as `kazan.goal.<ID> = {g, at}` (Solo writes only on buttons) and wins over the version's goal while newer than
+  its `savedAt`; another device opens the version's goal until a fill or a save. Paces follow the goal until the athlete
+  sets his own; own paces stored with the Kazan version (not its goal's) are taken as own in a browser that never chose
+  a pace source, so another device shows them and a fill there keeps them. The goal scales easy runs and long runs
+  (the long run's «N км» in its text too, the parts summing to the new length; an unnamed «остаток» keeps at least
+  1 km, taken from the first part); key workouts and the marathon stay. The race week has no easy runs (owner).
+- Late entry (owner: soft): starting after week −21, the first two weeks ×0.75 and ×0.9 (easy + long); the week of
+  the first fill is kept as `student.kazanStart` so it does not move.
+- Main race (owner): before a fill, unless the diary's main race is already Kazan (a marathon dated `KAZAN.d` or the two
+  days before, now 30.04–02.05.2027, whose goal then follows the page: the confirm box says «Цель на старт 2 мая
+  сменится: 3:20 → 3:30.», and with nothing else to write the button still writes the goal, «Цель на старт обновлена»),
+  «Казанский марафон 2 мая станет главным стартом вместо …»; «Да» writes the Kazan day as the main race (`typtrain 6`,
+  `main6 1`), the old race day stays as an ordinary race, never written over by a fill (no day of type 6 is, even with
+  «Не трогать…» unticked). «Вернуть как было» does not undo the main race and says so («Главным стартом останется
+  Казанский марафон.»). Without Kazan as the main race nothing is filled.
+- Versions: `kind: 'kazan'`, `student.kazanGoal`, `student.kazanStart`, one per athlete, active only while Kazan is the
+  main race; Solo lays a Kazan version by its kind. Browser keys `s10week.kazan.…`, Solo's untouched (React too:
+  `storeFor('kazan.')`). The AI limit is shared with Solo.
+- Logged out: a Kazan block («Подготовка к Казанскому марафону», countdown, «Войти и начать» with the full `back`).
+- Builder's decisions the owner may change: the scale 1 / 0.85 / 0.7, the soft entry ×0.75 / ×0.9 after week −21,
+  «already Kazan» = `KAZAN.d` and the two days before, one active plan per athlete for both pages, default goal 3:30.
+- Delivery: static, `/solo/kazan` serves the same `solo.html` (`deploy/ЗАДАНИЕ.md`); React, `<SoloKazan />` (Solo V4).
+
 ## Design decisions (from the owner; keep them)
 
 - Header as on the site (owner, 06.11.2026): the menu button on the left opens the site's own menu over the page (the
@@ -190,9 +231,10 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
 - Fill buttons sit at the bottom of their box; the hint under the count is two lines. «Сохранить версию» stands at the top
   right beside the «2 беговые недели / До старта» switch (on a phone above it), «Заполнить календарь» at the bottom
   (owner, 09.11.2026). «Заполнить календарь» saves the plan to the profile itself.
-- Paywall (owner, 09.11.2026): without premium «Заполнить календарь» is replaced by «Оформить Premium» to `/money` (it
-  saves a new or library plan to the profile first, so it is there after paying), with «750 ₽ в месяц или 9 €»; the other
-  write buttons stay disabled with an «Оформить Premium» link. No free promise in Solo: the site gives Premium for the
+- Paywall (owner, 09.11.2026; changed 11.11.2026): without premium «Заполнить календарь» is replaced by «Оформить Premium»
+  to `/money`, with «750 ₽ в месяц или 9 €»; NOTHING is stored in the profile without premium (11.11: the plan used to be
+  saved first): «Оформить Premium» is a plain link, «Сохранить версию» goes to `/money`, and `storePlan` returns null. The
+  other write buttons stay disabled with an «Оформить Premium» link. No free promise in Solo: the site gives Premium for the
   first 3 days, so the paywall is only seen once it is over (owner: no card binding, a paywall after 3 days).
 - A saved version is named by the race and its goal, «Valencia 3:20» (`planName()`; the distance when the race has no
   name; a re-plan adds «· перестроен <date>»); a coach's version keeps its name.
@@ -206,11 +248,25 @@ typtrain: 0 none · 1 recovery · 2 development · 3 interval · 4 repeat · 5 l
   посмотрим» without a race, «Марафон 6 дек, Valencia, цель 3:20:00.» with one; typing makes it the athlete's
   (owner, 01.11.2026: the first time he pressed «Сгенерировать» without noticing the box).
 
+- Main race (owner, 11.11.2026): beside it «Добавить цель» (or «Изменить цель» when it has one) opens the start window
+  with the race filled in; saving only a new goal keeps the race day's own task, place and distance. «Сбросить» asks
+  («Убрать главный старт … из дневника?») and deletes the race day (an empty task: on S10 the main race IS that day's
+  task); the plan stays, without a race date (`noRace`). Own page only, as the start window.
+- AI generations (owner, 11.11.2026): 5 a Moscow day per logged-in user, «Сгенерировать план» and «Перестроить с ИИ»
+  together; the count is `userparam soloGen = {d, n}` in that user's own row; «Осталось N из 5 на сегодня», buttons off
+  at 0. Client-side only: generate.php itself has no limit.
+- Paces are used only as a full set of four readable paces (`fourPaces`): a forecast the site could not count
+  (`planresults.t = {err}`) or a version with one pace is not a pace source; a workout never shows NaN (11.11.2026 bug).
+  Readable: «4:30», «04:30», «0:04:30», «4.30», «430».
+- Every way to the login carries the full address back (`/login?back=<location.href>`): the site's login returns only
+  to `https://s10.run/…`. `tests/links.cjs` keeps every link of the three pages on paths the site serves.
+
 ## Testing
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # demo checks (104), the release build and its checks (13), the promo page (35), the payment page (22)
+npm test                                     # demo (104), release (29), promo page (35), payment page (23), links (7), kazan (83)
+npm run react                                # react-src: generate, webpack, release (32), promo (41) and kazan (38) on the React bundle
 ```
 
 GitHub Actions (`.github/workflows/check.yml`) runs the same on every push and pull request, and fails if the committed
@@ -223,7 +279,7 @@ Never write to the owner's real diary or profile without his explicit yes in the
 
 ## Open items
 
-- Race week: with the race on Sunday the plan leaves Thu–Sat as rest (its volume already includes the marathon). Ask the
-  owner whether easy runs should replace that.
+- Race week: with the race on Sunday the plan leaves Thu–Sat as rest (its volume already includes the marathon). For
+  Kazan the owner chose exactly that (17.11.2026: no easy runs in the race week); for Solo plans it is still to ask.
 - Ideas: a reminder on the week view when the filled weeks run out; a race-week sanity check; adapting volume to the
   fact; a coach view of athletes' plans; calendar export (ICS); analytics.
