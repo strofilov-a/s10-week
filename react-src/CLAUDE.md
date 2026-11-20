@@ -2,7 +2,8 @@
 
 You are working in the S10 developers' React app, integrating the pages that a separate team (the S10 Solo owner and
 his Claude) wrote and maintains: `/solo/plan` («S10 Solo / Моя неделя», an athlete's training cabinet), `/solo/kazan`
-(the same cabinet in its Kazan marathon mode, new in V4) and `/solo/start` (the public S10 Solo promo page). This folder
+(the same cabinet in its Kazan marathon mode, new in V4), `/solo/start` (the public S10 Solo promo page) and
+`/solo/kazan/start` (the public Kazan marathon promo page, new in V4). This folder
 is their hand-over, Solo V4 of 17.11.2026. Answer the developer in Russian unless he writes otherwise. The UI is
 Russian; keep every text as it is.
 
@@ -17,7 +18,7 @@ Read `README.md` (Russian, the full brief) and `CHANGES.md` (what changed since 
 - Webpack 5, `ts-loader`, plain CSS through `style-loader` + `css-loader`. No other loaders are needed: the promo
   fonts are `data:` URLs inside `fonts.css`.
 - No new npm dependencies without the developers' agreement. Already needed: `gsap@3.15.0` (with `gsap/ScrollTrigger`)
-  and `lenis@1.3.26`, both for `/solo/start` only. They ship their own types.
+  and `lenis@1.3.26`, both for the two promo pages only. They ship their own types.
 - `import './x.css'` needs `declare module '*.css';` somewhere in the project if it is not there yet.
 
 ## What is in here
@@ -30,18 +31,24 @@ solo-plan/   SoloPlan.tsx (root) → mountSoloPlan(host, opts) in engine.ts → 
              plan.css (all under .w-app)
 solo-start/  SoloStart.tsx (root, renders markup.ts) → mountSoloStart(root) in start.ts (+ stage.ts) → cleanup
              start.css (all under .s10-solo-start), fonts.css (Jost, Golos Text)
+kazan-start/ KazanStart.tsx (root, renders markup.ts) → mountKazanStart(root) in start.ts (+ ../solo-start/stage.ts)
+             start.css (all under .s10-kazan-start); fonts.css (Roboto) + ../solo-start/fonts.css
+             The three blocks on top (the owner's Kazan landing: hero drawing, «Что входит», the curator) are a
+             <template> in markup.ts that start.ts turns into a shadow root on #kml: their own CSS, isolated. Keep it so.
 ```
 
-Mount them where the router serves the three paths. Each is independent: importing mounts nothing, and `/solo/start`
-makes no requests at all.
+Mount them where the router serves the four paths. Each is independent: importing mounts nothing, and the two promo
+pages make no requests at all.
 
 ```tsx
 import { SoloPlan } from './solo-plan/SoloPlan';
 import { SoloKazan } from './solo-plan/SoloKazan';
 import { SoloStart } from './solo-start/SoloStart';
+import { KazanStart } from './kazan-start/KazanStart';
 {path === '/solo/plan' && <SoloPlan />}      // <SoloPlan overlay /> covers the window, as the standalone page did
 {path === '/solo/kazan' && <SoloKazan />}    // the mode comes from the component, not from the address
 {path === '/solo/start' && <SoloStart />}
+{path === '/solo/kazan/start' && <KazanStart />}  // an exact match: it is not /solo/kazan
 ```
 
 ## The Kazan mode (V4)
@@ -77,8 +84,8 @@ This is a wrapper, not a React rewrite (the owner's choice «вариант Б»
   The next version from the owner will replace this file whole. So: keep local edits to `engine.ts` minimal, mark
   each with a `// S10-LOCAL:` comment, and list them for the developer, so they can be sent to the owner and kept.
   Never reformat it or "clean it up".
-- **`plan.css`, `markup.ts`, `start.css`, `fonts.css` are generated too** — same rule.
-- **`api.ts`, `storage.ts`, `urlState.ts`, both `.tsx` roots, `start.ts`, `stage.ts` are hand-written** and meant to
+- **`plan.css`, both `markup.ts`, both `start.css`, `fonts.css` are generated too** — same rule.
+- **`api.ts`, `storage.ts`, `urlState.ts`, the `.tsx` roots, both `start.ts`, `stage.ts` are hand-written** and meant to
   be adapted: swap `api.ts` to route requests elsewhere, `urlState.ts` if your router owns the address.
 - Do not "convert" the cabinet to React components as part of integration. If the developers want that, it is a
   rewrite to agree with the owner first (his estimate: several days and a long behaviour comparison).
@@ -106,13 +113,14 @@ This is a wrapper, not a React rewrite (the owner's choice «вариант Б»
 - `/solo/plan` and `/solo/kazan`: sets `document.title`; while its menu is open, `overflow: hidden` on `<html>`; a
   palette colour on `<html>` background. Unmount restores `<html>` (not the title). `opts.overlay` makes it
   `position: fixed` over the app.
-- `/solo/start`: while mounted, Lenis smooths the mouse wheel on the window and GSAP's ticker runs with
+- `/solo/start` and `/solo/kazan/start`: while mounted, Lenis smooths the mouse wheel on the window and GSAP's ticker runs with
   `lagSmoothing(0)`; `<html>` gets `scroll-behavior`, `<body>` `overscroll-behavior: none` (with Lenis). Unmount
   reverts every ScrollTrigger, destroys Lenis, restores the ticker (`lagSmoothing(500, 33)`) and those styles.
-  The page's own `body` styles (background `#EEF1EF`, fonts) sit on the `.s10-solo-start` root here.
+  The page's own `body` styles (background `#EEF1EF`, fonts) sit on the `.s10-solo-start` / `.s10-kazan-start` root here.
 - HTML shell: `/solo/plan` and `/solo/kazan` need the site's Roboto (400/500/900) from `/t5` like `/calc3`; `/solo/start` needs its
   meta tags in your shell (title «S10 Solo — план до старта», description, og:*, `theme-color #EEF1EF`,
-  `viewport-fit=cover`) — React does not set them.
+  `viewport-fit=cover`) — React does not set them; `/solo/kazan/start` the same with its own title «Казанский марафон 2027 —
+  план подготовки · S10 Solo» and texts from `kazan-start.html`.
 
 ## How to check your integration
 
@@ -128,6 +136,8 @@ This is a wrapper, not a React rewrite (the owner's choice «вариант Б»
    - `/solo/start` on desktop and a phone: three scroll scenes run, the big red circle lands on 6 December (with a
      mouse) or pops in (touch), every button goes to `/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan`, no
      horizontal scroll.
+   - `/solo/kazan/start` the same way: the red circle with 2 lands on 2 May, the goal picker 3:00 / 3:30 / 4:00
+     changes the paces, every button goes to `/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan`, no horizontal scroll.
    - Navigate away and back to each page: no duplicated animations, listeners or content, no console errors.
 4. Report to the developer what was checked and what was not; do not claim checks that did not run.
 

@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Казанский марафон 2027 — план подготовки · S10 Solo</title>
+<meta name="description" content="План к Казанскому марафону 2 мая 2027 на 24 недели от Юрия Строфилова. Выберите цель 3:00, 3:30 или 4:00, и S10 Solo заполнит календарь тренировками в ваших темпах.">
+<meta property="og:title" content="Казанский марафон 2027 — план подготовки">
+<meta property="og:description" content="24 недели до 2 мая. Цель 3:00, 3:30 или 4:00, тренировки в ваших темпах в календаре S10.">
+<meta name="theme-color" content="#EEF1EF">
+<script>
+  document.documentElement.classList.add('js');
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@600;700&family=Golos+Text:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../landing-v2/scenes/stage.css">
+<style>
+/* The Kazan marathon promo page (/solo/kazan/start): landing-v2 (/solo/start) retold for one race, the owner's 24-week
+   plan to 2 May 2027. The same look, motif and scenes; the calendar holds the plan's last 12 weeks with its three key
+   workouts a week (the easy runs depend on the athlete's volume, so none are drawn), the paces slider became the goal
+   picker (3:00 / 3:30 / 4:00, the same scale as solo.js's KAZAN), and «План» shows the plan's four stages. */
+/* ---------- colour: taste's correction of the owner's pacific blue · tomato · mustard (his choice, 03.11.2026);
+   the race-day circle is the page's one motif ---------- */
+:root {
+  color-scheme: light;
+  --bg: #EEF1EF; --surface: #E1E8E6; --deep: #FFFFFF;
+  --ink: #0B3A42; --muted: rgba(11,58,66,.78);
+  --accent: #EF4B3F; --on-accent: #2a0605;
+  --light: #F6CD4C; --on-light: #231b02;
+  --mid: #0B8FA3; --on-mid: #03191c;
+  --race: #EF4B3F; --on-race: #2a0605;
+  --hi: #0B8FA3; --on-hi: #ffffff; --work: #B07A00; --long: #0B8FA3;
+}
+
+:root {
+  --display: 'Jost', system-ui, sans-serif;
+  --font: 'Golos Text', system-ui, sans-serif;
+  --m: clamp(20px, 2.2vw, 32px);
+  --gap: clamp(16px, 2vw, 28px);
+  --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --step-head: clamp(2.25rem, 1.3rem + 3.2vw, 4.25rem);
+  --step-display: clamp(3rem, 6vw, 6.5rem);
+  --step-giant: clamp(6rem, 21vw, 21rem);
+  --ease: cubic-bezier(.22,.61,.36,1);
+  --section: clamp(120px, 14vw, 200px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); overflow-x: clip;
+  font-family: var(--font); font-weight: 400; font-size: var(--step-body); line-height: 1.5;
+  -webkit-font-smoothing: antialiased; transition: background-color .6s var(--ease), color .6s var(--ease);
+}
+a { color: inherit; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, .h1 { font-family: var(--display); font-weight: 700; letter-spacing: -0.04em; line-height: .92; }
+h2 { font-size: var(--step-head); }
+[id] { scroll-margin-top: 80px; }
+::selection { background: var(--accent); color: var(--on-accent); }
+:focus-visible { outline: 3px solid var(--light); outline-offset: 3px; }
+.vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wrap { padding-inline: var(--m); }
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); }
+.num { font-variant-numeric: tabular-nums lining-nums; }
+
+/* the motif's shape: buttons are fully round */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5em;
+  min-height: 48px; padding: 0 26px; border: 0; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent);
+  font: 600 var(--step-body)/1 var(--font); text-decoration: none; cursor: pointer;
+  transition: transform .18s var(--ease), background-color .18s var(--ease), color .18s var(--ease);
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0) scale(.98); }
+.btn.alt { background: var(--ink); color: var(--bg); }
+.link { text-decoration: underline 2px transparent; text-underline-offset: .28em; transition: text-decoration-color .25s var(--ease); }
+.link:hover, .link:focus-visible { text-decoration-color: currentColor; }
+/* the motif at text size: a round bullet */
+.dot::before { content: ''; display: inline-block; width: .55em; height: .55em; border-radius: 50%; background: var(--race); margin-right: .5em; vertical-align: .06em; }
+
+/* ---------- header ---------- */
+.rail { position: sticky; top: 0; z-index: 30; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 var(--m); background: var(--bg); }
+.mark { font: 700 1.375rem/1 var(--display); letter-spacing: -0.03em; text-decoration: none; }
+.rail-act { display: flex; align-items: center; gap: 24px; font-size: var(--step-small); }
+.rail-act .btn { font-size: var(--step-small); min-height: 40px; padding: 0 18px; }
+
+/* ---------- hero: the race-day circle at full scale ---------- */
+.hero { position: relative; overflow-x: clip; /* a circle past the right edge never widens a touch screen's page */ min-height: calc(100svh - 64px); display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding-block: 48px; }
+.hero-text { grid-column: 1 / 8; position: relative; z-index: 2; }
+.hero .h1 { font-size: var(--step-display); max-width: 11ch; } /* an h2: the page's h1 is the Kazan hero's above */
+.hero-sent { margin-top: 32px; max-width: 38ch; font-size: var(--step-lead); line-height: 1.35; }
+.hero .row { display: flex; align-items: center; gap: 24px; margin-top: 40px; flex-wrap: wrap; }
+.hero .btn { min-height: 56px; padding: 0 30px; }
+.hero-note { margin-top: 28px; color: var(--muted); font-size: var(--step-small); }
+/* the orb: a circle min(120vh, 75vw) across entering from the right; with motion it flies into 6 December */
+.orb {
+  --D: min(120svh, 75vw);
+  position: absolute; z-index: 1; width: var(--D); height: var(--D); border-radius: 50%;
+  left: calc(100vw - .68 * var(--D)); top: calc(50% - .5 * var(--D));
+  background: var(--race); color: var(--on-race); display: grid; place-items: center;
+  font: 500 calc(var(--D) * .61) / 1 var(--font); letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+  pointer-events: none; transform-origin: 50% 50%; will-change: transform;
+}
+.orb span { display: block; transform: translateY(-.03em); } /* the 6's ink sits .03em under its line box's middle in Golos Text */
+.orb.flying { position: fixed; }
+/* touch: 6 December pops in on a timer as the calendar comes into view (see flight) */
+.cal-sec.pop .d.race::before { animation: race-pop .7s cubic-bezier(.2, .8, .2, 1) both; }
+.cal-sec.pop .d.race { animation: race-num .7s ease-out both; }
+@keyframes race-pop { from { transform: scale(2.6); opacity: 0; } 50% { opacity: 1; } to { transform: scale(1); opacity: 1; } }
+@keyframes race-num { from { opacity: 0; } 60% { opacity: 0; } to { opacity: 1; } }
+.orb.gone { visibility: hidden; }
+/* the Kazan blocks on top (deploy/kazan-intro.cjs, in a shadow root) stay above the circle, which reaches up out of our hero */
+.kml { position: relative; z-index: 2; }
+
+/* ---------- scene: the calendar, the race already marked, fills up to it ---------- */
+.cal-sec { margin-top: var(--section); }
+.cal-stage { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding: calc(64px + 2svh) var(--m) 3svh; min-height: 100svh; }
+.cal-text { grid-column: 1 / 6; }
+.cal-text h2 { max-width: 11ch; }
+.cal-says { position: relative; margin-top: 32px; min-height: 4.2em; font-size: var(--step-lead); line-height: 1.3; }
+.cal-says p { max-width: 24ch; }
+.is-live .cal-says p { position: absolute; inset: 0 auto auto 0; opacity: 0; visibility: hidden; transform: translateY(14px); transition: opacity .45s var(--ease), transform .45s var(--ease), visibility 0s .45s; }
+.is-live[data-beat="0"] .cal-says p:nth-child(1), .is-live[data-beat="1"] .cal-says p:nth-child(2),
+.is-live[data-beat="2"] .cal-says p:nth-child(3), .is-live[data-beat="3"] .cal-says p:nth-child(4) { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.cal-sec:not(.is-live) .cal-says p + p { margin-top: .5em; }
+.cal-figs { display: flex; gap: clamp(28px, 4vw, 64px); margin-top: 36px; }
+.cal-figs div { font-size: var(--step-small); color: var(--muted); }
+.cal-figs b { display: block; font: 700 var(--step-head)/1 var(--display); letter-spacing: -0.03em; color: var(--ink); margin-bottom: 6px; }
+.cal { grid-column: 6 / 13; background: var(--surface); padding: clamp(20px, 3svh, 40px) clamp(20px, 2.6vw, 40px); border-radius: 28px; }
+.cal-grid { display: grid; grid-template-columns: 2.6em repeat(7, 1fr) 4.2em; font-size: var(--step-body); line-height: 1.25; }
+.cal-grid .wd { color: var(--muted); text-align: center; padding-bottom: 8px; font-size: var(--step-small); }
+.cal-grid .wd:last-child { text-align: right; }
+.cal-grid .mo { color: var(--muted); align-self: center; padding-bottom: 8px; font-size: var(--step-small); }
+.cal-grid .wk-km { text-align: right; align-self: center; padding-bottom: 8px; color: var(--muted); font-variant-numeric: tabular-nums; opacity: .25; transition: opacity .3s var(--ease), color .3s var(--ease); }
+.cal-grid .wk-km.on, .cal-sec:not(.is-live) .wk-km { opacity: 1; color: var(--ink); }
+.cal-grid .d { position: relative; z-index: 0; text-align: center; padding: clamp(1px, .4svh, 4px) 0 clamp(9px, 1.9svh, 17px); font-variant-numeric: tabular-nums; color: var(--muted); transition: color .3s var(--ease); }
+.cal-grid .d::after { content: ''; position: absolute; left: 50%; bottom: clamp(1px, .5svh, 4px); width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--ink); opacity: 0; transform: scale(.3); transition: opacity .3s var(--ease), transform .3s var(--ease); }
+.cal-grid .d.work::after { background: var(--work); width: 9px; height: 9px; margin-left: -4.5px; }
+.cal-grid .d.long::after { background: var(--long); width: 18px; height: 6px; margin-left: -9px; border-radius: 3px; }
+.cal-grid .d.on, .cal-sec:not(.is-live) .d { color: var(--ink); }
+.cal-grid .d.on::after, .cal-sec:not(.is-live) .d::after { opacity: 1; transform: scale(1); }
+.cal-grid .d.run.on::after, .cal-sec:not(.is-live) .d.run::after { opacity: .45; }
+.cal-grid .d.work.on, .cal-sec:not(.is-live) .d.work { color: var(--work); font-weight: 600; }
+.cal-grid .d.long.on, .cal-sec:not(.is-live) .d.long { color: var(--long); font-weight: 600; }
+/* the race day: lit from the start; while the orb is in flight it waits hidden under it */
+.cal-grid .d.race { font-weight: 500; color: var(--on-race); }
+.cal-grid .d.race::after { display: none; }
+.cal-grid .d.race::before { content: ''; position: absolute; left: 50%; top: calc(clamp(1px, .4svh, 4px) + .625em); width: 1.65em; height: 1.65em; margin: -.825em 0 0 -.825em; border-radius: 50%; background: var(--race); z-index: -1; }
+.cal-sec.waiting .d.race { visibility: hidden; }
+.cal-key { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 16px; font-size: var(--step-small); color: var(--muted); }
+.cal-key span::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); margin-right: 8px; vertical-align: middle; }
+.cal-key span.e::before { opacity: .45; }
+.cal-key span.k::before { background: var(--work); width: 9px; height: 9px; }
+.cal-key span.l::before { background: var(--long); width: 18px; height: 6px; border-radius: 3px; }
+.cal-key span.r::before { background: var(--race); width: 12px; height: 12px; }
+
+/* interface fragments: the product's own panels */
+.ui { background: var(--deep); color: var(--ink); font-size: 16px; line-height: 1.4; padding: 24px; border-radius: 22px; }
+.ui-lbl { font-weight: 600; }
+.ui-mut { color: var(--muted); font-size: 14px; }
+.ui-box { margin-top: 10px; padding: 14px 16px; background: var(--bg); border-radius: 14px; outline: 2px solid var(--hi); outline-offset: -2px; }
+.ui-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ui-btn { display: inline-block; padding: 10px 16px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 14px; }
+.ui-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 10px; }
+.ui-head b { font-weight: 600; }
+.ui-day { display: grid; grid-template-columns: 4.2em 1fr auto; gap: 4px 12px; padding: 10px 0; }
+.ui-day .dt { color: var(--muted); font-size: 14px; }
+.ui-day .ty, .ui-day .km { font-weight: 600; }
+.ui-day .fact { grid-column: 2 / 4; font-size: 14px; }
+.ui-day .fact b { font-weight: 600; color: var(--hi); }
+.ui-day.today { background: var(--surface); margin-inline: -12px; padding-inline: 12px; border-radius: 12px; }
+.pz { display: grid; grid-template-columns: 4.5em 1fr auto; align-items: baseline; gap: 12px; padding: 7px 0; }
+.pz b { font: 700 1.75rem/1.1 var(--display); letter-spacing: -0.02em; }
+.pz.easy b { color: var(--hi); font-size: 1.375rem; }
+.wk { display: grid; grid-template-columns: 7.5em 1fr 3.4em; align-items: center; gap: 10px; padding: 4px 0; font-size: 14px; }
+.wk i { display: block; height: 8px; border-radius: 4px; background: var(--ink); opacity: .85; }
+.wk.race i { background: var(--race); opacity: 1; }
+.wk span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.lay { display: grid; grid-template-columns: 2.4em 1fr 3.4em; gap: 8px; padding: 6px 0; font-size: 14px; align-items: center; }
+.lay span:nth-child(2) { padding: 4px 12px; background: var(--surface); border-radius: 999px; }
+.lay span:last-child { text-align: right; }
+.hc-block + .hc-block { margin-top: 22px; }
+.hc-lbl { color: var(--muted); font-size: 14px; }
+.hc-big { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-top: 4px; font: 700 1.625rem/1.1 var(--display); letter-spacing: -0.02em; }
+.hc-scale { position: relative; height: 10px; margin-top: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; }
+.hc-scale i { position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--hi); border-radius: 5px; }
+.hc-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; text-align: center; font-size: 13px; }
+.hc-week span { display: block; padding: 7px 0; background: var(--bg); color: var(--muted); border-radius: 999px; }
+.hc-week b { display: block; font-weight: 600; color: var(--ink); font-size: 15px; }
+.hc-week .done { background: var(--hi); color: var(--on-hi); }
+.hc-week .done b { color: var(--on-hi); }
+.hc-week .today { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+/* ---------- showcase: one fragment in front of a disc, chosen from a list ---------- */
+.show { margin-top: var(--section); position: relative; min-height: 100svh; }
+.show-disc { position: absolute; left: 58%; top: 50%; width: min(64svh, 46vw); aspect-ratio: 1; border-radius: 50%; translate: -50% -50%; background: var(--accent); transition: background-color .3s var(--ease); }
+.show-frag { position: absolute; left: 58%; top: 50%; width: min(440px, 34vw); translate: -50% -50%; }
+.show-frag .ui { transition: opacity .24s var(--ease); }
+.show-frag .ui[hidden] { display: block; position: absolute; inset: 0 0 auto 0; opacity: 0; visibility: hidden; }
+.show-list { position: absolute; left: var(--m); bottom: clamp(32px, 8svh, 80px); }
+.show-list ul { list-style: none; margin: 0; padding: 0; }
+.show-list h2 { font-size: clamp(1.75rem, 2.9vw, 2.75rem); color: var(--muted); margin-bottom: .1em; }
+.show-list button { all: unset; cursor: pointer; display: block; font: 700 clamp(1.75rem, 2.9vw, 2.75rem)/1.15 var(--display); letter-spacing: -0.03em; color: var(--muted); transition: color .2s var(--ease); }
+.show-list button[aria-pressed="true"] { color: var(--ink); }
+.show-list button[aria-pressed="true"]::before { content: ''; display: inline-block; width: .42em; height: .42em; border-radius: 50%; background: var(--race); margin-right: .3em; vertical-align: .12em; }
+.show-list button:focus-visible { outline: 3px solid var(--light); outline-offset: 4px; }
+.show-fact { position: absolute; right: var(--m); top: 50%; translate: 0 -50%; width: 30ch; max-width: calc(42% - 4ch - var(--m)); font-size: 1.0625rem; }
+
+/* ---------- how it works: a held scene, scroll moves the stages ---------- */
+.how { margin-top: var(--section); }
+.how-stage { position: relative; }
+.how-fields { display: grid; grid-template-columns: 1fr 1fr; min-height: 88svh; }
+.how.is-live .how-fields { height: 100svh; min-height: 0; }
+.how-left { background: var(--light); color: var(--on-light); padding: clamp(32px, 5vw, 72px) var(--m); }
+.how.is-live .how-left { padding-top: calc(64px + clamp(32px, 5vw, 72px)); }
+.how-left h2 { max-width: 12ch; font-size: clamp(2.75rem, 1.3rem + 4.4vw, 5.5rem); transition: opacity .2s var(--ease); }
+.how-right { background: var(--deep); display: grid; place-items: center; padding: 96px var(--m) 140px; }
+.how-frag { width: min(500px, 100%); position: relative; }
+.how-frag .ui { font-size: 17px; padding: 28px; transition: opacity .25s var(--ease), transform .25s var(--ease); }
+.how-frag .ui[hidden] { display: block; position: absolute; inset: 0 0 auto 0; opacity: 0; transform: translateY(16px); pointer-events: none; visibility: hidden; }
+.how-frag .wk, .how-frag .lay { font-size: 15px; }
+.how-bar { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 28px 26px; z-index: 2; }
+.how-track { position: relative; height: 8px; border-radius: 4px; overflow: hidden; }
+.how-track::before { content: ''; position: absolute; inset: 0; background: currentColor; opacity: .25; }
+.how-track i { position: absolute; left: 0; top: 0; height: 8px; width: var(--pos, 12.5%); background: var(--accent); border-radius: 4px; }
+.how-names { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 14px; }
+.how-names button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; color: inherit; opacity: .7; transition: opacity .2s var(--ease); }
+.how-names button::before { content: ''; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box; border: 2px solid currentColor; }
+.how-names button[aria-pressed="true"] { opacity: 1; font-weight: 600; }
+.how-names button[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); }
+.how-names button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.how-names button:nth-child(-n+2) { color: var(--on-light); }
+.dc-title { font: 700 var(--step-lead)/1.1 var(--display); letter-spacing: -0.02em; }
+.dc-dates { margin-top: 8px; color: var(--muted); font-size: var(--step-lead); }
+.dc-figs { display: flex; gap: clamp(28px, 4vw, 64px); margin-top: 40px; }
+.dc-figs div { color: var(--muted); }
+.dc-figs b { display: block; font: 700 clamp(4.5rem, 2rem + 6vw, 8rem)/.85 var(--display); letter-spacing: -0.045em; color: var(--ink); margin-bottom: 10px; }
+.dc-figs div + div b { color: var(--hi); }
+
+/* ---------- features: a held scene, one feature per beat ---------- */
+.feats { margin-top: var(--section); }
+.feat-stage { position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding: calc(64px + 3svh) var(--m) 96px; min-height: 100svh; }
+.feat-head { grid-column: 1 / 13; align-self: start; font-size: clamp(1.5rem, 2.2vw, 2.25rem); color: var(--muted); margin-bottom: 24px; }
+.feat-list { grid-column: 1 / 13; display: grid; gap: 64px; list-style: none; margin: 0; padding: 0; }
+.feat { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; }
+.feat-text { grid-column: 1 / 6; }
+.feat-name { font: 700 clamp(2.75rem, 1.3rem + 4.4vw, 5.5rem)/.92 var(--display); letter-spacing: -0.04em; max-width: 10ch; }
+.feat-say { margin-top: 24px; font-size: var(--step-lead); line-height: 1.35; max-width: 26ch; }
+.feat-field { grid-column: 7 / 13; display: grid; place-items: center; min-height: min(62svh, 560px); padding: 40px; border-radius: 32px; }
+.feat-field .ui { width: min(500px, 100%); font-size: 18px; padding: 28px; }
+.feat:nth-child(6n+1) .feat-field { background: var(--accent); }
+.feat:nth-child(6n+2) .feat-field { background: var(--light); }
+.feat:nth-child(6n+3) .feat-field { background: var(--mid); }
+.feat:nth-child(6n+4) .feat-field { background: var(--surface); }
+.feat:nth-child(6n+5) .feat-field { background: var(--light); }
+.feat:nth-child(6n+6) .feat-field { background: var(--race); }
+.feat-dots { display: none; }
+/* live: the features stack in one place and the scroll steps through them */
+.feats.is-live .feat-stage { height: 100svh; align-content: center; }
+.feats.is-live .feat-list { position: relative; display: block; height: min(62svh, 560px); }
+.feats.is-live .feat { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .35s var(--ease), visibility 0s .35s; }
+.feats.is-live .feat .feat-field { transform: translateY(24px) scale(.97); transition: transform .45s var(--ease); height: 100%; }
+.feats.is-live .feat .feat-text { transform: translateY(16px); transition: transform .45s var(--ease); }
+.feats.is-live .feat.on { opacity: 1; visibility: visible; transition-delay: 0s; }
+.feats.is-live .feat.on .feat-field, .feats.is-live .feat.on .feat-text { transform: none; }
+.feats.is-live .feat-dots { display: flex; gap: 14px; position: absolute; left: var(--m); bottom: 40px; }
+.feat-dots button { all: unset; cursor: pointer; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--ink); opacity: .6; transition: background-color .2s var(--ease), opacity .2s var(--ease); }
+.feat-dots button[aria-pressed="true"] { background: var(--race); border-color: var(--race); opacity: 1; }
+.feat-dots button:focus-visible { outline: 3px solid var(--light); outline-offset: 3px; }
+.feat-count { position: absolute; right: var(--m); bottom: 36px; color: var(--muted); font-size: var(--step-small); display: none; }
+.feats.is-live .feat-count { display: block; }
+/* the pieces inside the fields */
+.opt { display: flex; gap: 8px; margin: 14px 0 18px; }
+.opt span { padding: 8px 14px; border-radius: 999px; background: var(--surface); font-size: 14px; }
+.opt span.on { background: var(--ink); color: var(--bg); font-weight: 600; }
+.ks { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; text-align: center; font-size: 13px; }
+.ks span { padding: 10px 0; border-radius: 999px; background: var(--surface); color: var(--muted); }
+.ks span b { display: block; color: var(--ink); font-size: 14px; font-weight: 600; }
+.ks span.k { background: var(--work); color: var(--on-hi); }
+.ks span.k b { color: var(--on-hi); }
+.ks span.l { background: var(--long); color: var(--on-hi); }
+.ks span.l b { color: var(--on-hi); }
+.frm { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 18px; }
+.frm div { padding: 10px 14px; border-radius: 14px; background: var(--surface); }
+.frm div span { display: block; color: var(--muted); font-size: 13px; }
+.frm div b { font-weight: 600; }
+
+
+.paces { margin-top: var(--section); background: var(--light); color: var(--on-light); min-height: 88svh; display: flex; flex-direction: column; padding: clamp(40px, 6vw, 88px) var(--m) clamp(32px, 4vw, 56px); border-radius: 40px 40px 0 0; }
+.paces h2 { font-size: clamp(2.25rem, 3.6vw, 3.5rem); max-width: 14ch; }
+.pc-ctl { margin-top: 28px; width: min(560px, 100%); }
+.seg { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; padding: 10px 18px; border-radius: 999px; background: rgba(0,0,0,.08); font-weight: 500; transition: background-color .18s var(--ease), color .18s var(--ease); }
+.seg input:checked + span { background: var(--on-light); color: var(--light); }
+.seg input:focus-visible + span { outline: 3px solid var(--on-light); outline-offset: 3px; }
+.goal { margin-top: 26px; }
+.goal label { display: flex; justify-content: space-between; align-items: baseline; font-weight: 500; }
+.goal output { font: 700 1.75rem/1 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.goal input { width: 100%; margin: 16px 0 0; height: 44px; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+.goal input::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: rgba(0,0,0,.18); }
+.goal input::-moz-range-track { height: 8px; border-radius: 4px; background: rgba(0,0,0,.18); }
+.goal input::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; margin-top: -12px; border-radius: 50%; background: var(--race); border: 0; }
+.goal input::-moz-range-thumb { width: 32px; height: 32px; border-radius: 50%; background: var(--race); border: 0; }
+.goal input:focus-visible { outline: 3px solid var(--on-light); outline-offset: 4px; }
+.pc-res { margin-top: auto; padding-top: 48px; display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; }
+.pc-big { font: 700 var(--step-giant)/.8 var(--display); letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.pc-big small { font-size: .2em; letter-spacing: 0; margin-left: .25em; }
+.pc-rest { list-style: none; margin: 0; padding: 0; min-width: 16em; font-size: var(--step-lead); }
+.pc-rest li { display: flex; justify-content: space-between; gap: 24px; padding: 4px 0; }
+.pc-rest b { font: 700 1em/1.3 var(--display); font-variant-numeric: tabular-nums; }
+/* the goal picker: three goals, the half marathon that goes with each */
+.g-hint { margin-top: 24px; max-width: 34ch; font-size: var(--step-lead); line-height: 1.3; }
+.g-hint b { font-family: var(--display); font-variant-numeric: tabular-nums; }
+.seg.goals span { font: 700 1.5rem/1 var(--display); padding: 12px 22px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+/* the plan's four stages, a bar each as long as its weeks */
+.ph { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 12px; padding: 7px 0; font-size: 14px; }
+.ph b { font-weight: 600; }
+.ph span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.ph i { grid-column: 1 / -1; display: block; height: 8px; border-radius: 4px; background: var(--ink); opacity: .85; }
+.ph.race i { background: var(--race); opacity: 1; }
+
+/* ---------- the band that splits the page: the platform ---------- */
+.band { background: var(--mid); color: var(--on-mid); padding: clamp(64px, 9vw, 140px) var(--m); }
+.band .big { font-size: var(--step-head); max-width: 14ch; }
+.band-sent { margin-top: 24px; font-size: var(--step-lead); max-width: 30ch; }
+.band .quote { margin: 48px 0 0 auto; max-width: 44ch; font-size: var(--step-lead); line-height: 1.4; }
+.band cite { font-style: normal; }
+
+/* ---------- pricing: two plans, two fields ---------- */
+.plans { display: grid; grid-template-columns: 5fr 7fr; }
+.plan { min-height: 90svh; padding: 40px var(--m); display: flex; flex-direction: column; }
+.plan h2 { font-size: clamp(2.75rem, 5vw, 5rem); }
+.plan .who { margin-top: 16px; max-width: 26ch; font-size: var(--step-lead); line-height: 1.3; }
+.plan .inc { margin-top: 28px; max-width: 46ch; }
+.plan .foot { margin-top: auto; padding-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+.plan .price { font: 700 clamp(4rem, 10vw, 10rem)/.8 var(--display); letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.plan .price small { font: 400 var(--step-body)/1.3 var(--font); letter-spacing: 0; margin-left: .5em; display: inline-block; }
+.plan.free { background: var(--surface); color: var(--ink); }
+.plan.pro { background: var(--light); color: var(--on-light); }
+.plan.pro .btn { background: var(--race); color: var(--on-race); }
+.plan.free .btn { background: var(--ink); color: var(--bg); }
+
+/* ---------- questions: filled tiles, one open at a time ---------- */
+.faq { margin-top: var(--section); }
+.faq-h { grid-column: 1 / 5; align-self: start; position: sticky; top: 96px; }
+.faq-h h2 { font-size: clamp(2.25rem, 4vw, 3.75rem); max-width: 7ch; }
+.faq-list { grid-column: 5 / 13; display: grid; gap: 8px; }
+.faq details { background: var(--surface); border-radius: 22px; transition: background-color .2s var(--ease), color .2s var(--ease); }
+.faq details[open] { background: var(--accent); color: var(--on-accent); }
+.faq summary { list-style: none; cursor: pointer; min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 24px; font-size: 1.25rem; font-weight: 500; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary i { position: relative; flex: none; width: 16px; height: 16px; }
+.faq summary i::before, .faq summary i::after { content: ''; position: absolute; left: 0; top: 6.5px; width: 16px; height: 3px; border-radius: 2px; background: currentColor; transition: transform .2s var(--ease); }
+.faq summary i::after { transform: rotate(90deg); }
+.faq details[open] summary i::after { transform: rotate(0deg); }
+.faq summary:focus-visible { outline: 3px solid var(--light); outline-offset: 3px; border-radius: 22px; }
+.faq details p { padding: 0 24px 24px; max-width: 52ch; font-size: 1.0625rem; }
+
+/* ---------- close: one word is the button ---------- */
+.cta { display: block; margin-top: var(--section); position: relative; min-height: 60svh; background: var(--race); color: var(--on-race); text-decoration: none; --r: 30svh; border-radius: var(--r) var(--r) 0 0; overflow: hidden; transition: background-color .15s, color .15s; }
+.cta:hover, .cta:focus-visible { background: var(--ink); color: var(--bg); outline: none; }
+/* the sentence and the arrow sit clear of the rounded corners: at a third of the radius in from the side and down from
+   the top the arch is always inside (owner, 09.11.2026: the text was cut by the curve) */
+.cta-sent { position: absolute; left: max(clamp(40px, 9vw, 160px), calc(var(--r) * .32)); top: max(clamp(40px, 9svh, 96px), calc(var(--r) * .34)); max-width: 26ch; font-size: var(--step-lead); line-height: 1.3; font-weight: 500; }
+.cta svg { position: absolute; right: max(clamp(40px, 9vw, 160px), calc(var(--r) * .32)); top: max(clamp(40px, 9svh, 96px), calc(var(--r) * .34)); width: 48px; height: 48px; }
+.cta-word { position: absolute; left: var(--m); right: var(--m); bottom: 24px; font: 700 27vw/.78 var(--display); letter-spacing: -0.06em; white-space: nowrap; }
+
+/* ---------- footer: the name built from blocks ---------- */
+.foot-mark { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; align-items: end; height: 34svh; min-height: 200px; padding: 4px; }
+.foot-mark span { height: 100%; border-radius: 22px 22px 0 0; display: grid; place-items: end center; font: 700 min(26svh, 20vw)/.78 var(--display); letter-spacing: -0.05em; color: var(--bg); overflow: hidden; }
+.foot-mark span:nth-child(1) { height: 82%; background: var(--light); }
+.foot-mark span:nth-child(2) { height: 100%; background: var(--race); border-radius: 50% 50% 0 0; }
+.foot-mark span:nth-child(3) { height: 64%; background: var(--mid); color: var(--light); }
+.foot-mark span:nth-child(4) { height: 90%; background: var(--ink); }
+.foot-links { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px var(--gap); padding: 56px var(--m) 24px; font-size: 15px; }
+.foot-links nav { grid-column: 1 / 9; display: flex; flex-wrap: wrap; gap: 12px 32px; }
+.foot-links .contact { grid-column: 9 / 13; color: var(--muted); }
+.foot-last { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 0 var(--m) 28px; font-size: 15px; color: var(--muted); }
+.foot-last .btn { min-height: 40px; font-size: 15px; padding: 0 18px; }
+
+
+/* entrances: parts of a section rise in turn, never hidden without a script */
+html.js [data-rise] { opacity: 0; transform: translateY(24px); transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: calc(var(--i, 0) * 80ms); }
+html.js [data-rise].in { opacity: 1; transform: none; }
+
+/* ---------- tablet ---------- */
+@media (max-width: 1100px) {
+  .rail-act .link { display: none; }
+  .cal-text { grid-column: 1 / 6; }
+  .cal-text h2 { font-size: 2.75rem; }
+  .cal-says { font-size: 1.25rem; }
+  .cal { grid-column: 6 / 13; }
+  .cal-grid { font-size: 1rem; grid-template-columns: 2.4em repeat(7, 1fr) 3.2em; }
+  .show-fact { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  .hero { align-items: start; padding-top: 10svh; }
+  .hero-text { grid-column: 1 / 10; }
+  .orb { --D: min(72svh, 80vw); left: calc(100vw - .62 * var(--D)); top: auto; bottom: calc(-.32 * var(--D)); }
+}
+
+/* ---------- phone ---------- */
+@media (max-width: 767px) {
+  .rail { padding: 0 20px; }
+  .hero { display: block; padding: 28px 20px 0; min-height: calc(100svh - 64px); }
+  .hero .h1 { font-size: 2.75rem; }
+  .hero-sent { margin-top: 18px; font-size: 1.125rem; }
+  .hero .row { margin-top: 24px; }
+  .hero .btn { width: 100%; }
+  .hero-note { margin-top: 16px; }
+  /* the phone: the whole circle under the text at the right edge of the text, the 6 in its middle (owner, 09.11.2026) */
+  .orb { --D: 56vw; position: relative; left: auto; top: auto; bottom: auto; margin: 12px 0 0 auto; }
+
+  /* the pinned calendar fits one phone screen under the top bar (owner, 09.11.2026: its heading went under the bar and
+     the legend off the bottom): heading on one line, tighter text and figures, shorter rows */
+  .cal-stage { grid-template-columns: 1fr; padding: 76px 20px 12px; align-content: start; row-gap: 10px; }
+  .cal-text, .cal { grid-column: 1; }
+  .cal-text h2 { font-size: 1.75rem; line-height: 1.05; max-width: none; }
+  .cal-says { margin-top: 6px; min-height: 2.6em; font-size: 1rem; }
+  .cal-figs { margin-top: 6px; }
+  .cal-figs b { font-size: 1.5rem; margin-bottom: 2px; }
+  .cal { padding: 12px 12px 10px; border-radius: 22px; }
+  .cal-grid { grid-template-columns: 2.2em repeat(7, 1fr) 3.4em; font-size: 14px; }
+  .cal-grid .wd, .cal-grid .mo, .cal-grid .wk-km { font-size: 13px; }
+  .cal-grid .wd { padding-bottom: 4px; }
+  .cal-grid .d { padding: 1px 0 clamp(7px, 1.4svh, 12px); } /* taller phones get roomier rows */
+  .cal-grid .d::after { bottom: 1px; }
+  .cal-grid .d.race::before { top: calc(1px + .625em); }
+  .cal-grid .d.race::before { width: 1.55em; height: 1.55em; margin: -.775em 0 0 -.775em; }
+  .cal-key { font-size: 13px; margin-top: 8px; gap: 6px 16px; }
+
+
+  .show { min-height: 0; padding: 0 20px; display: flex; flex-direction: column; gap: 24px; }
+  .show-disc, .show-frag, .show-list, .show-fact { position: relative; left: auto; top: auto; right: auto; bottom: auto; translate: none; }
+  .show-stage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; min-height: 92vw; }
+  .show-frag .ui { min-width: 0; }
+  .hc-big { font-size: 1.375rem; flex-wrap: wrap; }
+  .hc-big span { min-width: 0; overflow-wrap: anywhere; }
+  .show-disc { position: absolute; left: 50%; top: 50%; width: 86vw; translate: -50% -50%; }
+  .show-frag { width: 100%; }
+  .show-list { order: -1; }
+  .show-list ul { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; list-style: none; padding: 0; margin: 0; }
+  .show-list button { font-size: 1.5rem; }
+  .show-fact { display: block; width: auto; max-width: none; }
+
+  .how-fields { display: flex; flex-direction: column; min-height: 0; }
+  .how-right { order: -1; flex: 1 1 auto; padding: 28px 20px; }
+  .how.is-live .how-right { padding-top: 80px; }
+  .how-left { padding: 24px 20px 112px; }
+  .how.is-live .how-left { padding-top: 24px; }
+  .how-left h2 { font-size: 2.5rem; max-width: none; }
+  .how-frag .ui { font-size: 15px; padding: 20px; }
+  .how-frag .wk, .how-frag .lay { font-size: 14px; }
+  .how-bar { padding: 0 20px 20px; color: var(--on-light); }
+  .how-names { grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+  .how-names button:nth-child(n) { color: var(--on-light); }
+
+  .feat-stage { grid-template-columns: 1fr; padding: 80px 20px 72px; }
+  .feat-head { grid-column: 1; margin-bottom: 16px; }
+  .feat-list { grid-column: 1; gap: 48px; }
+  .feat { grid-template-columns: 1fr; row-gap: 20px; }
+  .feat-text, .feat-field { grid-column: 1; }
+  .feat-field { order: -1; min-height: 0; padding: 20px; border-radius: 24px; }
+  .feat-field .ui { font-size: 15px; }
+  .feat-name { font-size: 2.25rem; max-width: none; }
+  .feat-say { margin-top: 10px; font-size: 1.0625rem; }
+  .feats.is-live .feat-list { height: calc(100svh - 80px - 72px - 3.5rem); }
+  .feats.is-live .feat { display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+  .feats.is-live .feat .feat-field { height: auto; }
+  .feats.is-live .feat-dots { left: 20px; bottom: 28px; }
+  .feats.is-live .feat-count { right: 20px; bottom: 24px; }
+
+  .paces { border-radius: 28px 28px 0 0; min-height: 84svh; padding: 40px 20px 28px; }
+  .paces h2 { font-size: 2rem; }
+  .pc-res { padding-top: 40px; flex-direction: column; align-items: stretch; }
+  .pc-big { font-size: 30vw; }
+  .pc-rest { min-width: 0; font-size: 1.125rem; }
+
+  .band .quote { margin-left: 0; }
+  .plans { grid-template-columns: 1fr; }
+  .plans .pro { order: -1; }
+  .plan { min-height: 70svh; padding: 32px 20px 20px; }
+  .plan h2 { font-size: 12vw; }
+  .plan .price { font-size: 24vw; }
+  .plan .foot { flex-direction: column; align-items: stretch; }
+  .plan .btn { width: 100%; }
+
+  .faq-h { position: static; margin-bottom: 24px; }
+  .faq-h, .faq-list { grid-column: 1 / -1; }
+  .faq-h h2 { font-size: 9vw; max-width: none; }
+  .faq summary { font-size: 1.125rem; min-height: 64px; padding: 16px 20px; }
+  .faq details p { padding: 0 20px 20px; font-size: 1rem; }
+
+  .cta { min-height: 46svh; --r: 23svh; }
+  .cta-sent { left: max(28px, calc(var(--r) * .32)); top: max(56px, calc(var(--r) * .34)); font-size: 1.0625rem; max-width: 18ch; }
+  .cta svg { right: max(28px, calc(var(--r) * .32)); top: max(56px, calc(var(--r) * .34)); width: 32px; height: 32px; }
+  .cta-word { font-size: 25vw; }
+
+  .foot-mark { height: 22svh; min-height: 140px; }
+  .foot-mark span { border-radius: 14px 14px 0 0; font-size: 19vw; }
+  .foot-links { grid-template-columns: 1fr; padding: 32px 20px 20px; }
+  .foot-links nav, .foot-links .contact { grid-column: 1; }
+  .foot-last { padding: 0 20px 24px; }
+}
+
+/* a short phone (iPhone SE): the week figures go, the rows get shorter still */
+@media (max-width: 767px) and (max-height: 620px) {
+  .cal-figs { display: none; }
+  .cal-says { min-height: 0; }
+  .cal-grid { font-size: 13px; }
+  .cal-grid .d { padding: 1px 0 5px; }
+  .cal-grid .d::after { width: 5px; height: 5px; margin-left: -2.5px; bottom: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  html.js [data-rise] { opacity: 1; transform: none; transition: none; }
+  .btn, .link, .faq details, .cta { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="rail" id="top">
+  <a class="mark" href="#top">S10 Solo</a>
+  <div class="rail-act">
+    <a class="link" href="#how">Как это работает</a>
+    <a class="link" href="#goal">Цели</a>
+    <a class="link" href="#price">Цена</a>
+    <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Начать</a>
+  </div>
+</header>
+
+<main>
+<!--kml-->
+<div class="kml" id="kml" data-ladder='[["2026-11-16",2000],["2026-11-23",2125],["2026-11-30",2250],["2026-12-07",2375],["2026-12-14",2500],["2026-12-21",2625],["2026-12-28",2750],["2027-01-04",2875],["2027-01-11",3000]]'><template shadowrootmode="open"><link rel="stylesheet" href="intro/intro.css"><div class="kml-root" data-type="service" data-radius="soft" data-buttons="block" data-motion><div class="kml-body"><div class="kml-main">
+<section class="hero hero--photo" data-enter data-calm="top" aria-labelledby="hero-h"> <img class="hero__bg" src="intro/img/hero-1200.webp" srcset="intro/img/hero-800.webp 800w, intro/img/hero-1200.webp 1200w" sizes="100vw" width="1672" height="941" fetchpriority="high" decoding="async" alt="Карандашный рисунок: марафонцы в цветных майках бегут по набережной Казанки, за рекой Казанский кремль и мечеть Кул-Шариф" style="--ly-pos: 50% 62%; --ly-pos-phone: 58% 50%"> <div class="wrap"><div class="hero-text"> <div class="hero__text"> <h1 id="hero-h">Казанский марафон, 2 мая 2027</h1> <p class="hero__lead">Авторский план Юрия Строфилова и платформа S10.run с живыми тренерами.</p> <p class="hero-stats"><strong data-countdown>До старта 163 дня</strong>. План сейчас стоит <strong><span data-price>2 000</span>&nbsp;₽</strong>.</p> <div class="btn-row"> <a class="btn btn--primary" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan" data-s10 data-goal="buy_click" data-block="hero">Начать подготовку<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"></path><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"></path></svg></a> </div> </div> </div></div> </section>
+<section class="section" id="includes" style="--hm: 2" aria-labelledby="includes-h"> <div class="wrap"> <div class="section-head"> <h2 id="includes-h">Что входит в план подготовки</h2> </div> <ol class="includes"> <li class="includes__item"> <span class="includes__n" aria-hidden="true">01</span> <h3>Авторский план Юрия Строфилова</h3> <p>Тренировки до самого старта, неделя за неделей.</p> </li><li class="includes__item"> <span class="includes__n" aria-hidden="true">02</span> <h3>Личные темпы для каждой тренировки</h3> <p>Интервальные, развивающие, длительные и лёгкие пробежки — темп рассчитан под вас.</p> </li><li class="includes__item"> <span class="includes__n" aria-hidden="true">03</span> <h3>Автоматический разбор каждой тренировки</h3> <p>Аналитика после пробежки: что получилось и где запас.</p> </li><li class="includes__item"> <span class="includes__n" aria-hidden="true">04</span> <h3>План подстраивается под форму</h3> <p>Если задание не получилось, следующие тренировки можно пересчитать.</p> </li><li class="includes__item"> <span class="includes__n" aria-hidden="true">05</span> <h3>Телеграм-бот</h3> <p>Задания, напоминания и отчёты приходят в Телеграм.</p> </li><li class="includes__item"> <span class="includes__n" aria-hidden="true">06</span> <h3>Закрытый чат участников</h3> <p>Юрий Строфилов лично отвечает на вопросы.</p> </li><li class="includes__item"> <span class="includes__n" aria-hidden="true">07</span> <h3>Поддержка с живыми людьми</h3> <p>Техническую помощь оказывают люди, а не автоответчик.</p> </li> </ol> </div> </section>
+<section class="section statement" id="coach" style="--hm: 2" data-moment="word-highlight" aria-labelledby="coach-h"> <div class="wrap"> <div class="grid grid--top coach"> <div class="span-6 coach__text"> <h2 id="coach-h" class="t-label">Куратор плана — Юрий Строфилов</h2> <p class="mo-wh__text">Личный рекорд на марафоне — <strong>2:36 в 59 лет</strong>.</p> <ul class="coach__facts"> <li>Чемпион мира на марафоне в возрастных группах 55 и 60 лет</li> <li>Автор книги «Не про бег»</li> </ul> </div> <div class="span-6 start-7"> <div class="frame frame--photo coach__photo"><img class="frame__img" src="intro/img/strofilov-800.webp" srcset="intro/img/strofilov-480.webp 480w, intro/img/strofilov-800.webp 800w" sizes="(max-width: 1023px) 320px, 628px" alt="Юрий Строфилов, карандашный рисунок: сидит на каменном парапете у китайской беседки, в розовой шапке и тёмных очках" loading="lazy" decoding="async" width="800" height="800"></div> </div> </div> </div> </section>
+</div></div></div></template></div>
+<!--/kml-->
+  <section class="hero wrap" aria-labelledby="h1">
+    <div class="hero-text">
+      <h2 class="h1" id="h1">Казанский марафон — план до старта</h2>
+      <p class="hero-sent" data-rise>Готовый план на 24 недели от Юрия Строфилова. Выберите цель — 3:00, 3:30 или 4:00, — и Solo заполнит ваш календарь S10 тренировками в ваших темпах.</p>
+      <div class="row" data-rise style="--i:1">
+        <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Попробовать 3 дня бесплатно</a>
+        <a class="link" href="#plan">Посмотреть план</a>
+      </div>
+      <p class="hero-note dot" data-rise style="--i:2"><span>2 мая 2027 · Казань · 42,2 км</span><span id="days"></span></p>
+    </div>
+    <div class="orb" id="orb" aria-hidden="true"><span>2</span></div>
+  </section>
+
+  <section class="scene cal-sec" id="plan" data-scene="calendar" data-options='{"hold": 3}' aria-labelledby="cal-h">
+    <div class="scene-stage cal-stage">
+      <div class="cal-text">
+        <h2 id="cal-h">Последние 12&nbsp;недель</h2>
+        <div class="cal-says">
+          <p>Старт отмечен: 2 мая, Казань, цель на ваш выбор.</p>
+          <p>Каждую неделю две работы и длительная.</p>
+          <p>Каждая тренировка в ваших темпах и километрах.</p>
+          <p>Календарь заполнен до самого старта.</p>
+        </div>
+        <div class="cal-figs">
+          <div><b class="num" id="cal-km">27 км</b><span id="cal-wk">длительная, 19–25 апр</span></div>
+          <div><b class="num" id="cal-n">34</b>ключевые тренировки</div>
+        </div>
+      </div>
+      <div class="cal" data-ui>
+        <div class="cal-grid" id="cal-grid" aria-label="Календарь с 8 февраля по 2 мая, цель 3:30"></div>
+        <div class="cal-key"><span class="k">работа</span><span class="l">длительная, км справа</span><span class="r">старт</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="show" aria-labelledby="show-h">
+    <div class="show-stage">
+      <div class="show-disc" id="show-disc"></div>
+      <div class="show-frag">
+        <div class="ui" data-ui data-item="0">
+          <div class="hc-block">
+            <div class="hc-lbl">Сегодня, среда 10 марта</div>
+            <div class="hc-big"><span>Развивающая</span><span class="num">17 км</span></div>
+            <div class="hc-lbl">2 по 6 км по 4:59 через 1 км трусцой</div>
+          </div>
+          <div class="hc-block">
+            <div class="hc-lbl">Неделя 17 из 24 · марафонская работа</div>
+            <div class="hc-week num"><span class="done">Пн<b>8</b></span><span class="done">Вт<b>8</b></span><span class="today">Ср<b>17</b></span><span>Чт<b>—</b></span><span>Пт<b>11</b></span><span>Сб<b>8</b></span><span>Вс<b>26</b></span></div>
+          </div>
+          <div class="hc-block">
+            <div class="hc-lbl">До старта</div>
+            <div class="hc-big"><span class="num">53 дня</span></div>
+            <div class="hc-lbl">Казань, 2 мая, 42 км, цель 3:30:00</div>
+          </div>
+        </div>
+        <div class="ui" data-ui data-item="1" hidden>
+          <div class="ui-head"><b>Моя неделя</b><span class="ui-mut">8–14 марта</span></div>
+          <div class="ui-day"><span class="dt">Пн 8</span><span class="ty">Восстановительная</span><span class="km">8 км</span><span class="fact ui-mut">Темп 5:50–6:10 · факт <b>8 км, 5:52</b>, в задании</span></div>
+          <div class="ui-day today"><span class="dt">Ср 10</span><span class="ty">Развивающая</span><span class="km">17 км</span><span class="fact ui-mut">Сегодня · 2 по 6 км по 4:59 через 1 км трусцой, разминка/заминка</span></div>
+          <div class="ui-day"><span class="dt">Пт 12</span><span class="ty">Развивающая</span><span class="km">11 км</span><span class="fact ui-mut">6 по 1 км по 4:41 через 200 м трусцой, разминка/заминка</span></div>
+          <div class="ui-day"><span class="dt">Вс 14</span><span class="ty">Длительная</span><span class="km">26 км</span><span class="fact ui-mut">Первые 10 км по 5:44, потом 13 км непрерывно по 4:59, последние 3 км трусцой</span></div>
+        </div>
+        <div class="ui" data-ui data-item="2" hidden>
+          <div class="ui-head"><b>Мои темпа</b><span class="ui-mut">цель 3:30:00</span></div>
+          <div class="pz"><span>T5</span><b class="num">4:23</b><span class="ui-mut num">400 м за 1:45</span></div>
+          <div class="pz"><span>T10</span><b class="num">4:34</b><span class="ui-mut num">400 м за 1:50</span></div>
+          <div class="pz"><span>T21</span><b class="num">4:46</b><span class="ui-mut num">400 м за 1:54</span></div>
+          <div class="pz"><span>T42</span><b class="num">4:59</b><span class="ui-mut num">400 м за 2:00</span></div>
+          <div class="pz easy"><span>Лёгкий</span><b class="num">5:50–6:10</b><span></span></div>
+        </div>
+        <div class="ui" data-ui data-item="3" hidden>
+          <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">Путь к Казани</span><span class="ui-mut">24 недели</span></div>
+          <div id="show-weeks"></div>
+        </div>
+      </div>
+    </div>
+    <div class="show-list">
+      <h2 id="show-h">Solo каждый день</h2>
+      <ul>
+        <li><button type="button" aria-pressed="true" data-to="0">Сегодня</button></li>
+        <li><button type="button" aria-pressed="false" data-to="1">Неделя</button></li>
+        <li><button type="button" aria-pressed="false" data-to="2">Темпа</button></li>
+        <li><button type="button" aria-pressed="false" data-to="3">План</button></li>
+      </ul>
+    </div>
+    <p class="show-fact" id="show-fact" aria-live="polite">Открыли Solo — и сразу видно, что бежать сегодня, какая это неделя плана и сколько дней до Казани.</p>
+  </section>
+
+  <section class="scene how" id="how" data-scene="how" data-options='{"hold": 3}' aria-labelledby="how-h">
+   <div class="scene-stage how-stage">
+    <div class="how-fields">
+      <div class="how-left">
+        <div class="how-clause" aria-live="polite"><h2 id="how-h">Сначала вы выбираете цель</h2></div>
+      </div>
+      <div class="how-right">
+        <div class="how-frag">
+          <div class="ui" data-ui data-stage="0">
+            <div class="ui-lbl">Цель на марафон</div>
+            <div class="opt num"><span>3:00</span><span class="on">3:30</span><span>4:00</span></div>
+            <div class="ui-row"><span class="ui-mut">Казань · 2 мая 2027 · 24 недели</span></div>
+          </div>
+          <div class="ui" data-ui data-stage="1" hidden>
+            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">Путь к Казани</span><span class="ui-mut">цель 3:30</span></div>
+            <div id="how-weeks"></div>
+          </div>
+          <div class="ui" data-ui data-stage="2" hidden>
+            <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">Дни недели</span><span class="ui-mut">как вам удобно</span></div>
+            <div class="lay"><span>Пн</span><span>Лёгкий бег</span><span></span></div>
+            <div class="lay"><span>Вт</span><span>Лёгкий бег</span><span></span></div>
+            <div class="lay"><span>Ср</span><span>Работа 1</span><span></span></div>
+            <div class="lay"><span>Чт</span><span>Отдых</span><span></span></div>
+            <div class="lay"><span>Пт</span><span>Работа 2</span><span></span></div>
+            <div class="lay"><span>Сб</span><span>Лёгкий бег</span><span></span></div>
+            <div class="lay"><span>Вс</span><span>Длительная</span><span></span></div>
+          </div>
+          <div class="ui" data-ui data-stage="3" hidden>
+            <div class="dc-title">Календарь заполнен</div>
+            <div class="dc-dates">до 2 мая 2027</div>
+            <div class="dc-figs num"><div><b>24</b>недели</div><div><b>3:30</b>цель</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="how-bar">
+      <div class="how-track"><i></i></div>
+      <div class="how-names" role="group" aria-label="Этапы">
+        <button type="button" data-to="0" aria-pressed="true">Цель</button>
+        <button type="button" data-to="1" aria-pressed="false">План</button>
+        <button type="button" data-to="2" aria-pressed="false">Ваша неделя</button>
+        <button type="button" data-to="3" aria-pressed="false">Календарь</button>
+      </div>
+    </div>
+   </div>
+  </section>
+
+  <section class="scene feats" id="feats" data-scene="feats" data-options='{"hold": 5}' aria-labelledby="feat-h">
+   <div class="scene-stage feat-stage">
+    <h2 class="feat-head" id="feat-h">Что умеет Solo</h2>
+    <ol class="feat-list">
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Заполнить календарь</h3><p class="feat-say">Две беговые недели или сразу весь план до 2 мая, одним нажатием.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-lbl">План в календарь</div>
+          <div class="opt"><span class="on">2 беговые недели</span><span>До старта</span></div>
+          <div class="ui-row"><span class="ui-mut">8–21 мар · 2 недели</span><span class="ui-btn">Заполнить календарь</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Темпа от цели</h3><p class="feat-say">T5, T10, T21 и T42 считаются от вашей цели. Можно задать и свои.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-head"><b>Мои темпа</b><span class="ui-mut">цель 3:30:00</span></div>
+          <div class="pz"><span>T5</span><b class="num">4:23</b><span class="ui-mut num">400 м за 1:45</span></div>
+          <div class="pz"><span>T10</span><b class="num">4:34</b><span class="ui-mut num">400 м за 1:50</span></div>
+          <div class="pz"><span>T21</span><b class="num">4:46</b><span class="ui-mut num">400 м за 1:54</span></div>
+          <div class="pz"><span>T42</span><b class="num">4:59</b><span class="ui-mut num">400 м за 2:00</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">План и факт</h3><p class="feat-say">Рядом с каждым заданием — что вы пробежали на самом деле, по трекам из дневника.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-day"><span class="dt">Ср 10</span><span class="ty">Развивающая</span><span class="km">17 км</span><span class="fact ui-mut">2 по 6 км по 4:59 · факт <b>17 км, 4:57</b>, в задании</span></div>
+          <div class="ui-day"><span class="dt">Вс 14</span><span class="ty">Длительная</span><span class="km">26 км</span><span class="fact ui-mut">13 км по 4:59 · факт <b>24 км</b>, короче задания</span></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Вероятность цели</h3><p class="feat-say">Насколько реальна цель к 2 мая — по вашим тренировкам за последние 6 недель. Меняется после каждой.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="hc-lbl">Вероятность достижения цели</div>
+          <div class="hc-big"><span class="num">68%</span><span class="num">3:30:00</span></div>
+          <div class="hc-scale" style="--w:68%"><i></i></div>
+          <p class="ui-mut" style="margin-top:12px">Ключевые работы, объём, длительные и регулярность за 6 недель.</p>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Поздний старт</h3><p class="feat-say">Начинаете, когда подготовка уже идёт? Первые две недели будут легче, ключевые работы — как в плане.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-row" style="padding-bottom:8px"><span class="ui-lbl">Ваш вход в план</span><span class="ui-mut">с недели 9</span></div>
+          <div class="ph"><b>Неделя 9</b><span>легче</span><i style="width:60%"></i></div>
+          <div class="ph"><b>Неделя 10</b><span>чуть легче</span><i style="width:80%"></i></div>
+          <div class="ph"><b>Неделя 11</b><span>по плану</span><i style="width:100%"></i></div>
+        </div></div>
+      </li>
+      <li class="feat">
+        <div class="feat-text"><h3 class="feat-name">Перестроить план</h3><p class="feat-say">Пропустили неделю или бежите быстрее задания? Solo перестроит оставшиеся недели по правилам или с ИИ.</p></div>
+        <div class="feat-field"><div class="ui" data-ui>
+          <div class="ui-lbl">Оставшиеся недели</div>
+          <p class="ui-mut" style="margin:8px 0 16px">За 2 недели пробежано 70% плана: объём вернётся постепенно.</p>
+          <div class="ui-row" style="justify-content:flex-start;flex-wrap:wrap"><span class="ui-btn">Перестроить по правилам</span><span class="ui-btn" style="background:var(--ink);color:var(--bg)">Перестроить с ИИ</span></div>
+        </div></div>
+      </li>
+    </ol>
+    <div class="feat-dots" role="group" aria-label="Функции">
+      <button type="button" aria-pressed="true" aria-label="Заполнить календарь"></button><button type="button" aria-pressed="false" aria-label="Темпа от цели"></button><button type="button" aria-pressed="false" aria-label="План и факт"></button><button type="button" aria-pressed="false" aria-label="Вероятность цели"></button><button type="button" aria-pressed="false" aria-label="Поздний старт"></button><button type="button" aria-pressed="false" aria-label="Перестроить план"></button>
+    </div>
+    <p class="feat-count num" id="feat-count" aria-live="polite">1 из 6</p>
+   </div>
+  </section>
+
+  <section class="paces" id="goal" aria-labelledby="pc-h">
+    <h2 id="pc-h">Какую цель выбрать</h2>
+    <form class="pc-ctl" id="pc-form" data-ui onsubmit="return false">
+      <fieldset class="seg goals">
+        <legend class="vh">Цель на марафон</legend>
+        <label><input type="radio" name="g" value="10800"><span>3:00</span></label>
+        <label><input type="radio" name="g" value="12600" checked><span>3:30</span></label>
+        <label><input type="radio" name="g" value="14400"><span>4:00</span></label>
+      </fieldset>
+    </form>
+    <p class="g-hint" aria-live="polite">Выбирайте по нынешней форме, а не по мечте: эта цель — если полумарафон сейчас около <b id="g-half">1:41</b>.</p>
+    <div class="pc-res" aria-live="polite">
+      <div class="pc-big"><span id="pc-main">4:59</span><small>/км</small></div>
+      <ul class="pc-rest num" id="pc-rest">
+        <li><span>10 км</span><b>4:34</b></li>
+        <li><span>Полумарафон</span><b>4:46</b></li>
+        <li><span>Лёгкий бег</span><b>5:50–6:10</b></li>
+        <li><span>Длительная до</span><b>27 км</b></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="band-h">
+    <h2 class="big" id="band-h">План написал Юрий Строфилов</h2>
+    <p class="band-sent" data-rise>Тренер и основатель S10.run, двукратный чемпион мира по марафону в возрастных группах 55+ и 60+.</p>
+    <blockquote class="quote" data-rise style="--i:1">«Когда вы регулярно тратите на что-то час-полтора в день, имеет смысл делать это осознанно. Именно так добиваются результатов» — <cite>Юрий Строфилов, основатель S10.run</cite></blockquote>
+  </section>
+
+  <section class="plans" id="price" aria-label="Цена">
+    <div class="plan free">
+      <h2>Регистрация</h2>
+      <p class="who">Аккаунт S10. План к Казани откроется сразу после входа.</p>
+      <p class="inc">Зарегистрироваться можно бесплатно. Заполнять календарь планом будет с Premium, первые 3 дня бесплатно.</p>
+      <div class="foot"><div class="price num">0&nbsp;₽</div><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Зарегистрироваться</a></div>
+    </div>
+    <div class="plan pro">
+      <h2>Premium</h2>
+      <p class="who">Для тех, кто готовится к Казани с Solo. <b>Первые 3 дня бесплатно.</b></p>
+      <p class="inc">S10 Solo заполняет календарь планом до 2 мая. Глубокий анализ тренировок, Telegram-бот и приложения для iOS и Android, челленджи каждую неделю и больше 100 подкастов.</p>
+      <div class="foot"><div class="price num">750&nbsp;₽<small>в месяц<br>или 9 €</small></div><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Попробовать 3 дня бесплатно</a></div>
+    </div>
+  </section>
+
+  <section class="faq wrap grid" id="faq" aria-labelledby="fq-h">
+    <div class="faq-h"><h2 id="fq-h">Частые вопросы</h2></div>
+    <div class="faq-list">
+      <details name="faq" open><summary>Подготовка уже идёт. Не поздно?<i></i></summary><p>Нет. Solo начнёт с ближайшей недели плана, а если вы пропустили больше трёх недель, первые две сделает легче.</p></details>
+      <details name="faq"><summary>Чем отличаются цели?<i></i></summary><p>Ключевые работы одни и те же. От цели зависят темпа, длина длительных и лёгкого бега. Цель можно сменить в любой момент.</p></details>
+      <details name="faq"><summary>У меня другой главный старт<i></i></summary><p>Перед заполнением Solo спросит, сделать ли Казанский марафон главным стартом. Прежний старт останется в дневнике обычным соревнованием.</p></details>
+      <details name="faq"><summary>Solo не испортит мой календарь?<i></i></summary><p>Прошедшие дни и сегодня он не трогает, а дни, где уже стоит задача, оставляет как есть. Заполнение можно отменить.</p></details>
+      <details name="faq"><summary>Сколько это стоит?<i></i></summary><p>Регистрация бесплатна. Заполнение календаря — в Premium: первые 3 дня бесплатно, дальше 750 ₽ или 9 € в месяц.</p></details>
+      <details name="faq"><summary>Дата марафона точная?<i></i></summary><p>Организатор пока не объявил её официально. План стоит на 2 мая 2027; если дата сдвинется, мы обновим план.</p></details>
+    </div>
+  </section>
+
+  <a class="cta" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan" aria-label="Начать подготовку к Казани: вход в S10">
+    <span class="cta-sent">Войдите в S10, и план к Казани откроется сразу после входа.</span>
+    <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M12 36 36 12M16 12h20v20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="cta-word" aria-hidden="true">Начать</span>
+  </a>
+</main>
+
+<footer>
+  <div class="foot-mark" aria-hidden="true"><span>S</span><span>o</span><span>l</span><span>o</span></div>
+  <div class="foot-links">
+    <nav aria-label="Ссылки"><a class="link" href="https://s10.run/premium">Premium</a><a class="link" href="https://t.me/+wP4aOZ4910I2MTk6">Вопросы в Telegram</a><a class="link" href="https://s10.run/">S10.run</a><a class="link" href="#faq">Частые вопросы</a></nav>
+    <p class="contact">S10 Solo · подготовка к Казанскому марафону</p>
+  </div>
+  <div class="foot-last"><span>© 2026 · <a class="link" href="https://s10.run/post/3578/">Персональные данные</a></span><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Начать</a></div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js"></script>
+<script src="../landing-v2/scenes/stage.js"></script>
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const touch = matchMedia('(pointer: coarse)').matches; // a finger scrolls: nothing may follow the scroll by script (see flight)
+  const fmt = (s) => { const r = Math.round(s); return Math.floor(r / 60) + ':' + String(r % 60).padStart(2, '0'); };
+  const hms = (s) => { const r = Math.round(s), h = Math.floor(r / 3600), m = Math.floor(r % 3600 / 60), x = r % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
+
+
+  /* the race: 2 May 2027 (solo.js KAZAN.d, provisional); the plan's week −1 is 26 Apr – 2 May, week −n starts n−1 weeks
+     before. Days to go by the Moscow date of the browser's clock, as the Kazan page counts them */
+  const RACE = Date.UTC(2027, 4, 2);
+  const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 12 || h > 14) ? b : c; };
+  const msk = new Date(Date.now() + 3 * 36e5), left = Math.round((RACE - Date.UTC(msk.getUTCFullYear(), msk.getUTCMonth(), msk.getUTCDate())) / 864e5);
+  if (left > 0) $('#days').textContent = ` · до старта ${left} ${plural(left, 'день', 'дня', 'дней')}`;
+  // the Kazan hero on top (deploy/kazan-intro.cjs) lives in a shadow root; its countdown, in its own words
+  const kml = $('#kml'), kmlDays = kml && kml.shadowRoot && kml.shadowRoot.querySelector('[data-countdown]');
+  if (kmlDays) kmlDays.textContent = left > 0 ? `До старта ${left} ${plural(left, 'день', 'дня', 'дней')}` : left === 0 ? 'Старт сегодня' : 'Марафон прошёл';
+  // its price, by their ladder (data-ladder: [from, price], from that Monday, Moscow time), as their own page sets it
+  const kmlPrice = kml && kml.shadowRoot && kml.shadowRoot.querySelector('[data-price]');
+  if (kmlPrice) { const day = msk.toISOString().slice(0, 10); let price = 0; try { JSON.parse(kml.dataset.ladder || '[]').forEach(([from, p]) => { if (!price || from <= day) price = p; }); } catch (e) { price = 0; } if (price) kmlPrice.textContent = price.toLocaleString('ru-RU').replace(/\s/g, '\u00a0'); }
+
+  /* the plan's four stages (plans/kazan-2027.md: База −24…−18, ПАНО −17…−10, Race Specific −9…−4, Taper −3…−1) */
+  const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  const mon = (n, plus = 0) => new Date(2027, 3, 26 - (n - 1) * 7 + plus); // the Monday of plan week −n (+ days: by the calendar, so no clock change shifts a date)
+  const dm = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  const STAGES = [['База', 24, 18], ['Порог', 17, 10], ['Марафонская работа', 9, 4], ['Подводка', 3, 1]];
+  $('#how-weeks').innerHTML = $('#show-weeks').innerHTML = STAGES.map(([name, a, b], k) => {
+    const end = mon(b, 6), n = a - b + 1;
+    return `<div class="ph${k === 3 ? ' race' : ''}"><b>${name}</b><span>${dm(mon(a))} – ${dm(end)} · ${n} ${plural(n, 'неделя', 'недели', 'недель')}</span><i style="width:${Math.round(n / 8 * 100)}%"></i></div>`;
+  }).join('');
+
+  /* the calendar: the plan's last 12 weeks, 8 Feb – 2 May 2027, with Solo's default days (works on Wednesday and Friday,
+     the long run on Sunday); the race week holds one work and the race. The right column is that week's long run for
+     3:30 (the plan's km × 0.85, as solo.js's KAZAN.scale) */
+  const LONG = [24, 21, 17, 24, 26, 26, 27, 22, 27, 20, 14, 0];
+  const span = (w) => {
+    const a = mon(12 - w), b = mon(12 - w, 6);
+    return a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${MONTHS[b.getMonth()]}` : `${dm(a)} – ${dm(b)}`;
+  };
+  const grid = $('#cal-grid'), days = [];
+  grid.insertAdjacentHTML('beforeend', '<span></span>' + ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((d) => `<span class="wd">${d}</span>`).join('') + '<span class="wd">км</span>');
+  let shownMonth = -1;
+  for (let w = 0; w < 12; w++) {
+    const a = mon(12 - w), m = a.getMonth(), endM = mon(12 - w, 6).getMonth();
+    const label = m !== shownMonth ? MONTHS[m] : endM !== shownMonth && endM !== m ? MONTHS[endM] : '';
+    if (label) shownMonth = label === MONTHS[m] ? m : endM;
+    grid.insertAdjacentHTML('beforeend', `<span class="mo">${label}</span>`);
+    for (let i = 0; i < 7; i++) {
+      const d = mon(12 - w, i), race = w === 11 && i === 6;
+      const work = w < 11 ? i === 2 || i === 4 : i === 2, long = w < 11 && i === 6;
+      const el = document.createElement('span');
+      el.className = 'd' + (race ? ' race' : long ? ' long' : work ? ' work' : '');
+      el.textContent = d.getDate();
+      if (race) el.setAttribute('aria-label', '2 мая, Казанский марафон');
+      grid.appendChild(el);
+      days.push({ el, run: work || long });
+    }
+    grid.insertAdjacentHTML('beforeend', `<span class="wk-km">${LONG[w] || '42'}</span>`);
+  }
+  const wkKm = $$('.wk-km', grid), runs = days.filter((d) => d.run);
+  const kmEl = $('#cal-km'), wkEl = $('#cal-wk'), nEl = $('#cal-n');
+  const showUpTo = (n) => {
+    days.forEach((d, i) => d.el.classList.toggle('on', i < n && d.run));
+    wkKm.forEach((el, w) => el.classList.toggle('on', n >= w * 7 + 7));
+    const w = Math.min(10, Math.max(0, Math.ceil(n / 7) - 1)); // the race week has no long run: its figure stays on the week before
+    kmEl.textContent = LONG[w] + ' км';
+    wkEl.textContent = 'длительная, ' + span(w);
+    const lit = runs.filter((d) => d.el.classList.contains('on')).length;
+    nEl.textContent = lit; nEl.nextSibling.textContent = plural(lit, 'ключевая тренировка', 'ключевые тренировки', 'ключевых тренировок');
+  };
+  nEl.textContent = runs.length;
+
+  window.Scenes = window.Scenes || {};
+  Scenes.calendar = (root, o) => Stage.scene(root, {
+    hold: o.hold ?? 3, beats: 4, scrub: Stage.lenis ? true : 0.5,
+    build(tl) {
+      const st = { n: 0 };
+      root.dataset.beat = '0';
+      showUpTo(0);
+      tl.to(st, { n: days.length, duration: 0.82, ease: 'none', onUpdate: () => showUpTo(Math.floor(st.n)) }, 0.1);
+    },
+    rest() { showUpTo(days.length); },
+  });
+
+  /* the orb: the hero's race circle shrinks and lands on 6 December as the calendar arrives (with a mouse) */
+  const orb = $('#orb'), calSec = $('#plan'), raceCell = $('.d.race', grid);
+  const flight = () => {
+    if (reduced) return;
+    // A touch screen scrolls the page on its own, ahead of any script, so whatever a script moves along with the scroll
+    // shakes there however it is done (owner, 09.11.2026, twice). On touch nothing follows the scroll: the circle stays in
+    // the hero and goes up with the page, and 6 December pops in by itself, on a timer, as the calendar comes into view.
+    if (touch) {
+      calSec.classList.add('waiting');
+      const io = new IntersectionObserver((es) => { if (!es.some((e) => e.isIntersecting)) return; calSec.classList.remove('waiting'); calSec.classList.add('pop'); io.disconnect(); }, { threshold: 0.6 });
+      io.observe(raceCell);
+      return;
+    }
+    let S, T, calTop, heroTop;
+    // S: the orb's centre and size in the hero (page coordinates); T: the race circle's centre and size when the calendar is pinned (viewport)
+    const measure = () => {
+      orb.classList.remove('flying', 'gone'); orb.style.cssText = '';
+      const r = orb.getBoundingClientRect();
+      S = { x: r.left + r.width / 2, y: r.top + scrollY + r.height / 2, d: r.width };
+      const sr = $('.cal-stage').getBoundingClientRect(), cr = raceCell.getBoundingClientRect(), cs = getComputedStyle(raceCell, '::before');
+      T = { x: cr.left + cr.width / 2, y: cr.top - sr.top + parseFloat(cs.top), d: parseFloat(cs.width) };
+      calTop = calSec.getBoundingClientRect().top + scrollY;
+      heroTop = orb.parentElement.getBoundingClientRect().top + scrollY - 64; // our hero under the top bar: the flight starts there
+      orb.classList.add('flying');
+      orb.style.left = (S.x - S.d / 2) + 'px'; orb.style.top = '0px';
+    };
+    const place = () => {
+      const p = Math.min(1, Math.max(0, (scrollY - heroTop) / (calTop - heroTop))), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      const cx = S.x + (T.x - S.x) * e, cy = (S.y - scrollY) + (T.y - (S.y - scrollY)) * e, s = 1 - (1 - T.d / S.d) * e;
+      orb.style.transform = `translate(${cx - S.x}px, ${cy - S.d / 2}px) scale(${s})`;
+      const landed = scrollY >= calTop - 1; // calTop can be fractional (the Kazan blocks above), scrollY is whole pixels
+      orb.classList.toggle('gone', landed);
+      calSec.classList.toggle('waiting', !landed);
+    };
+    measure(); place();
+    addEventListener('scroll', place, { passive: true });
+    let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { measure(); place(); }, 150); });
+    if (window.ScrollTrigger) ScrollTrigger.addEventListener('refresh', () => { measure(); place(); });
+  };
+
+  /* showcase: the list picks the fragment and the disc's colour */
+  const FACTS = [
+    'Открыли Solo — и сразу видно, что бежать сегодня, какая это неделя плана и сколько дней до Казани.',
+    'Каждое задание написано в минутах на километр, а рядом — что вы пробежали на самом деле.',
+    'Темпа считаются от вашей цели: T5, T10, T21, T42 и лёгкий бег. Никаких «T21+8» в дневнике.',
+    '24 недели в четыре этапа: база, порог, марафонская работа и подводка к старту.',
+  ];
+  const DISC = ['--accent', '--light', '--mid', '--ink'];
+  const disc = $('#show-disc'), frags = $$('.show-frag .ui'), picks = $$('.show-list button'), fact = $('#show-fact');
+  let item = 0;
+  function showItem(k, force) {
+    if (k === item && !force) return;
+    item = k;
+    frags.forEach((f, i) => { f.hidden = i !== k; });
+    picks.forEach((b, i) => b.setAttribute('aria-pressed', String(i === k)));
+    fact.textContent = FACTS[k];
+    disc.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue(DISC[k]).trim();
+  }
+  picks.forEach((b) => {
+    b.addEventListener('click', () => showItem(+b.dataset.to));
+    b.addEventListener('mouseenter', () => matchMedia('(hover: hover)').matches && showItem(+b.dataset.to));
+    b.addEventListener('focus', () => showItem(+b.dataset.to));
+  });
+  showItem(0, true);
+
+  /* how it works: the scroll moves the stages; the names jump to theirs */
+  const CLAUSES = ['Сначала вы выбираете цель', 'План подстраивается под неё', 'Дальше вы ставите дни', 'И календарь заполнен'];
+  const howRoot = $('#how'), hH = $('#how-h'), hfr = $$('.how-frag .ui'), names = $$('.how-names button'), track = $('.how-track');
+  let stage = 0;
+  const setStage = (i, force) => {
+    if (i === stage && !force) return;
+    stage = i;
+    hH.style.opacity = 0;
+    setTimeout(() => { hH.textContent = CLAUSES[i]; hH.style.opacity = 1; }, reduced ? 0 : 200);
+    hfr.forEach((f, k) => { f.hidden = k !== i; });
+    names.forEach((b, k) => b.setAttribute('aria-pressed', String(k === i)));
+    if (!howRoot.classList.contains('is-live')) track.style.setProperty('--pos', ((i + 0.5) / 4 * 100) + '%');
+  };
+  names.forEach((b) => b.addEventListener('click', () => {
+    const k = +b.dataset.to;
+    if (!howRoot.classList.contains('is-live')) return setStage(k);
+    const top = howRoot.getBoundingClientRect().top + scrollY, run = howRoot.offsetHeight - innerHeight;
+    const y = top + run * (k + 0.5) / 4;
+    Stage.lenis ? Stage.lenis.scrollTo(y) : scrollTo({ top: y, behavior: 'smooth' });
+  }));
+  Scenes.how = (root, o) => Stage.scene(root, {
+    hold: o.hold ?? 3, scrub: Stage.lenis ? true : 0.4,
+    build(tl) {
+      const st = { p: 0 };
+      tl.to(st, { p: 1, duration: 1, ease: 'none', onUpdate: () => {
+        track.style.setProperty('--pos', (st.p * 100) + '%');
+        setStage(Math.min(3, Math.floor(st.p * 4)));
+      } }, 0);
+    },
+    rest() { setStage(stage, true); },
+  });
+
+  /* features: the scroll steps through them; the dots jump to theirs */
+  const featRoot = $('#feats'), feats = $$('.feat', featRoot), fdots = $$('.feat-dots button'), fcount = $('#feat-count');
+  let feat = -1;
+  const setFeat = (k) => {
+    if (k === feat) return;
+    feat = k;
+    feats.forEach((f, i) => f.classList.toggle('on', i === k));
+    fdots.forEach((b, i) => b.setAttribute('aria-pressed', String(i === k)));
+    fcount.textContent = (k + 1) + ' из ' + feats.length;
+  };
+  fdots.forEach((b, k) => b.addEventListener('click', () => {
+    const top = featRoot.getBoundingClientRect().top + scrollY, run = featRoot.offsetHeight - innerHeight;
+    const y = top + run * (k + 0.5) / feats.length;
+    Stage.lenis ? Stage.lenis.scrollTo(y) : scrollTo({ top: y, behavior: 'smooth' });
+  }));
+  Scenes.feats = (root, o) => Stage.scene(root, {
+    hold: o.hold ?? 5, scrub: Stage.lenis ? true : 0.4,
+    build(tl) {
+      const st = { p: 0 };
+      setFeat(0);
+      tl.to(st, { p: 1, duration: 1, ease: 'none', onUpdate: () => setFeat(Math.min(feats.length - 1, Math.floor(st.p * feats.length))) }, 0);
+    },
+    rest() { feats.forEach((f) => f.classList.remove('on')); },
+  });
+
+  /* the goal picker: paces from the marathon goal by Riegel k = 1.06, easy runs from marathon pace (Solo's own formulas),
+     the longest long run (the plan's 32 km × the goal's scale, solo.js's KAZAN.scale), and the half marathon that goes
+     with the goal (the same Riegel) */
+  const SCALE = { 10800: 1, 12600: 0.85, 14400: 0.7 };
+  const form = $('#pc-form'), main = $('#pc-main'), rest = $$('#pc-rest li'), half = $('#g-half');
+  const calc = () => {
+    const sec = +form.g.value;
+    const at = (d) => sec * (d / 42.195) ** 1.06 / d, t42 = at(42.195);
+    const L = Math.min(1, Math.max(0, (t42 - 285) / (410 - 285))), lo = t42 + 55 - 45 * L, hi = lo + 20 + 10 * L, r5 = (x) => Math.round(x / 5) * 5;
+    main.textContent = fmt(t42);
+    rest[0].innerHTML = `<span>10 км</span><b>${fmt(at(10))}</b>`;
+    rest[1].innerHTML = `<span>Полумарафон</span><b>${fmt(at(21.0975))}</b>`;
+    rest[2].innerHTML = `<span>Лёгкий бег</span><b>${fmt(r5(lo))}–${fmt(r5(hi))}</b>`;
+    rest[3].innerHTML = `<span>Длительная до</span><b>${Math.round(32 * SCALE[sec])} км</b>`;
+    half.textContent = hms(Math.round(at(21.0975) * 21.0975 / 60) * 60).replace(/:00$/, '');
+  };
+  form.addEventListener('change', calc);
+  calc();
+
+  /* entrances */
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -12% 0px' }) : null;
+  $$('[data-rise]').forEach((el) => (io && !reduced ? io.observe(el) : el.classList.add('in')));
+
+  /* the disc and its fragment settle as the section arrives */
+  if (window.gsap && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger); // the scenes need it on every screen
+  if (window.gsap && window.ScrollTrigger && !reduced && !touch) { // the showcase and footer drift: not under a finger
+    gsap.fromTo('#show-disc', { scale: 0.6 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: '.show', start: 'top bottom', end: 'top 20%', scrub: 0.4 } });
+    gsap.fromTo('.show-frag', { yPercent: 18 }, { yPercent: 0, ease: 'none', scrollTrigger: { trigger: '.show', start: 'top bottom', end: 'top 20%', scrub: 0.4 } });
+    gsap.fromTo('.foot-mark span', { yPercent: 40 }, { yPercent: 0, stagger: 0.08, ease: 'none', scrollTrigger: { trigger: '.foot-mark', start: 'top bottom', end: 'bottom bottom', scrub: 0.4 } });
+  }
+
+  if (window.Stage) { Stage.smooth(); Stage.init(); }
+  if (document.fonts) document.fonts.ready.then(flight); else flight();
+})();
+</script>
+</body>
+</html>

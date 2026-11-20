@@ -6,9 +6,10 @@ const FILES = [
   { file: 't5/solo/solo.js', url: '/t5/solo/solo.js' },
   { file: 'solo.html', url: '/solo/plan', also: '/solo/kazan' }, // also: served at a second address too (the brief's table only)
   { file: 'solo-start.html', url: '/solo/start' },
+  { file: 'kazan-start.html', url: '/solo/kazan/start' }, // the Kazan promo page (20.11.2026)
 ];
 const hash = (buf) => crypto.createHash('sha256').update(buf).digest('hex').slice(0, 12);
-// one id for the three files together: the zip's name and the title of its README
+// one id for the files together: the zip's name and the title of its README
 const releaseId = (hashes) => crypto.createHash('sha256').update(FILES.map((f) => `${f.file}:${hashes[f.file]}`).join('\n')).digest('hex').slice(0, 10);
 
 module.exports = { FILES, hash, releaseId };

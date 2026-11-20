@@ -1,25 +1,30 @@
 // Checks the release promo page (release/solo-start.html) the way s10.run would serve it at /solo/start, with every
 // request outside this machine blocked (the fonts too): the scroll scenes must run from the inlined libraries alone,
 // every action must lead to the login with the way back to /solo/plan, and the paces must follow the goal.
+// `node tests/landing.cjs kazan`: the same for the Kazan promo page (release/kazan-start.html at /solo/kazan/start, back
+// to /solo/kazan, the circle lands on 2 May, the goal picker instead of the paces slider).
 // Run after `npm run build`.
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
-const FILE = path.resolve(__dirname, '..', 'release', 'solo-start.html');
-const LOGIN = 'https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan';
+const KZ = process.argv[2] === 'kazan';
+const FILE = path.resolve(__dirname, '..', 'release', KZ ? 'kazan-start.html' : 'solo-start.html');
+const ROUTE = KZ ? '/solo/kazan/start' : '/solo/start';
+const LOGIN = 'https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2F' + (KZ ? 'kazan' : 'plan');
+const RACE = KZ ? '2 May' : '6 December';
 
 const results = []; const check = (n, ok, i = '') => { results.push(!!ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${i ? `  (${i})` : ''}`); };
 const REACT = !!process.env.REACT; // the same checks on react-src/ as the developers' app would run it (tests/react)
 const srv = http.createServer((q, r) => {
   const p = new URL(q.url, 'http://x').pathname;
   if (REACT && p === '/app.js') { r.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' }); return r.end(fs.readFileSync(path.join(__dirname, 'react', 'dist', 'app.js'))); }
-  if (REACT && p === '/solo/start') { r.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return r.end('<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html,body{margin:0}</style></head><body><div id="app"></div><script src="/app.js"></script></body></html>'); }
-  if (p !== '/solo/start') { r.writeHead(404); return r.end(); }
+  if (REACT && p === ROUTE) { r.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return r.end('<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html,body{margin:0}</style></head><body><div id="app"></div><script src="/app.js"></script></body></html>'); }
+  if (p !== ROUTE) { r.writeHead(404); return r.end(); }
   r.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); r.end(fs.readFileSync(FILE));
 });
 
 (async () => {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
-  const url = `http://127.0.0.1:${srv.address().port}/solo/start`;
+  const url = `http://127.0.0.1:${srv.address().port}${ROUTE}`;
   const browser = await chromium.launch();
   // the tablet and the phone are touch screens (pointer: coarse), as people hold them: no Lenis, the orb rides with the page
   for (const [w, h, name, touch] of [[1440, 900, 'desktop', false], [768, 1024, 'tablet', true], [390, 844, 'phone', true]]) {
@@ -30,12 +35,37 @@ const srv = http.createServer((q, r) => {
     await page.goto(url, { waitUntil: 'load' });
     await page.waitForTimeout(800);
 
-    check(`${name}: the title`, (await page.textContent('h1')).trim() === 'S10 Solo — план до старта');
-    check(`${name}: the scroll libraries run from the page itself`, REACT ? await page.evaluate(() => !!(window.__s10 && window.__s10.triggers() > 0 && document.querySelector('.s10-solo-start.js'))) : await page.evaluate(() => !!(window.gsap && window.ScrollTrigger && window.Stage && window.Stage.live)));
+    check(`${name}: the title`, KZ ? (await page.textContent('#h1')).trim() === 'Казанский марафон — план до старта' : (await page.textContent('h1')).trim() === 'S10 Solo — план до старта');
+    if (KZ) { // the three Kazan blocks on top, in their shadow root: there, with their pictures, the page's one h1, the button to the login
+      const kml = await page.evaluate(async (login) => {
+        const r = document.getElementById('kml').shadowRoot; if (!r) return { root: false };
+        const imgs = [...r.querySelectorAll('img')]; imgs.forEach((i) => { i.loading = 'eager'; }); await Promise.all(imgs.map((i) => i.decode().catch(() => {})));
+        return { root: true, blocks: [...r.querySelectorAll('section')].map((x) => x.id || x.className.split(' ')[0]).join(' '), h1: [...document.querySelectorAll('h1'), ...r.querySelectorAll('h1')].map((h) => h.textContent.replace(/\s+/g, ' ').trim()),
+          imgs: imgs.map((i) => i.naturalWidth), links: [...r.querySelectorAll('a')].every((a) => a.href === login), font: getComputedStyle(r.querySelector('h1')).fontFamily, days: r.querySelector('[data-countdown]').textContent, price: r.querySelector('[data-price]').textContent };
+      }, LOGIN);
+      check(`${name}: the Kazan blocks on top: hero, «Что входит», the curator, their pictures and one h1`, kml.root && kml.blocks === 'hero includes coach' && kml.h1.length === 1 && kml.h1[0] === 'Казанский марафон, 2 мая 2027' && kml.imgs.length === 2 && kml.imgs.every((w) => w > 0) && kml.links && /Roboto/.test(kml.font), JSON.stringify(kml));
+      { // the price of the Moscow day by their ladder: 2 000 ₽ from 16.11.2026, +125 ₽ each Monday, 3 000 ₽ from 11.01.2027
+        const day = new Date(Date.now() + 3 * 36e5).toISOString().slice(0, 10), L = [['2026-11-16', 2000], ['2026-11-23', 2125], ['2026-11-30', 2250], ['2026-12-07', 2375], ['2026-12-14', 2500], ['2026-12-21', 2625], ['2026-12-28', 2750], ['2027-01-04', 2875], ['2027-01-11', 3000]];
+        const want = L.filter(([f]) => f <= day).pop()?.[1] ?? 2000;
+        check(`${name}: their price of the day, by their ladder`, kml.price.replace(/\s/g, '') === String(want), `${kml.price} ₽ on ${day}, want ${want}`);
+      }
+      check(`${name}: their countdown says what ours says`, kml.days === (await page.textContent('#days')).replace(/^ · до старта/, 'До старта'), `${kml.days} | ${await page.textContent('#days')}`);
+      const over = await page.evaluate(async () => { const r = document.getElementById('kml').shadowRoot, ph = r.querySelector('#coach img'); ph.scrollIntoView({ block: 'center', behavior: 'instant' }); await new Promise((ok) => setTimeout(ok, 600)); const q = ph.getBoundingClientRect(); const hit = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); return hit && hit.id; });
+      check(`${name}: nothing of ours covers the portrait`, over === 'kml', over);
+      await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' })); await page.waitForTimeout(800);
+    }
+    if (KZ) { // days to go, by the Moscow date (the race is 2 May 2027)
+      const left = Math.round((Date.UTC(2027, 4, 2) - Date.UTC(...new Date(Date.now() + 3 * 36e5).toISOString().slice(0, 10).split('-').map((v, i) => (i === 1 ? v - 1 : +v)))) / 864e5);
+      const days = (await page.textContent('#days')).trim();
+      check(`${name}: days to the race`, left > 0 ? new RegExp(`^· до старта ${left} (день|дня|дней)$`).test(days) : days === '', days);
+      const cal = await page.evaluate(() => ({ days: document.querySelectorAll('#cal-grid .d').length, race: document.querySelector('#cal-grid .d.race').textContent, first: document.querySelector('#cal-grid .d').textContent, stages: document.querySelectorAll('#show-weeks .ph').length }));
+      check(`${name}: the calendar is 8 Feb – 2 May, four stages`, cal.days === 84 && cal.race === '2' && cal.first === '8' && cal.stages === 4, JSON.stringify(cal));
+    }
+    check(`${name}: the scroll libraries run from the page itself`, REACT ? await page.evaluate((sel) => !!(window.__s10 && window.__s10.triggers() > 0 && document.querySelector(sel)), KZ ? '.s10-kazan-start.js' : '.s10-solo-start.js') : await page.evaluate(() => !!(window.gsap && window.ScrollTrigger && window.Stage && window.Stage.live)));
     const live = await page.evaluate(() => ['plan', 'how', 'feats'].map((id) => document.getElementById(id).classList.contains('is-live')));
     check(`${name}: the three scroll scenes are live`, live.every(Boolean), live.join(' '));
     const hrefs = await page.evaluate(() => [...document.querySelectorAll('a.btn, a.cta')].map((a) => a.href));
-    check(`${name}: every action goes to the login and back to /solo/plan`, hrefs.length >= 5 && hrefs.every((x) => x === LOGIN), `${hrefs.length} actions`);
+    check(`${name}: every action goes to the login and back to ${KZ ? '/solo/kazan' : '/solo/plan'}`, hrefs.length >= 5 && hrefs.every((x) => x === LOGIN), `${hrefs.length} actions`);
 
     // with a mouse the race circle flies into 6 December as the calendar pins; on touch nothing follows the scroll: the
     // circle stays in the hero and 6 December pops in on a timer as the calendar comes into view (owner, 09.11.2026)
@@ -45,7 +75,7 @@ const srv = http.createServer((q, r) => {
       const orb = document.getElementById('orb'), cal = document.getElementById('plan'), cell = document.querySelector('.d.race');
       return { flying: orb.classList.contains('flying'), orbGone: orb.classList.contains('gone'), pop: cal.classList.contains('pop'), cellShown: getComputedStyle(cell).visibility === 'visible' };
     });
-    check(`${name}: 6 December ${touch ? 'pops in, the circle stays in the hero' : 'gets the flying circle'}`, landed.cellShown && (touch ? !landed.flying && landed.pop : landed.orbGone), JSON.stringify(landed));
+    check(`${name}: ${RACE} ${touch ? 'pops in, the circle stays in the hero' : 'gets the flying circle'}`, landed.cellShown && (touch ? !landed.flying && landed.pop : landed.orbGone), JSON.stringify(landed));
     if (!touch) { // the flight closes in on 6 December steadily
       const path = [];
       for (let i = 0; i <= 10; i++) {
@@ -53,11 +83,11 @@ const srv = http.createServer((q, r) => {
         await page.waitForTimeout(120);
         path.push(await page.evaluate(() => { const o = document.getElementById('orb').getBoundingClientRect(), c = document.querySelector('.d.race').getBoundingClientRect(); return Math.hypot(o.left + o.width / 2 - (c.left + c.width / 2), o.top + o.height / 2 - (c.top + c.height / 2)); }));
       }
-      check(`${name}: the circle closes in on 6 December steadily`, path.slice(0, -1).every((d, i) => path[i + 1] <= d + 2), path.map((d) => Math.round(d)).join(' '));
+      check(`${name}: the circle closes in on ${RACE} steadily`, path.slice(0, -1).every((d, i) => path[i + 1] <= d + 2), path.map((d) => Math.round(d)).join(' '));
     } else if (w < 768) { // a phone: the whole circle on the first screen, the 6 in its middle
       await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(200);
       const o = await page.evaluate(() => { const c = document.getElementById('orb').getBoundingClientRect(), d = document.querySelector('#orb span').getBoundingClientRect(); return { inside: c.left >= 0 && c.right <= innerWidth, dx: Math.round(Math.abs(c.left + c.width / 2 - (d.left + d.width / 2))) }; });
-      check(`${name}: the whole circle on screen, the 6 in its middle`, o.inside && o.dx <= 2, JSON.stringify(o));
+      check(`${name}: the whole circle on screen, the ${KZ ? 2 : 6} in its middle`, o.inside && o.dx <= 2, JSON.stringify(o));
     }
     // the pinned calendar fits under the top bar and above the screen's bottom
     await page.evaluate(() => scrollTo(0, document.getElementById('plan').offsetTop + innerHeight)); await page.waitForTimeout(400);
@@ -73,12 +103,19 @@ const srv = http.createServer((q, r) => {
     }
     check(`${name}: «Что умеет Solo» steps from the first feature to the sixth`, steps[0] === '1 из 6' && steps[2] === '6 из 6', steps.join(' → '));
 
-    // paces follow the goal: 3:20 marathon gives 4:44, a 1:30 half its own pace
-    const p0 = await page.textContent('#pc-main');
-    await page.check('input[name="d"][value="21.0975"]', { force: true });
-    await page.evaluate(() => { const r = document.getElementById('pc-t'); r.value = 5400; r.dispatchEvent(new Event('input', { bubbles: true })); });
-    const p1 = await page.textContent('#pc-main');
-    check(`${name}: paces follow the goal`, p0 === '4:44' && p1 === '4:16', `${p0}, then ${p1}`);
+    if (KZ) { // the goal picker: 3:30 by default; 3:00 gives 4:16, the 32 km long run and a 1:26 half; 4:00 gives 5:41
+      const read = () => page.evaluate(() => [document.getElementById('pc-main').textContent, document.getElementById('g-half').textContent, ...[...document.querySelectorAll('#pc-rest b')].map((b) => b.textContent)].join(' '));
+      const g0 = await read();
+      await page.check('input[name="g"][value="10800"]', { force: true }); const g1 = await read();
+      await page.check('input[name="g"][value="14400"]', { force: true }); const g2 = await read();
+      check(`${name}: the goal sets the paces, the long run and the half`, g0 === '4:59 1:41 4:34 4:46 5:50–6:10 27 км' && g1 === '4:16 1:26 3:55 4:06 5:10–5:30 32 км' && g2 === '5:41 1:55 5:13 5:27 6:15–6:40 22 км', `${g0} | ${g1} | ${g2}`);
+    } else { // paces follow the goal: 3:20 marathon gives 4:44, a 1:30 half its own pace
+      const p0 = await page.textContent('#pc-main');
+      await page.check('input[name="d"][value="21.0975"]', { force: true });
+      await page.evaluate(() => { const r = document.getElementById('pc-t'); r.value = 5400; r.dispatchEvent(new Event('input', { bubbles: true })); });
+      const p1 = await page.textContent('#pc-main');
+      check(`${name}: paces follow the goal`, p0 === '4:44' && p1 === '4:16', `${p0}, then ${p1}`);
+    }
 
     // the closing «Начать» block is an arch: its sentence and arrow stay inside the rounded corners (cut on phones and
     // tablets before 09.11.2026)
@@ -97,17 +134,17 @@ const srv = http.createServer((q, r) => {
     if (REACT) { // unmount and mount again: no triggers, observers or classes left, and no doubles after a second mount
       const n1 = await page.evaluate(() => window.__s10.triggers());
       await page.evaluate(() => window.__s10.unmount()); await page.waitForTimeout(300);
-      const after = await page.evaluate(() => ({ t: window.__s10.triggers(), root: !!document.querySelector('.s10-solo-start'), sb: document.documentElement.style.scrollBehavior, ob: document.body.style.overscrollBehavior }));
+      const after = await page.evaluate(() => ({ t: window.__s10.triggers(), root: !!document.querySelector('.s10-solo-start, .s10-kazan-start'), sb: document.documentElement.style.scrollBehavior, ob: document.body.style.overscrollBehavior }));
       await page.evaluate(() => { scrollTo(0, 400); dispatchEvent(new Event('resize')); }); await page.waitForTimeout(400);
       check(`${name}: react: unmount removes every ScrollTrigger, Lenis marks and the page`, after.t === 0 && !after.root && !after.sb && !after.ob && !errors.length, JSON.stringify(after) + errors.join('; '));
       await page.evaluate(() => { scrollTo(0, 0); window.__s10.mount(); }); await page.waitForTimeout(1000);
-      const again = await page.evaluate(() => ({ t: window.__s10.triggers(), live: ['plan', 'how', 'feats'].every((id) => document.getElementById(id).classList.contains('is-live')), weeks: document.querySelectorAll('#how-weeks .wk').length, days: document.querySelectorAll('#cal-grid .d').length }));
-      check(`${name}: react: mounted again: the same triggers, scenes live, the calendar once`, again.t === n1 && again.live && again.weeks === 12 && again.days === 84 && !errors.length, JSON.stringify(again) + ` first ${n1}`);
+      const again = await page.evaluate(() => ({ t: window.__s10.triggers(), live: ['plan', 'how', 'feats'].every((id) => document.getElementById(id).classList.contains('is-live')), weeks: document.querySelectorAll('#how-weeks .wk, #how-weeks .ph').length, days: document.querySelectorAll('#cal-grid .d').length }));
+      check(`${name}: react: mounted again: the same triggers, scenes live, the calendar once`, again.t === n1 && again.live && again.weeks === (KZ ? 4 : 12) && again.days === 84 && !errors.length, JSON.stringify(again) + ` first ${n1}`);
     }
     await page.close();
   }
   await browser.close(); srv.close();
   const failed = results.filter((x) => !x).length;
-  console.log(`\n${results.length - failed}/${results.length} landing checks passed`);
+  console.log(`\n${results.length - failed}/${results.length} ${KZ ? 'Kazan ' : ''}landing checks passed`);
   process.exit(failed ? 1 : 0);
 })();

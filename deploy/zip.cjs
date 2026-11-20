@@ -14,5 +14,5 @@ const name = `solo_release_${releaseId(hashes)}.zip`, zip = path.join(OUT, name)
 fs.mkdirSync(OUT, { recursive: true });
 fs.rmSync(zip, { force: true });
 // the same layout as every archive before: the files at the top, solo.js under t5/solo/; -X leaves out Mac extras
-execFileSync('zip', ['-X', '-r', zip, 'README.md', 'solo.html', 'solo-start.html', 't5'], { cwd: REL, stdio: 'ignore' });
+execFileSync('zip', ['-X', '-r', zip, 'README.md', 'solo.html', 'solo-start.html', 'kazan-start.html', 't5'], { cwd: REL, stdio: 'ignore' });
 console.log(`dist/${name}\n  changed: ${changed.join(', ')}\n  after the developer puts it up: npm run live, then commit deploy/live.json and release/`);

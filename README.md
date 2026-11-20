@@ -38,6 +38,7 @@ Colours: palette №3 «Лист, синяя и красная ручка» is t
 | `index.html` | GitHub Pages root: redirects to the demo outside s10.run. |
 | `landing/` | Promo page for S10 Solo: https://strofilov-a.github.io/s10-week/landing/ (`?p=1`, `3` or `4` picks a palette). |
 | `landing-v2/` | The same page redesigned after a taste review: https://strofilov-a.github.io/s10-week/landing-v2/ |
+| `landing-kazan/` | The Kazan marathon promo page (`/solo/kazan/start`), landing-v2 retold for the race of 2 May 2027 with the goal picker 3:00 / 3:30 / 4:00. |
 | `deploy/solo.html`, `deploy/ЗАДАНИЕ.md` | The page shell for s10.run and the one-page brief for the S10 developer. |
 | `deploy/build.cjs`, `release/` | `npm run build` makes `release/`, the folder for the S10 developer: production `solo.js` without the demo, `solo.html`, `solo-start.html`, the brief. |
 | `deploy/zip.cjs`, `deploy/live.cjs`, `deploy/live.json` | `npm run zip` packs `release/` as `dist/solo_release_<id>.zip`, its brief marking which files changed since the live site; `npm run live` checks what s10.run serves and records it once a release is up. |
@@ -53,6 +54,7 @@ Colours: palette №3 «Лист, синяя и красная ручка» is t
 3. Open it logged in. A coach can view an athlete with `?id=<athlete id>`.
 4. Add «Моя неделя» to the site menu.
 5. (17.11.2026) Serve the same `solo.html` at `/solo/kazan`, also before the club's route.
+6. (20.11.2026) Serve `kazan-start.html` at `/solo/kazan/start`, before `/solo/kazan` and the club's route.
 
 For each new release: `npm run zip`, send the zip; the developer replaces the files its README marks as changed (`?v=`
 in `solo.html` is already bumped). Then `npm run live` confirms the site serves it. `solo.js` must be served from

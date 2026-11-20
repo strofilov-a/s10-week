@@ -5,6 +5,7 @@
 - `/solo/plan` — кабинет «S10 Solo / Моя неделя».
 - `/solo/kazan` — тот же кабинет в режиме Казанского марафона 2 мая 2027 (новое в V4).
 - `/solo/start` — публичная промо-страница S10 Solo.
+- `/solo/kazan/start` — публичная промо-страница подготовки к Казанскому марафону (новое в V4).
 
 ## Новое в V4: `/solo/kazan`
 
@@ -16,6 +17,10 @@
 - Версия плана — в том же `studentPlans<ID>` с `kind: 'kazan'`. Ключи localStorage — `s10week.kazan.…`, ключи Solo не трогаются.
 
 Подробности и какие файлы заменить — в `CHANGES.md`.
+
+## Новое в V4: `/solo/kazan/start`
+
+`<KazanStart />` — промо-страница Казани, устроена как `/solo/start`: своя разметка (`kazan-start/markup.ts`), свой скрипт (`kazan-start/start.ts`), стили под `.s10-kazan-start`; сцены прокрутки (`solo-start/stage.ts`) и шрифты (`solo-start/fonts.css`) общие с `/solo/start`. Запросов к сайту не делает, все кнопки ведут на `/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan`. Сверху три блока со страницы Казанского марафона владельца (рисунок Казани, «Что входит в план подготовки», куратор Юрий Строфилов с портретом) со своими стилями: они лежат в shadow DOM (`#kml`), его создаёт `start.ts` при монтировании, так что их CSS и наш не пересекаются. Картинки уже внутри `markup.ts` (data: URL), отдельных файлов не нужно.
 
 ## Отличия от b82aba6586
 
@@ -62,10 +67,16 @@ solo-start/
   stage.ts       сцены прокрутки (GSAP ScrollTrigger, Lenis)
   start.css      стили, все под .s10-solo-start
   fonts.css      Jost и Golos Text (woff2 в data: URL)
+kazan-start/
+  KazanStart.tsx корневой компонент /solo/kazan/start
+  markup.ts      разметка страницы (строка)
+  start.ts       скрипт страницы: mountKazanStart(root) → cleanup (сцены из solo-start/stage.ts)
+  start.css      стили, все под .s10-kazan-start (шрифты Jost и Golos Text из solo-start/fonts.css)
+  fonts.css      Roboto (woff2 в data: URL) для трёх блоков сверху
 README.md, CHANGES.md, CLAUDE.md
 ```
 
-`engine.ts`, `plan.css`, `markup.ts`, `start.css` и `fonts.css` сгенерированы скриптом из исходников релиза. Сам скрипт лежит в нашем репозитории (`deploy/react-src.cjs`). Править их можно, но при следующей нашей версии мы пришлём их заново целиком.
+`engine.ts`, `plan.css`, оба `markup.ts`, оба `start.css` и `fonts.css` сгенерированы скриптом из исходников релиза. Сам скрипт лежит в нашем репозитории (`deploy/react-src.cjs`). Править их можно, но при следующей нашей версии мы пришлём их заново целиком.
 
 ## Подключение
 
@@ -73,14 +84,16 @@ README.md, CHANGES.md, CLAUDE.md
 import { SoloPlan } from './solo-plan/SoloPlan';
 import { SoloKazan } from './solo-plan/SoloKazan';
 import { SoloStart } from './solo-start/SoloStart';
+import { KazanStart } from './kazan-start/KazanStart';
 
 // где-то в вашем роутере
 {path === '/solo/plan'  && <SoloPlan />}
 {path === '/solo/kazan' && <SoloKazan />}
 {path === '/solo/start' && <SoloStart />}
+{path === '/solo/kazan/start' && <KazanStart />}   // точное совпадение: /solo/kazan/start — не /solo/kazan
 ```
 
-- **Независимость страниц.** Каждая страница — отдельный корневой компонент. При импорте ничего не монтируется. `SoloStart` не делает запросов: в `start.ts` и `stage.ts` нет ни одного `fetch` и нет обращений к кабинету.
+- **Независимость страниц.** Каждая страница — отдельный корневой компонент. При импорте ничего не монтируется. `SoloStart` и `KazanStart` не делают запросов: в `start.ts` и `stage.ts` нет ни одного `fetch` и нет обращений к кабинету.
 - **Режим задаёт компонент, а не адрес.** `<SoloKazan />` включает Казань, `<SoloPlan />` по любому адресу — обычный Solo.
 - **`<SoloPlan overlay />`.** Кабинет накрывает всё окно (`position: fixed`), как в отдельном релизе поверх `#root` сайта. По умолчанию `overlay` выключен, и кабинет рисуется на своём месте.
 - **Webpack.** Нужны правила только для `.tsx?` (ts-loader) и `.css` (`style-loader` + `css-loader`). Шрифты лежат внутри CSS как `data:`, отдельное правило для файлов шрифтов не нужно. Для `import './x.css'` в проекте нужна декларация `declare module '*.css';`, если её ещё нет.
@@ -96,13 +109,14 @@ import { SoloStart } from './solo-start/SoloStart';
   - `viewport` с `viewport-fit=cover`.
 
   Тексты — из `solo-start.html` релиза.
-- **Стили страницы на `<body>`.** В отдельной странице стили `body` (фон `#EEF1EF`, шрифт, `overflow-x: clip`) стояли на `<body>`. Здесь они стоят на корне `.s10-solo-start`. Если корень у вас не во всю ширину, поля вокруг будут вашего цвета.
+- **`/solo/kazan/start`.** То же самое, тексты из `kazan-start.html` релиза: `<title>Казанский марафон 2027 — план подготовки · S10 Solo</title>`, `meta description`, `og:title`, `og:description`, `theme-color #EEF1EF`, `viewport-fit=cover`.
+- **Стили страницы на `<body>`.** В отдельной странице стили `body` (фон `#EEF1EF`, шрифт, `overflow-x: clip`) стояли на `<body>`. Здесь они стоят на корне `.s10-solo-start` (у Казани `.s10-kazan-start`). Если корень у вас не во всю ширину, поля вокруг будут вашего цвета.
 
 ## Внешние зависимости
 
 | Что | Версия | Где | Зачем |
 |---|---|---|---|
-| `gsap` (с `gsap/ScrollTrigger`) | 3.15.0 | `solo-start/stage.ts`, `start.ts` | Сцены прокрутки: календарь, «Как это работает», «Что умеет Solo», движение диска и подвала. Бесплатная лицензия GSAP («Standard No Charge») |
+| `gsap` (с `gsap/ScrollTrigger`) | 3.15.0 | `solo-start/stage.ts`, `start.ts`, `kazan-start/start.ts` | Сцены прокрутки: календарь, «Как это работает», «Что умеет Solo», движение диска и подвала. Бесплатная лицензия GSAP («Standard No Charge») |
 | `lenis` | 1.3.26 | `solo-start/stage.ts` | Плавная прокрутка колесом мыши (на тачскринах и при `prefers-reduced-motion` выключена) |
 | Шрифты Jost, Golos Text | @fontsource 5.3.0 | `solo-start/fonts.css` | Уже внутри CSS, снаружи ничего не грузится. В релизе были Google Fonts, они из России открываются ненадёжно |
 | Roboto | шрифт сайта | `/t5` вашей оболочки | Кабинет |
