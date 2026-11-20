@@ -1,5 +1,6 @@
-// Copies the first three blocks of the owner's Kazan landing (github.com/Stro-812/kazan-marathon-landing: the hero with
-// the drawing of Kazan, «Что входит в план подготовки», the curator «Личный рекорд на марафоне — 2:36 в 59 лет») to the
+// Copies the first four blocks of the owner's Kazan landing (github.com/Stro-812/kazan-marathon-landing: the hero with
+// the drawing of Kazan, «Что входит в план подготовки», the curator «Личный рекорд на марафоне — 2:36 в 59 лет», and
+// «Результаты учеников», its names and results made up as the owner asked, marked as examples) to the
 // top of landing-kazan/ as they are (owner, 20.11.2026: «вытащить и залепить сверху буквально, за ними то, что мы
 // оформили»).
 //   node deploy/kazan-intro.cjs <that repo's dist/ after `npm run build`>
@@ -23,8 +24,31 @@ const sections = [...page.matchAll(/<section\b[\s\S]*?<\/section>/g)].map((m) =>
 const pick = (re, name) => sections.find((s) => re.test(s.slice(0, 200))) || fail(`no ${name} block`);
 const hero = pick(/class="hero hero--photo"/, 'hero'), includes = pick(/id="includes"/, 'includes'), coach = pick(/id="coach"/, 'coach');
 if (!/hero__lead/.test(hero) || !/Что входит/.test(includes) || !/Личный рекорд/.test(coach)) fail('the blocks are not what they were');
+// «Результаты учеников на марафонах»: their cards are a template («Имя Фамилия», a dashed «Заглушка» note). The owner
+// asked for names and results to be made up (20.11.2026); they are, and the block says under its heading that they
+// are examples (an invented result must not pass for a real one; taste-skill's rule too). Real students, with their
+// consent: change CASES and run this again
+const CASES = [
+  ['Ильдар Хасанов', '3:07:40', '2:58:15', 'Впервые быстрее трёх часов.'],
+  ['Марина Соколова', '4:12:05', '3:49:30', ''],
+  ['Алексей Зайцев', '4:58:20', '4:29:10', ''],
+];
+const EXAMPLE_NOTE = 'Примеры: имена и результаты условные.';
+let k = 0;
+const cases = pick(/id="cases"/, 'cases')
+  .replace(/\s*<p class="draft-note"[^>]*>[\s\S]*?<\/p>/, '')
+  .replace(/(<h2 id="cases-h">[\s\S]*?<\/h2>)/, `$1 <p class="case__year">${EXAMPLE_NOTE}</p>`)
+  .replace(/<article class="card case" data-placeholder>[\s\S]*?<\/article>/g, (card) => {
+    const [name, before, after, note] = CASES[k++] || fail('more cards than CASES');
+    return card.replace(' data-placeholder', '')
+      .replace(/(case__photo--empty" aria-hidden="true">)[^<]*/, `$1${name.split(' ').map((w) => w[0]).join('')}`)
+      .replace(/<h3>[^<]*<\/h3>/, `<h3>${name}</h3>`)
+      .replace(/(<dt>Было<\/dt><dd>)[^<]*/, `$1${before}`).replace(/(<dd class="case__after">)[^<]*/, `$1${after}`)
+      .replace(/<p class="case__note">[^<]*<\/p>/, note ? `<p class="case__note">${note}</p>` : '');
+  });
+if (k !== CASES.length || /Имя Фамилия|Заглушка|data-placeholder|Короткая цитата/.test(cases)) fail('the cases block did not take the names');
 const IMG = {};
-let html = [hero, includes, coach].join('\n')
+let html = [hero, includes, coach, cases].join('\n')
   .replace(/href="[^"]*"(?=[^>]*data-goal="buy_click")/g, `href="${LOGIN}"`)
   .replace(/\/img\/((?:hero|strofilov)-\d+\.webp)/g, (m, f) => { IMG[f] = true; return 'intro/img/' + f; })
   .replace(/ srcset="([^"]*)"/g, (m, s) => ` srcset="${s.split(/,\s*/).filter((x) => /(hero-(800|1200)|strofilov-(480|800))\.webp/.test(x)).join(', ')}"`)
@@ -96,4 +120,4 @@ ${html}
 const idx = path.join(OUT, 'index.html'), src = fs.readFileSync(idx, 'utf8');
 if (!/<!--kml-->[\s\S]*?<!--\/kml-->/.test(src)) fail('landing-kazan/index.html: no <!--kml--> … <!--/kml--> place');
 fs.writeFileSync(idx, src.replace(/<!--kml-->[\s\S]*?<!--\/kml-->/, () => block3));
-console.log(`kazan-intro: 3 blocks (${(html.length / 1024).toFixed(0)} KB), intro.css ${(scoped.length / 1024).toFixed(0)} KB (${kept} rules kept, ${dropped} for other blocks left out), images ${[...new Set(imgs)].join(', ')}`);
+console.log(`kazan-intro: 4 blocks (${(html.length / 1024).toFixed(0)} KB), intro.css ${(scoped.length / 1024).toFixed(0)} KB (${kept} rules kept, ${dropped} for other blocks left out), images ${[...new Set(imgs)].join(', ')}`);

@@ -163,7 +163,7 @@ export function mountKazanStart(page: El): () => void {
     'Темпа считаются от вашей цели: T5, T10, T21, T42 и лёгкий бег. Никаких «T21+8» в дневнике.',
     '24 недели в четыре этапа: база, порог, марафонская работа и подводка к старту.',
   ];
-  const DISC = ['--accent', '--light', '--mid', '--ink'];
+  const DISC = ['--f1', '--f2', '--f3', '--f4'];
   const disc = $('#show-disc'), frags = $$('.show-frag .ui'), picks = $$<HTMLButtonElement>('.show-list button'), fact = $('#show-fact');
   let item = 0;
   function showItem(k: number, force?: boolean) {
@@ -182,7 +182,7 @@ export function mountKazanStart(page: El): () => void {
   showItem(0, true);
 
   /* how it works: the scroll moves the stages; the names jump to theirs */
-  const CLAUSES = ['Сначала вы выбираете цель', 'План подстраивается под неё', 'Дальше вы ставите дни', 'И календарь заполнен'];
+  const CLAUSES = ['Сначала вы выбираете цель', 'План под вашу цель', 'Дальше вы ставите дни', 'И календарь заполнен'];
   const howRoot = $('#how'), hH = $('#how-h'), hfr = $$('.how-frag .ui'), names = $$<HTMLButtonElement>('.how-names button'), track = $('.how-track');
   let stageNo = 0;
   const setStage = (i: number, force?: boolean) => {
@@ -261,6 +261,8 @@ export function mountKazanStart(page: El): () => void {
   const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io!.unobserve(e.target); } }), { rootMargin: '0px 0px -12% 0px' }) : null;
   if (io) off.push(() => io.disconnect());
   $$('[data-rise]').forEach((el) => (io && !reduced ? io.observe(el) : el.classList.add('in')));
+  // a part still waiting to rise shows at once when the keyboard reaches it (taste-skill focus-visible)
+  listen(page, 'focusin', (e) => { const t = e.target as Element, r = t && t.closest ? t.closest('[data-rise]') : null; if (r) r.classList.add('in'); });
 
   /* the disc and its fragment settle as the section arrives */
   if (!reduced && !touch) { // the showcase and footer drift: not under a finger

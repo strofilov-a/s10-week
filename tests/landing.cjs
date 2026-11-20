@@ -41,9 +41,11 @@ const srv = http.createServer((q, r) => {
         const r = document.getElementById('kml').shadowRoot; if (!r) return { root: false };
         const imgs = [...r.querySelectorAll('img')]; imgs.forEach((i) => { i.loading = 'eager'; }); await Promise.all(imgs.map((i) => i.decode().catch(() => {})));
         return { root: true, blocks: [...r.querySelectorAll('section')].map((x) => x.id || x.className.split(' ')[0]).join(' '), h1: [...document.querySelectorAll('h1'), ...r.querySelectorAll('h1')].map((h) => h.textContent.replace(/\s+/g, ' ').trim()),
-          imgs: imgs.map((i) => i.naturalWidth), links: [...r.querySelectorAll('a')].every((a) => a.href === login), font: getComputedStyle(r.querySelector('h1')).fontFamily, days: r.querySelector('[data-countdown]').textContent, price: r.querySelector('[data-price]').textContent };
+          imgs: imgs.map((i) => i.naturalWidth), links: [...r.querySelectorAll('a')].every((a) => a.href === login), font: getComputedStyle(r.querySelector('h1')).fontFamily, days: r.querySelector('[data-countdown]').textContent, price: r.querySelector('[data-price]').textContent,
+          cases: [...r.querySelectorAll('#cases h3')].map((h) => h.textContent), note: (r.querySelector('#cases .section-head p') || {}).textContent, stub: /Имя Фамилия|Заглушка/.test(r.innerHTML) };
       }, LOGIN);
-      check(`${name}: the Kazan blocks on top: hero, «Что входит», the curator, their pictures and one h1`, kml.root && kml.blocks === 'hero includes coach' && kml.h1.length === 1 && kml.h1[0] === 'Казанский марафон, 2 мая 2027' && kml.imgs.length === 2 && kml.imgs.every((w) => w > 0) && kml.links && /Roboto/.test(kml.font), JSON.stringify(kml));
+      check(`${name}: the students' block: three made-up cards, said to be examples, no template left`, kml.cases && kml.cases.join(', ') === 'Ильдар Хасанов, Марина Соколова, Алексей Зайцев' && /^Примеры/.test(kml.note || '') && !kml.stub, `${kml.cases} | ${kml.note}`);
+      check(`${name}: the Kazan blocks on top: hero, «Что входит», the curator, the students, their pictures and one h1`, kml.root && kml.blocks === 'hero includes coach cases' &&kml.h1.length === 1 && kml.h1[0] === 'Казанский марафон, 2 мая 2027' && kml.imgs.length === 2 && kml.imgs.every((w) => w > 0) && kml.links && /Roboto/.test(kml.font), JSON.stringify(kml));
       { // the price of the Moscow day by their ladder: 2 000 ₽ from 16.11.2026, +125 ₽ each Monday, 3 000 ₽ from 11.01.2027
         const day = new Date(Date.now() + 3 * 36e5).toISOString().slice(0, 10), L = [['2026-11-16', 2000], ['2026-11-23', 2125], ['2026-11-30', 2250], ['2026-12-07', 2375], ['2026-12-14', 2500], ['2026-12-21', 2625], ['2026-12-28', 2750], ['2027-01-04', 2875], ['2027-01-11', 3000]];
         const want = L.filter(([f]) => f <= day).pop()?.[1] ?? 2000;
@@ -93,6 +95,16 @@ const srv = http.createServer((q, r) => {
     await page.evaluate(() => scrollTo(0, document.getElementById('plan').offsetTop + innerHeight)); await page.waitForTimeout(400);
     const fit = await page.evaluate(() => { const R = (s) => document.querySelector(s).getBoundingClientRect(); return { bar: Math.round(R('.rail').bottom), head: Math.round(R('.cal-text h2').top), key: Math.round(R('.cal-key').bottom), h: innerHeight }; });
     check(`${name}: the pinned calendar fits between the top bar and the bottom`, fit.head >= fit.bar && fit.key <= fit.h, JSON.stringify(fit));
+
+    if (KZ && w < 768) { // «Как это работает» on a phone: each stage's heading stays clear of the stage bar (its buttons a finger tall)
+      const gaps = [];
+      for (const f of [0.1, 0.4, 0.6, 0.9]) {
+        await page.evaluate((f) => { const r = document.getElementById('how'); scrollTo({ top: r.getBoundingClientRect().top + scrollY + (r.offsetHeight - innerHeight) * f, behavior: 'instant' }); }, f); await page.waitForTimeout(600);
+        gaps.push(await page.evaluate(() => Math.round(document.querySelector('.how-bar').getBoundingClientRect().top - document.getElementById('how-h').getBoundingClientRect().bottom)));
+      }
+      const tall = await page.evaluate(() => Math.min(...[...document.querySelectorAll('.how-names button')].map((b) => b.getBoundingClientRect().height)));
+      check(`${name}: «Как это работает»: every heading clear of the stage bar, its buttons 44px`, gaps.every((g) => g >= 0) && tall >= 44, `gaps ${gaps.join(' ')}, buttons ${tall}px`);
+    }
 
     // the features scene steps through all six
     const steps = [];

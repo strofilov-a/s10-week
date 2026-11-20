@@ -34,17 +34,28 @@
    plan to 2 May 2027. The same look, motif and scenes; the calendar holds the plan's last 12 weeks with its three key
    workouts a week (the easy runs depend on the athlete's volume, so none are drawn), the paces slider became the goal
    picker (3:00 / 3:30 / 4:00, the same scale as solo.js's KAZAN), and «План» shows the plan's four stages. */
-/* ---------- colour: taste's correction of the owner's pacific blue · tomato · mustard (his choice, 03.11.2026);
-   the race-day circle is the page's one motif ---------- */
+/* ---------- colour: S10.run's own (owner, 20.11.2026: «из файла со стилем возьми только цвета», S10_visual_style.md).
+   The --s10-* values are the ones measured on the live s10.run, as the Kazan blocks on top use them (the style file
+   says measured colours win over its working ones). Blue acts, coral marks the race and highlights, green is progress
+   and done; soft tints for fields; white ground. Shapes and type stay this page's own. ---------- */
 .s10-kazan-start {
   color-scheme: light;
-  --bg: #EEF1EF; --surface: #E1E8E6; --deep: #FFFFFF;
-  --ink: #0B3A42; --muted: rgba(11,58,66,.78);
-  --accent: #EF4B3F; --on-accent: #2a0605;
-  --light: #F6CD4C; --on-light: #231b02;
-  --mid: #0B8FA3; --on-mid: #03191c;
-  --race: #EF4B3F; --on-race: #2a0605;
-  --hi: #0B8FA3; --on-hi: #ffffff; --work: #B07A00; --long: #0B8FA3;
+  --s10-primary: #004AAD; --s10-primary-hover: #003A8A; --s10-primary-soft: #E9E9FF;
+  --s10-coral: #FF6259; --s10-coral-ink: #B3261E; --s10-coral-soft: #FFEEEE;
+  --s10-success: #64C504; --s10-success-ink: #2E7D32; --s10-success-soft: #EBFFF5;
+  --s10-background: #FFFFFF; --s10-surface: #FFFFFF; --s10-surface-alt: #F4F4FF;
+  --s10-text: #212121; --s10-text-muted: #666666; --s10-border: #E3E5EE;
+  /* the page's roles, on those tokens */
+  --bg: var(--s10-background); --surface: var(--s10-surface-alt); --deep: var(--s10-surface);
+  --ink: var(--s10-text); --muted: var(--s10-text-muted);
+  --accent: var(--s10-primary); --on-accent: #FFFFFF;
+  --light: var(--s10-primary-soft); --on-light: var(--s10-text);
+  --mid: var(--s10-primary-hover); --on-mid: #FFFFFF;
+  --race: var(--s10-coral); --on-race: var(--s10-text);
+  --hi: var(--s10-primary); --on-hi: #FFFFFF; --work: var(--s10-primary); --long: var(--s10-coral-ink);
+  --done: var(--s10-success); --done-soft: var(--s10-success-soft); --done-ink: var(--s10-success-ink);
+  /* the four soft fields (features, the showcase disc, the footer blocks) */
+  --f1: var(--s10-primary-soft); --f2: var(--s10-coral-soft); --f3: var(--s10-success-soft); --f4: var(--s10-surface-alt);
 }
 
 .s10-kazan-start {
@@ -75,7 +86,7 @@
 .s10-kazan-start h2 { font-size: var(--step-head); }
 .s10-kazan-start [id] { scroll-margin-top: 80px; }
 .s10-kazan-start ::selection { background: var(--accent); color: var(--on-accent); }
-.s10-kazan-start :focus-visible { outline: 3px solid var(--light); outline-offset: 3px; }
+.s10-kazan-start :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; } /* ink, not the blue: the ring must show on a blue button */
 .s10-kazan-start .vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .s10-kazan-start .wrap { padding-inline: var(--m); }
 .s10-kazan-start .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); }
@@ -173,7 +184,7 @@
 .s10-kazan-start .cal-key span.r::before { background: var(--race); width: 12px; height: 12px; }
 
 /* interface fragments: the product's own panels */
-.s10-kazan-start .ui { background: var(--deep); color: var(--ink); font-size: 16px; line-height: 1.4; padding: 24px; border-radius: 22px; }
+.s10-kazan-start .ui { background: var(--deep); color: var(--ink); font-size: 16px; line-height: 1.4; padding: 24px; border-radius: 22px; border: 1px solid var(--s10-border); }
 .s10-kazan-start .ui-lbl { font-weight: 600; }
 .s10-kazan-start .ui-mut { color: var(--muted); font-size: 14px; }
 .s10-kazan-start .ui-box { margin-top: 10px; padding: 14px 16px; background: var(--bg); border-radius: 14px; outline: 2px solid var(--hi); outline-offset: -2px; }
@@ -201,12 +212,12 @@
 .s10-kazan-start .hc-lbl { color: var(--muted); font-size: 14px; }
 .s10-kazan-start .hc-big { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-top: 4px; font: 700 1.625rem/1.1 var(--display); letter-spacing: -0.02em; }
 .s10-kazan-start .hc-scale { position: relative; height: 10px; margin-top: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; }
-.s10-kazan-start .hc-scale i { position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--hi); border-radius: 5px; }
+.s10-kazan-start .hc-scale i { position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--done); border-radius: 5px; }
 .s10-kazan-start .hc-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; text-align: center; font-size: 13px; }
 .s10-kazan-start .hc-week span { display: block; padding: 7px 0; background: var(--bg); color: var(--muted); border-radius: 999px; }
 .s10-kazan-start .hc-week b { display: block; font-weight: 600; color: var(--ink); font-size: 15px; }
-.s10-kazan-start .hc-week .done { background: var(--hi); color: var(--on-hi); }
-.s10-kazan-start .hc-week .done b { color: var(--on-hi); }
+.s10-kazan-start .hc-week .done { background: var(--done-soft); color: var(--done-ink); }
+.s10-kazan-start .hc-week .done b { color: var(--done-ink); }
 .s10-kazan-start .hc-week .today { outline: 2px solid var(--ink); outline-offset: -2px; }
 
 /* ---------- showcase: one fragment in front of a disc, chosen from a list ---------- */
@@ -221,7 +232,7 @@
 .s10-kazan-start .show-list button { all: unset; cursor: pointer; display: block; font: 700 clamp(1.75rem, 2.9vw, 2.75rem)/1.15 var(--display); letter-spacing: -0.03em; color: var(--muted); transition: color .2s var(--ease); }
 .s10-kazan-start .show-list button[aria-pressed="true"] { color: var(--ink); }
 .s10-kazan-start .show-list button[aria-pressed="true"]::before { content: ''; display: inline-block; width: .42em; height: .42em; border-radius: 50%; background: var(--race); margin-right: .3em; vertical-align: .12em; }
-.s10-kazan-start .show-list button:focus-visible { outline: 3px solid var(--light); outline-offset: 4px; }
+.s10-kazan-start .show-list button:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
 .s10-kazan-start .show-fact { position: absolute; right: var(--m); top: 50%; translate: 0 -50%; width: 30ch; max-width: calc(42% - 4ch - var(--m)); font-size: 1.0625rem; }
 
 /* ---------- how it works: a held scene, scroll moves the stages ---------- */
@@ -246,7 +257,7 @@
 .s10-kazan-start .how-names button::before { content: ''; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box; border: 2px solid currentColor; }
 .s10-kazan-start .how-names button[aria-pressed="true"] { opacity: 1; font-weight: 600; }
 .s10-kazan-start .how-names button[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); }
-.s10-kazan-start .how-names button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.s10-kazan-start .how-names button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 .s10-kazan-start .how-names button:nth-child(-n+2) { color: var(--on-light); }
 .s10-kazan-start .dc-title { font: 700 var(--step-lead)/1.1 var(--display); letter-spacing: -0.02em; }
 .s10-kazan-start .dc-dates { margin-top: 8px; color: var(--muted); font-size: var(--step-lead); }
@@ -266,12 +277,10 @@
 .s10-kazan-start .feat-say { margin-top: 24px; font-size: var(--step-lead); line-height: 1.35; max-width: 26ch; }
 .s10-kazan-start .feat-field { grid-column: 7 / 13; display: grid; place-items: center; min-height: min(62svh, 560px); padding: 40px; border-radius: 32px; }
 .s10-kazan-start .feat-field .ui { width: min(500px, 100%); font-size: 18px; padding: 28px; }
-.s10-kazan-start .feat:nth-child(6n+1) .feat-field { background: var(--accent); }
-.s10-kazan-start .feat:nth-child(6n+2) .feat-field { background: var(--light); }
-.s10-kazan-start .feat:nth-child(6n+3) .feat-field { background: var(--mid); }
-.s10-kazan-start .feat:nth-child(6n+4) .feat-field { background: var(--surface); }
-.s10-kazan-start .feat:nth-child(6n+5) .feat-field { background: var(--light); }
-.s10-kazan-start .feat:nth-child(6n+6) .feat-field { background: var(--race); }
+.s10-kazan-start .feat:nth-child(4n+1) .feat-field { background: var(--f1); }
+.s10-kazan-start .feat:nth-child(4n+2) .feat-field { background: var(--f2); }
+.s10-kazan-start .feat:nth-child(4n+3) .feat-field { background: var(--f3); }
+.s10-kazan-start .feat:nth-child(4n+4) .feat-field { background: var(--f4); }
 .s10-kazan-start .feat-dots { display: none; }
 /* live: the features stack in one place and the scroll steps through them */
 .s10-kazan-start .feats.is-live .feat-stage { height: 100svh; align-content: center; }
@@ -284,7 +293,7 @@
 .s10-kazan-start .feats.is-live .feat-dots { display: flex; gap: 14px; position: absolute; left: var(--m); bottom: 40px; }
 .s10-kazan-start .feat-dots button { all: unset; cursor: pointer; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--ink); opacity: .6; transition: background-color .2s var(--ease), opacity .2s var(--ease); }
 .s10-kazan-start .feat-dots button[aria-pressed="true"] { background: var(--race); border-color: var(--race); opacity: 1; }
-.s10-kazan-start .feat-dots button:focus-visible { outline: 3px solid var(--light); outline-offset: 3px; }
+.s10-kazan-start .feat-dots button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 .s10-kazan-start .feat-count { position: absolute; right: var(--m); bottom: 36px; color: var(--muted); font-size: var(--step-small); display: none; }
 .s10-kazan-start .feats.is-live .feat-count { display: block; }
 /* the pieces inside the fields */
@@ -310,8 +319,8 @@
 .s10-kazan-start .seg { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
 .s10-kazan-start .seg label { position: relative; }
 .s10-kazan-start .seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.s10-kazan-start .seg span { display: block; padding: 10px 18px; border-radius: 999px; background: rgba(0,0,0,.08); font-weight: 500; transition: background-color .18s var(--ease), color .18s var(--ease); }
-.s10-kazan-start .seg input:checked + span { background: var(--on-light); color: var(--light); }
+.s10-kazan-start .seg span { display: block; padding: 10px 18px; border-radius: 999px; background: var(--deep); font-weight: 500; transition: background-color .18s var(--ease), color .18s var(--ease); }
+.s10-kazan-start .seg input:checked + span { background: var(--accent); color: var(--on-accent); }
 .s10-kazan-start .seg input:focus-visible + span { outline: 3px solid var(--on-light); outline-offset: 3px; }
 .s10-kazan-start .goal { margin-top: 26px; }
 .s10-kazan-start .goal label { display: flex; justify-content: space-between; align-items: baseline; font-weight: 500; }
@@ -357,7 +366,7 @@
 .s10-kazan-start .plan .price small { font: 400 var(--step-body)/1.3 var(--font); letter-spacing: 0; margin-left: .5em; display: inline-block; }
 .s10-kazan-start .plan.free { background: var(--surface); color: var(--ink); }
 .s10-kazan-start .plan.pro { background: var(--light); color: var(--on-light); }
-.s10-kazan-start .plan.pro .btn { background: var(--race); color: var(--on-race); }
+.s10-kazan-start .plan.pro .btn { background: var(--accent); color: var(--on-accent); }
 .s10-kazan-start .plan.free .btn { background: var(--ink); color: var(--bg); }
 
 /* ---------- questions: filled tiles, one open at a time ---------- */
@@ -366,18 +375,18 @@
 .s10-kazan-start .faq-h h2 { font-size: clamp(2.25rem, 4vw, 3.75rem); max-width: 7ch; }
 .s10-kazan-start .faq-list { grid-column: 5 / 13; display: grid; gap: 8px; }
 .s10-kazan-start .faq details { background: var(--surface); border-radius: 22px; transition: background-color .2s var(--ease), color .2s var(--ease); }
-.s10-kazan-start .faq details[open] { background: var(--accent); color: var(--on-accent); }
+.s10-kazan-start .faq details[open] { background: var(--light); color: var(--ink); }
 .s10-kazan-start .faq summary { list-style: none; cursor: pointer; min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 24px; font-size: 1.25rem; font-weight: 500; }
 .s10-kazan-start .faq summary::-webkit-details-marker { display: none; }
 .s10-kazan-start .faq summary i { position: relative; flex: none; width: 16px; height: 16px; }
 .s10-kazan-start .faq summary i::before, .s10-kazan-start .faq summary i::after { content: ''; position: absolute; left: 0; top: 6.5px; width: 16px; height: 3px; border-radius: 2px; background: currentColor; transition: transform .2s var(--ease); }
 .s10-kazan-start .faq summary i::after { transform: rotate(90deg); }
 .s10-kazan-start .faq details[open] summary i::after { transform: rotate(0deg); }
-.s10-kazan-start .faq summary:focus-visible { outline: 3px solid var(--light); outline-offset: 3px; border-radius: 22px; }
+.s10-kazan-start .faq summary:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; border-radius: 22px; }
 .s10-kazan-start .faq details p { padding: 0 24px 24px; max-width: 52ch; font-size: 1.0625rem; }
 
 /* ---------- close: one word is the button ---------- */
-.s10-kazan-start .cta { display: block; margin-top: var(--section); position: relative; min-height: 60svh; background: var(--race); color: var(--on-race); text-decoration: none; --r: 30svh; border-radius: var(--r) var(--r) 0 0; overflow: hidden; transition: background-color .15s, color .15s; }
+.s10-kazan-start .cta { display: block; margin-top: var(--section); position: relative; min-height: 60svh; background: var(--accent); color: var(--on-accent); text-decoration: none; --r: 30svh; border-radius: var(--r) var(--r) 0 0; overflow: hidden; transition: background-color .15s, color .15s; }
 .s10-kazan-start .cta:hover, .s10-kazan-start .cta:focus-visible { background: var(--ink); color: var(--bg); outline: none; }
 /* the sentence and the arrow sit clear of the rounded corners: at a third of the radius in from the side and down from
    the top the arch is always inside (owner, 09.11.2026: the text was cut by the curve) */
@@ -388,9 +397,9 @@
 /* ---------- footer: the name built from blocks ---------- */
 .s10-kazan-start .foot-mark { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; align-items: end; height: 34svh; min-height: 200px; padding: 4px; }
 .s10-kazan-start .foot-mark span { height: 100%; border-radius: 22px 22px 0 0; display: grid; place-items: end center; font: 700 min(26svh, 20vw)/.78 var(--display); letter-spacing: -0.05em; color: var(--bg); overflow: hidden; }
-.s10-kazan-start .foot-mark span:nth-child(1) { height: 82%; background: var(--light); }
+.s10-kazan-start .foot-mark span:nth-child(1) { height: 82%; background: var(--f1); color: var(--accent); }
 .s10-kazan-start .foot-mark span:nth-child(2) { height: 100%; background: var(--race); border-radius: 50% 50% 0 0; }
-.s10-kazan-start .foot-mark span:nth-child(3) { height: 64%; background: var(--mid); color: var(--light); }
+.s10-kazan-start .foot-mark span:nth-child(3) { height: 64%; background: var(--mid); color: var(--f1); }
 .s10-kazan-start .foot-mark span:nth-child(4) { height: 90%; background: var(--ink); }
 .s10-kazan-start .foot-links { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px var(--gap); padding: 56px var(--m) 24px; font-size: 15px; }
 .s10-kazan-start .foot-links nav { grid-column: 1 / 9; display: flex; flex-wrap: wrap; gap: 12px 32px; }
@@ -460,19 +469,20 @@
   .s10-kazan-start .show-frag { width: 100%; }
   .s10-kazan-start .show-list { order: -1; }
   .s10-kazan-start .show-list ul { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; list-style: none; padding: 0; margin: 0; }
-  .s10-kazan-start .show-list button { font-size: 1.5rem; }
+  .s10-kazan-start .show-list button { font-size: 1.5rem; min-height: 44px; display: flex; align-items: center; } /* a finger's size (taste-skill tap-size) */
   .s10-kazan-start .show-fact { display: block; width: auto; max-width: none; }
 
   .s10-kazan-start .how-fields { display: flex; flex-direction: column; min-height: 0; }
   .s10-kazan-start .how-right { order: -1; flex: 1 1 auto; padding: 28px 20px; }
   .s10-kazan-start .how.is-live .how-right { padding-top: 80px; }
-  .s10-kazan-start .how-left { padding: 24px 20px 112px; }
+  .s10-kazan-start .how-left { padding: 24px 20px 156px; } /* room for the stage bar, its buttons a finger tall */
   .s10-kazan-start .how.is-live .how-left { padding-top: 24px; }
   .s10-kazan-start .how-left h2 { font-size: 2.5rem; max-width: none; }
   .s10-kazan-start .how-frag .ui { font-size: 15px; padding: 20px; }
   .s10-kazan-start .how-frag .wk, .s10-kazan-start .how-frag .lay { font-size: 14px; }
   .s10-kazan-start .how-bar { padding: 0 20px 20px; color: var(--on-light); }
-  .s10-kazan-start .how-names { grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+  .s10-kazan-start .how-names { grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .s10-kazan-start .how-names button { min-height: 44px; } /* a finger's size (taste-skill tap-size) */
   .s10-kazan-start .how-names button:nth-child(n) { color: var(--on-light); }
 
   .s10-kazan-start .feat-stage { grid-template-columns: 1fr; padding: 80px 20px 72px; }
@@ -530,6 +540,19 @@
   .s10-kazan-start .cal-grid { font-size: 13px; }
   .s10-kazan-start .cal-grid .d { padding: 1px 0 5px; }
   .s10-kazan-start .cal-grid .d::after { width: 5px; height: 5px; margin-left: -2.5px; bottom: 0; }
+}
+/* a phone under 700px tall: «Как это работает» keeps its heading clear of the stage bar */
+@media (max-width: 767px) and (max-height: 700px) {
+  .s10-kazan-start .how-left h2 { font-size: 1.875rem; }
+  .s10-kazan-start .how-frag .ui { padding: 14px 16px; }
+  .s10-kazan-start .how-frag .lay { padding: 3px 0; }
+}
+@media (max-width: 767px) and (max-height: 620px) {
+  .s10-kazan-start .how-left h2 { font-size: 1.5rem; }
+  .s10-kazan-start .how.is-live .how-right { padding-top: 72px; padding-bottom: 8px; }
+  .s10-kazan-start .how-frag .ui { font-size: 13px; }
+  .s10-kazan-start .how-frag .lay, .s10-kazan-start .how-frag .ph { font-size: 12px; padding: 1px 0; }
+  .s10-kazan-start .how-frag .ph i { height: 6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
