@@ -265,8 +265,9 @@ feature and fix applies, both modes share the tests. Design: `docs/superpowers/s
   name; a re-plan adds «· перестроен <date>»); a coach's version keeps its name.
 - The goal field asks for a keyboard with punctuation (`inputmode="text"`), the easy-run range too (it needs «-»);
   a goal typed as digits reads «130» → 1:30 for a half/marathon, «2230» → 22:30 for 10 km and shorter, 5–6 digits h:mm:ss.
-- Landing: «Попробовать 3 дня бесплатно» on both buttons, the 3 free days in the Premium card and the price answer. The
-  Valencia example with its fixed dates stays as is (owner, 09.11.2026).
+- No free trial anywhere (owner, 22.11.2026: «никаких пробных 3 дня нигде»): the promo buttons say «Начать подготовку»,
+  no «3 дня бесплатно» in the Premium card, the price answer or the payment page's FAQ; `tests/links.cjs` keeps it so.
+  The Valencia example with its fixed dates stays as is (owner, 09.11.2026).
 - Footer: a link to the Telegram chat for questions and feedback, https://t.me/+wP4aOZ4910I2MTk6 (owner, 01.11.2026).
 - Plan generator: the «Расскажите о себе и цели» box comes first, 16/500 label in ink, 2px accent border and an accent
   hint under it (`aria-describedby`); it takes the focus with its text selected. Prefilled: «заполни как есть, там

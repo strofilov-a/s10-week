@@ -47,6 +47,13 @@ check('links: /solo/kazan known (the page\'s Kazan path, in the brief beside /so
 // /solo/kazan/start: the Kazan promo page, its own file; the Kazan mode must not take that address
 check('links: /solo/kazan/start is the Kazan promo page, not the Kazan mode', isKazan && !isKazan.test('/solo/kazan/start') && /`\/solo\/kazan\/start`[^\n]*`kazan-start\.html`/.test(brief));
 
+// owner, 22.11.2026: «никаких пробных 3 дня нигде» — no free trial promised on any of our pages (the source and the build)
+{ const said = [];
+  for (const f of ['solo.js', 'landing-v2/index.html', 'landing-kazan/index.html', 'pay/index.html', 'release/t5/solo/solo.js', 'release/solo-start.html', 'release/kazan-start.html', 'release/pay/index.html']) {
+    const t = fs.readFileSync(path.join(ROOT, f), 'utf8'); const m = t.match(/.{0,40}(3|три|тр[её]х) (дня|дней)[^<]{0,20}(бесплатн|без оплаты)|.{0,40}(попробовать|попробуйте)[^<]{0,30}(бесплатн|до оплаты)|.{0,40}пробн(ый|ого|ые) (период|срок|дн)/i);
+    if (m) said.push(`${f}: …${m[0]}`); }
+  check('no free trial («3 дня бесплатно», «пробный период») on any page, source or build', !said.length, said.join(' | ')); }
+
 const failed = results.filter((x) => !x).length;
 console.log(`\nlinks: ${results.length - failed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
