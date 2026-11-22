@@ -11,6 +11,14 @@ export async function get(u: string): Promise<any> {
   return r.json();
 }
 
+/** GET JSON that the site may precede with PHP notices (/apiapp/me): parsed from its first brace. */
+export async function getLoose(u: string): Promise<any> {
+  const r = await fetch(ORIGIN + u, { credentials: 'include' });
+  if (!r.ok) throw new Error(String(r.status));
+  const t = await r.text();
+  return JSON.parse(t.slice(t.search(/[{[]/)));
+}
+
 /** POST FormData; a non-2xx status or a body with `error` throws Error(error | status). */
 export async function post(u: string, fd: FormData): Promise<any> {
   const r = await fetch(ORIGIN + u, { method: 'POST', body: fd, credentials: 'include' });

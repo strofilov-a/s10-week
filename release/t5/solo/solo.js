@@ -1,4 +1,4 @@
-/* S10 «Моя неделя» · release d51ceddccc: everything on one page.
+/* S10 «Моя неделя» · release 88dad9b306: everything on one page.
    Today and this week · the paces · the master plan (your saved versions, the library, or a new one from a prompt) laid
    over the dates to the race · «Заполнить календарь» for the whole plan · «Запланировать неделю» for one week (calc3).
    It reads and writes the logged-in user's data through the site's own API. */
@@ -9,12 +9,17 @@
   // 'solo'; one line on purpose: the React build replaces it as a whole
   const MODE = /\/solo\/kazan\/?$/.test(location.pathname) ? 'kazan' : 'solo';
   // the Kazan marathon (the date is provisional: the organiser has not announced it, calendars say 30.04–02.05.2027);
-  // scale = each goal's share of the plan's volume (easy runs and long runs)
-  const KAZAN = { name: 'Казань', location: 'KAZAN', d: '2027-05-02', km: 42.2, goals: ['3:00:00', '3:30:00', '4:00:00'], scale: { '3:00:00': 1, '3:30:00': 0.85, '4:00:00': 0.7 } };
+  // the goal is any time (owner, 22.11.2026); the plan's volume comes from one of three plans, 3:00 / 3:30 / 4:00, by
+  // the goal's band: faster than 3:15 (band[0], s) the 3:00 plan, faster than 3:45 (band[1]) the 3:30 one, else 4:00;
+  // scale = each plan's share of the plan's volume (easy runs and long runs)
+  const KAZAN = { name: 'Казань', location: 'KAZAN', d: '2027-05-02', km: 42.2, goals: ['3:00:00', '3:30:00', '4:00:00'], band: [11700, 13500], scale: { '3:00:00': 1, '3:30:00': 0.85, '4:00:00': 0.7 } };
   const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
   const last = (a) => a[a.length - 1];
   async function get(u) {
     const r = await fetch(ORIGIN + u, { credentials: 'include' }); if (!r.ok) throw new Error(r.status); return r.json();
+  }
+  async function getLoose(u) {
+    const r = await fetch(ORIGIN + u, { credentials: 'include' }); if (!r.ok) throw new Error(r.status); const t = await r.text(); return JSON.parse(t.slice(t.search(/[{[]/)));
   }
   async function post(u, fd) {
     const r = await fetch(ORIGIN + u, { method: 'POST', body: fd, credentials: 'include' }); const b = await r.json().catch(() => ({})); if (!r.ok || b.error) throw new Error(b.error || r.status); return b;
@@ -78,6 +83,7 @@
   // from KAZAN.d, so a new date is that one line
   const dayLong = (s) => { const [, m, d] = s.split('-'); return `${+d} ${MON[m - 1]}`; };
   const kazanDay = () => `${dayLong(KAZAN.d)} ${KAZAN.d.slice(0, 4)}`;
+  const kzPaidTo = () => `${dayLong(add(KAZAN.d, 1))} ${KAZAN.d.slice(0, 4)}`; // 2 000 ₽ = Premium to the day after the race
 
   /* ================= load ================= */
   const me = await get('/apiweb/student/self/info/').catch(() => null);
@@ -86,7 +92,7 @@
     box.style.cssText = 'font:16px/1.5 Roboto,system-ui,sans-serif;max-width:560px;margin:0 auto;padding:48px 24px;color:#111';
     if (MODE === 'kazan') { // the marathon plan's visitor: no server time, so the browser's clock in Moscow time
       const left = kazanCountdown(Date.now());
-      box.innerHTML = '<h1 style="font-size:24px;font-weight:500;margin:0 0 8px">Подготовка к Казанскому марафону</h1><p style="margin:0">' + kazanDay() + (left ? ' · ' + left : '') + '</p><p style="margin:0">Цель на выбор: 3:00, 3:30 или 4:00</p><p style="margin:0">План с вашими темпами — сразу в календаре S10</p><p style="margin:0 0 16px">Premium S10</p><a href="/login?back=' + encodeURIComponent(location.href) + '" style="display:inline-block;background:#1a4be0;color:#fff;text-decoration:none;border-radius:8px;padding:10px 20px">Войти и начать</a>';
+      box.innerHTML = '<h1 style="font-size:24px;font-weight:500;margin:0 0 8px">Подготовка к Казанскому марафону</h1><p style="margin:0">' + kazanDay() + (left ? ' · ' + left : '') + '</p><p style="margin:0">Цель любая: темпа считаются от неё</p><p style="margin:0">План с вашими темпами — сразу в календаре S10</p><p style="margin:0 0 16px">2 000 ₽: весь план и Premium S10 до ' + kzPaidTo() + '</p><a href="/login?back=' + encodeURIComponent(location.href) + '" style="display:inline-block;background:#1a4be0;color:#fff;text-decoration:none;border-radius:8px;padding:10px 20px">Войти и начать</a>';
       document.body.appendChild(box); document.title = 'Подготовка к Казанскому марафону · S10.run';
       return 'S10 «Казань»: нужен вход';
     }
@@ -104,6 +110,11 @@
     get('/apiweb/userparam.php?action=get&param[]=planTemplates').catch(() => ({})),
     get(`/apiweb/calc.php?id=${id}`).catch(() => null),
   ]);
+  // the Kazan mode: Premium paid up to the race (2 000 ₽ = Premium to 3 May, owner 22.11.2026) skips the payment step;
+  // /apiapp/me may print PHP notices before its JSON, so the text is read from its first brace
+  const meApp = MODE === 'kazan' && isSelf ? await getLoose('/apiapp/me').catch(() => null) : null;
+  const paidUntil = meApp?.subscriptionExpiredAt ? new Date((+meApp.subscriptionExpiredAt + 3 * 3600) * 1000).toISOString().slice(0, 10) : '';
+  let kazanPaid = me.role === 'trainer' || (!!me.isPremium && paidUntil >= KAZAN.d);
   const parseList = (v) => { try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
   let versions = parseList(spRes.param?.[`studentPlans${id}`]).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
   const library = parseList(libRes.param?.planTemplates).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
@@ -130,13 +141,17 @@
   const isKazanRace = (r) => !!r && (+r.prekm === 42 || +r.prekm === 42.2) && r.d >= add(KAZAN.d, -2) && r.d <= KAZAN.d;
   let kazanMain = MODE === 'kazan' && isKazanRace(main.main) ? main.main : null, kazanAsk = '';
   // the goal the picker opens at: the Kazan version's (every device the same), else this browser's, else the diary's
-  // Kazan goal (the nearest of the three: 3:20 → 3:30), else 3:30. A tap on the picker is kept only in the browser
+  // Kazan goal, else 3:30. A tap on the picker is kept only in the browser
   // (Solo writes only on a button), as {g, at}: it wins over the version's goal while it is newer than the version's save,
   // so a reload keeps it until a fill or a save stores it. An older plain «3:30:00» there reads as {g} with no time
   const kzSec = (t) => { const p = String(t || '').trim().split(':'); return p.length >= 2 && p.length <= 3 && p.every((x) => /^\d+$/.test(x)) ? (p.length === 2 ? [...p, '0'] : p).reduce((a, x) => a * 60 + +x, 0) : 0; };
-  const nearGoal = (t) => { const s = kzSec(t); return s ? KAZAN.goals.reduce((b, g) => (Math.abs(kzSec(g) - s) < Math.abs(kzSec(b) - s) ? g : b)) : null; };
-  const goalB = (() => { const v = MODE === 'kazan' ? store.get(`goal.${id}`, null) : null, b = typeof v === 'string' ? { g: v, at: null } : v; return KAZAN.goals.includes(b?.g) ? b : null; })();
-  const goalV = KAZAN.goals.includes(kzV?.student?.kazanGoal) ? kzV.student.kazanGoal : null;
+  // a Kazan goal: any marathon time from 2:00 to 7:00, kept as «3:40:00»; its plan (kzBand) is one of KAZAN.goals
+  const kzOk = (g) => { const s = kzSec(g); return s >= 7200 && s <= 25200; };
+  const kzNorm = (g) => { const s = kzSec(g); return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
+  const kzBand = (g) => { const s = kzSec(g); return s < KAZAN.band[0] ? KAZAN.goals[0] : s < KAZAN.band[1] ? KAZAN.goals[1] : KAZAN.goals[2]; };
+  const nearGoal = (t) => (kzOk(t) ? kzNorm(t) : null);
+  const goalB = (() => { const v = MODE === 'kazan' ? store.get(`goal.${id}`, null) : null, b = typeof v === 'string' ? { g: v, at: null } : v; return kzOk(b?.g) ? { ...b, g: kzNorm(b.g) } : null; })();
+  const goalV = kzOk(kzV?.student?.kazanGoal) ? kzNorm(kzV.student.kazanGoal) : null;
   const goalBNewer = !!goalB?.at && !!kzV && Date.parse(goalB.at) > Date.parse(kzV.savedAt);
   let kazanGoal = MODE === 'kazan' ? (goalBNewer ? goalB.g : goalV || goalB?.g || nearGoal(kazanMain?.prediction) || '3:30:00') : null;
   const kazanRace = () => ({ d: kazanMain?.d || KAZAN.d, prekm: '42.2', location: KAZAN.location, prediction: kazanGoal, task: 'гонка' });
@@ -505,14 +520,14 @@
   //  3. race-day form = form now × (1 − gain), gain = rate × weeks left × (T − 30%) / 70%: at T 30% no gain, under it the
   //     form drops; rate 0.5% a week for a 4:00+ marathon level down to 0.25% at 3:00, in all at most 10% down to 6%
   //  4. spread 2% + 0.2% a week left; chance = Φ((goal − race-day form) / (race-day form × spread)), 1…99%
-  const CH = { anchorWeeks: 12, k: 1.06, slow: 14400, fast: 10800, rate: [0.005, 0.0025], cap: [0.10, 0.06], noGain: 0.3, q: 0.5, qMax: 0.03, sd: 0.02, sdWeek: 0.002 };
+  const CH = { anchorWeeks: 12, k: 1.06, slow: 14400, fast: 10800, rate: [0.005, 0.0025], cap: [0.10, 0.06], noGain: 0.3, q: 0.5, qMax: 0.03, sd: 0.02, sdWeek: 0.002, planZ: 0.5244 }; // planZ: Φ⁻¹(70%), the plan run in full
   const doneDay = (x) => { const km = runKm(x), t = +x?.target || 0; return t ? km >= READY.done * t : km > 0; };
-  function training() {
+  function training(minDays = READY.minDays) {
     const from = add(today, -READY.days), rows = [];
     for (let d = from; d < today; d = add(d, 1)) rows.push({ d, x: days.get(d) || null, k: d >= add(today, -READY.recent) ? 2 : 1 });
     if (runKm(days.get(today)) > 0) rows.push({ d: today, x: days.get(today), k: 2 }); // today counts once it is run
     const planned = rows.filter((r) => isRun(r.x));
-    if (planned.length < READY.minDays) return null;
+    if (planned.length < minDays) return null;
     const done = (r) => doneDay(r.x);
     const share = (list) => { const all = list.reduce((a, r) => a + r.k, 0); return all ? list.filter(done).reduce((a, r) => a + r.k, 0) / all : null; };
     // key workouts, and of those done with a pace-only task, how far from its pace
@@ -559,7 +574,18 @@
     if (past) { f0 = riegel(+past.realhms, KM_OF(past.distance), D); src = `по старту ${nameOf(past) || ''} ${dayLbl(past.d)}: ${fmtTime(+past.realhms, KM_OF(past.distance))} на ${n1(+past.distance)} км`.replace('  ', ' '); }
     else if (fr) { f0 = +fr.prehms; src = 'по прогнозу S10'; }
     else if (pacesOk(PACE) && !(paceSrc === 'own' && paceGuess) && !fromGoal()) { const k = D >= 30 ? 42 : D >= 15 ? 21 : D >= 7.5 ? 10 : 5; f0 = paceSec(PACE[k]) * D; src = `по вашему темпу T${k}`; }
-    if (!f0) return { goal, D, none: true, guess: pacesOk(PACE) };
+    // nothing to start from (owner, 22.11.2026: do not scare a newcomer, give a figure after the first week): the plan
+    // itself. Who runs it all at its paces reaches the goal with CH.planPct; every workout moves it as usual, from the
+    // first planned run day on (training with one day). Before that: no figure, only when it will come
+    let plan0 = false;
+    if (!f0) {
+      if (!goal) return { goal, D, none: true };
+      T = training(1); if (!T) return { goal, D, none: true, wait: true };
+      const weeks0 = Math.max(0, (d8(race.d) - d8(today)) / 6048e5), sd0 = CH.sd + CH.sdWeek * weeks0;
+      const lvl0 = Math.max(0, Math.min(1, (riegel(goal, D, 42.195) - CH.fast) / (CH.slow - CH.fast)));
+      const gain0 = Math.min(CH.cap[1] + (CH.cap[0] - CH.cap[1]) * lvl0, (CH.rate[1] + (CH.rate[0] - CH.rate[1]) * lvl0) * weeks0);
+      f0 = goal / (1 + CH.planZ * sd0) / (1 - gain0); src = 'по вашим тренировкам по плану'; plan0 = true;
+    }
     const q = T?.q || 0, fNow = f0 * (1 + q);
     const lvl = Math.max(0, Math.min(1, (riegel(fNow, D, 42.195) - CH.fast) / (CH.slow - CH.fast)));
     const rate = CH.rate[1] + (CH.rate[0] - CH.rate[1]) * lvl, cap = CH.cap[1] + (CH.cap[0] - CH.cap[1]) * lvl;
@@ -567,7 +593,7 @@
     const gain = Math.max(-cap, Math.min(cap, rate * weeks * Math.max(-0.5, Math.min(1, (score - CH.noGain) / (1 - CH.noGain)))));
     const fRace = fNow * (1 - gain), sd = CH.sd + CH.sdWeek * weeks;
     const pct = goal ? Math.max(1, Math.min(99, Math.round(100 * phi((goal - fRace) / (fRace * sd))))) : null;
-    return { pct, goal, D, f0, fNow, q, src, fRace, gain, weeks, t50: fRace, t80: fRace * (1 + 0.8416 * sd), T };
+    return { pct, goal, D, f0, fNow, q, src, fRace, gain, weeks, t50: fRace, t80: fRace * (1 + 0.8416 * sd), T, plan0 };
   }
   // a race time: h:mm for a half or a marathon, m:ss or h:mm:ss for 10 km and shorter
   const fmtTime = (s, D) => { s = Math.round(s); if (D >= 15) { const m = Math.round(s / 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; } const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(x).padStart(2, '0')}`; };
@@ -579,13 +605,14 @@
     const head = `<div class="w-ch"><h2 id="w-ready-h">Вероятность достижения цели</h2>${race ? `<span class="w-muted num">${raceName ? `${esc(raceName)}, ` : ''}${dayLbl(race.d)}</span>` : ''}</div>`;
     const wrap = (body) => `<section class="w-card w-ready" aria-labelledby="w-ready-h">${head}${body}${replanHTML()}</section>`;
     if (!race) return wrap(`<p class="w-note">Вероятность считается к главному старту и его цели. ${isSelf ? '<button class="w-link" data-act="onbopen">Укажите старт и цель</button>, и она появится здесь.' : 'Старт не выбран.'}</p>`);
-    if (C.none) return wrap(`<p class="w-note">Форму пока не от чего посчитать: нет результата старта за последние 12 недель и прогноза S10${C.guess ? ', а темпа посчитаны от цели' : ', темпа не заданы'}. Вероятность появится после старта или когда вы зададите свои темпа на вкладке «Мои темпа».</p>`);
+    if (C.wait) return wrap(`<p class="w-note">Пробегите первую неделю по плану, и здесь появится ваш шанс пробежать за ${fmtGoal(C.goal, C.D)}. Каждая тренировка его двигает.</p>`);
+    if (C.none) return wrap(`<p class="w-note">Укажите цель на старт, и здесь появится шанс её достичь.</p>`);
     const D = C.D, T = C.T, t = (s) => fmtTime(s, D), weeks = Math.round(C.weeks);
     const rows = [
-      ['Форма сейчас', t(C.fNow), `${C.src}${C.q ? `; ключевые ${C.q < 0 ? 'быстрее' : 'медленнее'} задания: ${C.q < 0 ? '−' : '+'}${fmtHms(Math.abs(C.fNow - C.f0))}` : ''}`],
-      ['К старту', t(C.fRace), T ? `если тренироваться как последние 6 недель, ${weeks} ${plural(weeks, 'неделя', 'недели', 'недель')} до старта` : `если тренироваться по плану (тренировок пока мало), ${weeks} ${plural(weeks, 'неделя', 'недели', 'недель')} до старта`],
+      C.plan0 ? null : ['Форма сейчас', t(C.fNow), `${C.src}${C.q ? `; ключевые ${C.q < 0 ? 'быстрее' : 'медленнее'} задания: ${C.q < 0 ? '−' : '+'}${fmtHms(Math.abs(C.fNow - C.f0))}` : ''}`],
+      ['К старту', t(C.fRace), C.plan0 ? `если тренироваться так же, ${weeks} ${plural(weeks, 'неделя', 'недели', 'недель')} до старта` : T ? `если тренироваться как последние 6 недель, ${weeks} ${plural(weeks, 'неделя', 'недели', 'недель')} до старта` : `если тренироваться по плану (тренировок пока мало), ${weeks} ${plural(weeks, 'неделя', 'недели', 'недель')} до старта`],
       ['Реалистично', t(C.t50), `вероятность 50%; на ${t(C.t80)} — 80%`],
-    ];
+    ].filter(Boolean);
     return wrap(`
       <div class="w-step"><div class="w-ready-v"><b class="num">${C.pct != null ? `${C.pct}<small>%</small>` : '—'}</b><span>${C.goal ? `пробежать за ${fmtGoal(C.goal, D)}: вероятность ${chanceLevel(C.pct)}` : 'у старта не задана цель: укажите её на странице «Настройка плана»'}</span></div>${C.pct != null ? chanceBar(C.pct) : ''}</div>
       <ul class="w-ready-p">${rows.map(([n, v, s]) => `<li><span class="w-ready-n">${n}</span><span class="num w-ready-s">${v}</span><span aria-hidden="true"></span><span class="w-muted">${esc(s)}</span></li>`).join('')}</ul>
@@ -599,8 +626,8 @@
   // the plan's scale: the first-week volume typed by the athlete; in the Kazan mode without one, the goal's share
   // (KAZAN.scale), so a re-plan, which works in plan km divided by this, stays consistent there too
   // a Kazan plan's goal: the page's in the Kazan mode (it follows the picker), else the one stored with the version
-  const kGoal = (p) => { const g = MODE === 'kazan' ? kazanGoal : p?.student?.kazanGoal; return KAZAN.goals.includes(g) ? g : '3:30:00'; };
-  const scaleK = (p) => { const f = firstKm(p); return volume && f ? volume / f : isK(p) ? KAZAN.scale[kGoal(p)] : 1; };
+  const kGoal = (p) => { const g = MODE === 'kazan' ? kazanGoal : p?.student?.kazanGoal; return kzOk(g) ? kzNorm(g) : '3:30:00'; };
+  const scaleK = (p) => { const f = firstKm(p); return volume && f ? volume / f : isK(p) ? KAZAN.scale[kzBand(kGoal(p))] : 1; };
   const easyText = () => (PACE ? easyRange(PACE).map(fmtSec).join('-') : 'Лёгкий бег');
   // a long run's text scaled with its length (the Kazan mode): «26 км. Первые 20 км …, последние 6 км …» ×0.7 →
   // «18 км. Первые 14 км …, последние 4 км …». The head becomes the new length: the «N км» the text opens with (a
@@ -1138,7 +1165,7 @@
     }
     // a goal the S10 forecast is slower than: said, not changed (the race and its goal stay as set)
     const C = chance();
-    if (C?.pct != null && C.pct < 40) reasons.push(`Вероятность достижения цели ${C.pct}%: к старту ожидается около ${fmtTime(C.fRace, C.D)} при цели ${fmtGoal(C.goal, C.D)}. Перестройка её не поднимет, если не выполнять тренировки; реалистичная цель — около ${fmtTime(C.t50, C.D)}.`);
+    if (C?.pct != null && C.pct < 40 && !C.plan0) reasons.push(`Вероятность достижения цели ${C.pct}%: к старту ожидается около ${fmtTime(C.fRace, C.D)} при цели ${fmtGoal(C.goal, C.D)}. Перестройка её не поднимет, если не выполнять тренировки; реалистичная цель — около ${fmtTime(C.t50, C.D)}.`);
     return { by: 'rules', weeksNew, rows, moves, paces, reasons, opts: { vol: true, move: true, pace: true } };
   }
   // stage 3: the generator rewrites the weeks from next Monday, told what was run
@@ -1278,6 +1305,7 @@
   }
   // the fill block's mode-dependent text: both modes drawn in one grid cell, the inactive one hidden, so the block is as
   // tall as the taller mode with any font and width and the buttons below never move when the mode is switched
+  const rolesHTML = () => `<div class="w-roles">${layout.map((r, i) => `<label class="w-role"><small>${DN[i]}</small><select data-p="role" data-i="${i}" aria-label="${DNF[i]}">${Object.entries(ROLE).map(([k, l]) => `<option value="${k}" ${r === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div>`;
   const SPANS = { '2w': '2 беговые недели', race: 'До старта' };
   const spanLabel = (k) => (k === 'race' && !race ? 'Весь план' : SPANS[k]);
   function fillModes(f) {
@@ -1292,6 +1320,8 @@
     return `<div class="w-modes">${modes.map(body).join('')}</div>
           <label class="w-chk"><input type="checkbox" data-p="keep" ${keepExisting ? 'checked' : ''}> <span>Не трогать дни, где задача уже стоит <span class="w-modes w-chk-n">${modes.map(count).join('')}</span></span></label>`;
   }
+  // the fill's confirm box (or the Kazan main-race question), on the plan card and on the conveyor's last step
+  const fillConfirmHTML = (f) => `${fill.confirm && kazanAsk ? kazanAskHTML() : fill.confirm && ((fill.snap || f.write).length || goalChangeLine()) ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h">${(fill.snap || f.write).length ? `<b>Записать ${(fill.snap || f.write).length} ${plural((fill.snap || f.write).length, 'день', 'дня', 'дней')} в дневник?</b> ${range((fill.snap || f.write)[0].d, last(fill.snap || f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'}${goalChangeLine() ? ` ${goalChangeLine()}` : ''}` : `<b>Записать новую цель в дневник?</b> ${goalChangeLine()}`} План и настройки сохранятся в вашем профиле.</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}`;
   function planCard() {
     const p = plan();
     const head = `<div class="w-ch"><h2 id="w-plan2-h">${p ? `Мастер-план «${esc(MODE === 'kazan' && isK(p) ? kzName(p.name) : p.name || 'Без названия')}»` : 'Мастер-план'}</h2>${!race && raceEnd ? `<span class="w-muted num">без старта, по ${dayLbl(raceEnd)}</span>` : race ? `<span class="w-muted num">старт${raceName ? ` ${esc(raceName)}` : ''}, ${dayLbl(race.d)}</span>` : ''}${p && MODE !== 'kazan' ? `<button class="w-btn sm" data-act="pchoose" aria-expanded="${chooser}">${chooser ? 'Свернуть выбор' : 'Сменить план'}</button>` : ''}</div>`;
@@ -1306,8 +1336,8 @@
       <div class="w-step">
         <div class="w-pmeta"><span class="w-muted num">${src} · ${ws.length} ${plural(ws.length, 'неделя', 'недели', 'недель')} · ${range(first.mon, add(lastW.mon, 6))} · темпа ${esc(paceLabel())}</span></div>
         <div class="w-pset">
-          <label class="w-f w-f-s"><span>Объём первой недели</span><span class="w-inl"><input data-p="volume" class="num" inputmode="numeric" value="${volume || (isK(p) ? Math.round(firstKm(p) * KAZAN.scale[kGoal(p)]) : firstKm(p))}"> км</span></label>
-          <div class="w-f w-f-wide"><span>Дни недели</span><div class="w-roles">${layout.map((r, i) => `<label class="w-role"><small>${DN[i]}</small><select data-p="role" data-i="${i}" aria-label="${DNF[i]}">${Object.entries(ROLE).map(([k, l]) => `<option value="${k}" ${r === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div></div>
+          <label class="w-f w-f-s"><span>Объём первой недели</span><span class="w-inl"><input data-p="volume" class="num" inputmode="numeric" value="${volume || (isK(p) ? Math.round(firstKm(p) * KAZAN.scale[kzBand(kGoal(p))]) : firstKm(p))}"> км</span></label>
+          <div class="w-f w-f-wide"><span>Дни недели</span>${rolesHTML()}</div>
         </div>
       </div>
       <ol class="w-weeks">${ws.map((w, n) => {
@@ -1331,11 +1361,11 @@
           ${fillModes(f)}
           ${(() => { const u = lastUndo(); if (!undoable(u)) return ''; const ds = u.days.map((r) => r[0]).sort(); return `<span class="w-undo">${ds.length ? `Последнее заполнение: ${range(ds[0], last(ds))}` : 'План перестроен'} · <button class="w-link" data-act="undoask" data-where="card">Вернуть как было</button></span>`; })()}</div>
         <button class="w-btn w-fsave" data-act="pversion">Сохранить версию</button>
-        <div class="w-acts w-fgo">${me.isPremium ? `<button class="w-btn primary" data-act="fillask" ${(f.write.length || goalChangeLine()) && !fill.busy && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button>` : `<a class="w-btn primary" data-act="buy" href="${SITE}/money">Оформить Premium</a>`}</div>
-        ${pacesOk(PACE) ? '' : '<p class="w-note w-prem">Задайте темпа на вкладке «Мои темпа»: без них в задания встанут T5…T42 вместо минут на километр.</p>'}
-        ${me.isPremium ? '' : `<p class="w-note w-prem">Заполнять календарь можно с Premium: 750 ₽ в месяц или 9 €. План сохранится в вашем профиле: после оплаты вернитесь сюда и нажмите «Заполнить календарь».</p>`}
+        <div class="w-acts w-fgo">${me.isPremium ? `<button class="w-btn primary" data-act="fillask" ${(f.write.length || goalChangeLine()) && !fill.busy && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button>` : MODE === 'kazan' ? `<a class="w-btn primary" data-act="buy" href="${SITE}/money2?paysite=1&amp;kazan=1">Оплатить 2&nbsp;000&nbsp;₽</a>` : `<a class="w-btn primary" data-act="buy" href="${SITE}/money">Оформить Premium</a>`}</div>
+        ${pacesOk(PACE) ? '' : '<p class="w-note w-prem">Задайте темпа на вкладке «Мои темпа», чтобы в заданиях стояли минуты на километр.</p>'}
+        ${me.isPremium ? '' : (MODE === 'kazan' ? `<p class="w-note w-prem">Весь план до старта — 2&nbsp;000&nbsp;₽, вместе с Premium до ${kzPaidTo()}. После оплаты вернитесь сюда и нажмите «Заполнить календарь».</p>` : `<p class="w-note w-prem">Заполнять календарь можно с Premium: 750 ₽ в месяц или 9 €. После оплаты вернитесь сюда и нажмите «Заполнить календарь».</p>`)}
       </div>
-      ${fill.confirm && kazanAsk ? kazanAskHTML() : fill.confirm && ((fill.snap || f.write).length || goalChangeLine()) ? `<div class="w-confirm" role="alertdialog" aria-labelledby="w-cf-h"><p id="w-cf-h">${(fill.snap || f.write).length ? `<b>Записать ${(fill.snap || f.write).length} ${plural((fill.snap || f.write).length, 'день', 'дня', 'дней')} в дневник?</b> ${range((fill.snap || f.write)[0].d, last(fill.snap || f.write).d)}. ${keepExisting ? 'Дни, где задача уже стоит, останутся как есть.' : 'Задачи, которые уже стоят в эти дни, заменятся.'}${goalChangeLine() ? ` ${goalChangeLine()}` : ''}` : `<b>Записать новую цель в дневник?</b> ${goalChangeLine()}`} План и настройки сохранятся в вашем профиле.</p><div class="w-acts"><button class="w-btn" data-act="fillno">Отмена</button><button class="w-btn primary" data-act="fillyes" ${fill.busy ? 'disabled' : ''}>${fill.busy ? esc(fill.progress || 'Записываю…') : 'Записать'}</button></div></div>` : ''}
+      ${fillConfirmHTML(f)}
       ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}
       ${undoHTML('card')}${undo.err ? `<p class="w-note w-err" role="alert">${esc(undo.err)}</p>` : ''}
     </section>`;
@@ -1348,7 +1378,7 @@
       <div class="w-ch"><h2 id="w-pace-h">Темпа для заданий, мин/км</h2><label class="w-inl w-muted">Откуда <select data-p="pacesrc" aria-label="Откуда брать темпа">${opts.map(([k, l]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label></div>
       <div class="w-paces num">${[['5', 'темп на 5 км'], ['10', 'темп на 10 км'], ['21', 'полумарафон'], ['42', 'марафон']].map(([k, l]) => `<label><span><b>T${k}</b><small>${l}</small></span><input data-p="pace" data-k="${k}" value="${P?.[k] || ''}" inputmode="numeric" aria-label="T${k}, мин/км" placeholder="4:30"></label>`).join('')}</div>
       ${paceTable(P)}
-      <p class="w-note">Все задания на странице считаются по этим темпам: «T21+8» — это ваш T21 плюс 8 секунд. Если поменять цифру, темпа станут «своими» и сохранятся на этом устройстве.</p>
+      <p class="w-note">Если поменять цифру, темпа станут вашими.</p>
     </section>`;
   }
   function paceTable(P) {
@@ -1554,14 +1584,14 @@
     const o = onb, f = (k, label, extra = '') => `<label class="w-f"><span>${label}</span><input data-o="${k}" value="${esc(o[k])}" ${extra}></label>`;
     return `<div class="w-modal"><section class="w-dlg" role="dialog" aria-modal="true" aria-labelledby="w-onb-h">
       <h2 id="w-onb-h">${o.race ? 'Главный старт' : 'Ваши темпа'}</h2>
-      ${o.race ? `<p class="w-muted">К какому старту готовимся? План ляжет на даты до него. Если старта пока нет, нажмите «Отсутствует»: план пойдёт со следующей беговой недели без даты старта.</p>
+      ${o.race ? `<p class="w-muted">К какому старту готовимся? План ляжет на даты до него.</p>
       <div class="w-onb-g">
         <label class="w-f"><span>Дата</span><input type="date" data-o="d" min="${add(today, 1)}" value="${o.d}"></label>
         <label class="w-f"><span>Дистанция</span><select data-o="dist">${DISTANCES.map((d) => `<option ${d === o.dist ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
         ${f('name', 'Название', 'placeholder="Например, Valencia"')}
         ${f('goal', 'Цель, необязательно', 'class="num" inputmode="text" autocomplete="off" placeholder="3:20 или 22:30"')}
       </div>` : ''}
-      ${o.pace ? `${o.race ? '<h3>Темпа</h3>' : ''}<p class="w-muted">По ним в задания встанут минуты на километр вместо T5…T42. <span id="w-onb-pn">${onbPaceNote(o)}</span> Поменять можно потом на вкладке «Мои темпа».</p>
+      ${o.pace ? `${o.race ? '<h3>Темпа</h3>' : ''}<p class="w-muted"><span id="w-onb-pn">${onbPaceNote(o)}</span> Поменять можно потом.</p>
       <label class="w-f"><span>Лёгкий бег, мин/км</span><input data-o="easy" class="num" inputmode="text" autocomplete="off" value="${esc(o.P.easy)}"></label>
       <div class="w-onb-p">${[5, 10, 21, 42].map((k) => `<label class="w-f"><span>T${k}</span><input data-o="t${k}" class="num" inputmode="numeric" value="${esc(o.P[k])}"></label>`).join('')}</div>` : ''}
       ${o.err ? `<p class="w-err" role="alert">${esc(o.err)}</p>` : ''}
@@ -1598,9 +1628,69 @@
   };
   // the Kazan mode: the goal picked here instead of «Добавить цель» / «Сбросить» (one race only); it moves the race's
   // goal, the version's name, the paces while they come from the goal, and the chance
-  const kazanPicker = () => `<div class="w-kgoal"><span class="w-lb">Цель</span><div class="w-seg" role="group" aria-label="Цель на марафон">${KAZAN.goals.map((g) => `<button type="button" class="num" data-act="kgoal" data-g="${g}" aria-pressed="${g === kazanGoal}">${g.replace(/:00$/, '')}</button>`).join('')}</div></div>`;
+  // any time (owner, 22.11.2026): typed as in the start window («3:40», «340»), its plan said beside it
+  const kzGoalTxt = (g = kazanGoal) => fmtGoal(kzSec(g), 42.195);
+  const kzPlanTxt = (g = kazanGoal) => `план на ${kzBand(g).replace(/:00$/, '')}`;
+  const kazanPicker = () => `<div class="w-kgoal"><label class="w-lb" for="w-kg">Цель</label><input id="w-kg" class="num" data-p="kgoal" inputmode="text" autocomplete="off" value="${kzGoalTxt()}" aria-describedby="w-kg-s"><span class="w-muted" id="w-kg-s">${kzPlanTxt()}</span></div>`;
+  // a typed goal: null when it is not a marathon time from 2:00 to 7:00
+  const kzRead = (v) => { const g = goalOf(v, 42.195); return g && kzOk(g) ? kzNorm(g) : null; };
+  /* ================= the Kazan way for a newcomer (owner, 22.11.2026: «конвейер», one step at a time) =================
+     Until the athlete has a Kazan plan in the profile with a filled calendar, the page shows one step instead of the
+     summary and the tabs: the goal, the running days, the first week, the payment (2 000 ₽ = Premium to the race; skipped
+     when that is paid), the fill. The step is kept in the browser (flow.<ID>); the first fill that writes ends it and the
+     usual page opens. Own page only, never for a coach with ?id=. */
+  const FLOW = [['goal', 'Цель'], ['days', 'Дни'], ['week', 'Первая неделя'], ['pay', 'Оплата'], ['fill', 'Календарь']];
+  const kzFilled = () => versions.some((v) => isK(v) && v.filled);
+  let flow = MODE === 'kazan' && isSelf && !kzFilled() ? store.get(`flow.${id}`, 'goal') : null;
+  if (flow === 'done') flow = null; else if (flow && !FLOW.some(([k]) => k === flow)) flow = 'goal';
+  if (flow === 'pay' && kazanPaid) flow = 'fill'; else if (flow === 'fill' && !kazanPaid) flow = 'pay'; // back from the payment
+  const flowGo = (k) => { flow = k; store.set(`flow.${id}`, k); fill.confirm = false; fill.err = ''; if (kazanAsk === 'ask') kazanAsk = ''; render(); root.querySelector('.w-flow')?.scrollIntoView({ block: 'start' }); };
+  const flowNext = () => flowGo(flow === 'week' && kazanPaid ? 'fill' : FLOW[FLOW.findIndex(([k]) => k === flow) + 1][0]);
+  const flowBack = () => flowGo(flow === 'fill' && kazanPaid ? 'week' : FLOW[Math.max(0, FLOW.findIndex(([k]) => k === flow) - 1)][0]);
+  const kzT42 = (g) => pacesFromGoal(42.195, kzSec(g))[42];
+  const flowGoalHint = (g) => `Темп марафона ${kzT42(g)} на километр · ${kzPlanTxt(g)}, для целей ${kzBand(g) === KAZAN.goals[0] ? 'быстрее 3:15' : kzBand(g) === KAZAN.goals[1] ? 'от 3:15 до 3:45' : 'от 3:45'}`;
+  // the first plan week the athlete will run: the first with a day after today
+  const firstWeek = (f) => f?.weeks.find((w) => w.days.some((d) => d.d > today)) || null;
+  function flowHTML() {
+    const i = FLOW.findIndex(([k]) => k === flow);
+    const bar = `<ol class="w-flow-bar" aria-label="Шаги">${FLOW.map(([k, l], j) => `<li class="${j < i || (k === 'pay' && kazanPaid) ? 'done' : j === i ? 'now' : ''}" ${j === i ? 'aria-current="step"' : ''}><span class="num">${j + 1}</span>${l}</li>`).join('')}</ol>`;
+    const nav = (next, back = true) => `<div class="w-flow-acts">${back ? '<button class="w-btn" data-act="flowback">Назад</button>' : ''}${next}</div>`;
+    let body = '';
+    if (flow === 'goal') body = `<h2 id="w-flow-h">За сколько хотите пробежать марафон?</h2>
+      <p class="w-flow-lead">План Юрия Строфилова на 24 недели. Темпа посчитаем от вашей цели, а тренировки разложим по вашим дням.</p>
+      <label class="w-flow-goal"><span class="w-lb">Цель</span><input id="w-fg" class="num" data-p="kflow" inputmode="text" autocomplete="off" value="${kzGoalTxt()}" aria-describedby="w-fg-s"></label>
+      <p class="w-flow-hint num" id="w-fg-s">${flowGoalHint(kazanGoal)}</p>
+      ${nav('<button class="w-btn primary" data-act="flownext">Дальше</button>', false)}`;
+    else if (flow === 'days') body = `<h2 id="w-flow-h">В какие дни удобно бегать?</h2>
+      <p class="w-flow-lead">Две работы и длительная на неделе, остальные дни лёгкие или отдых. Поменять можно в любой момент.</p>
+      ${rolesHTML()}
+      ${nav('<button class="w-btn primary" data-act="flownext">Дальше</button>')}`;
+    else if (flow === 'week') {
+      const f = fillPreview(), w = firstWeek(f);
+      body = `<h2 id="w-flow-h">Ваша первая неделя</h2>
+      ${w ? `<p class="w-flow-lead num">${range(w.mon, add(w.mon, 6))} · ${n1(w.total)} км · цель ${esc(kzGoalTxt())}</p>
+      <ol class="w-wdays w-flow-days">${w.days.map((d) => `<li class="${d.d <= today ? 'gone' : ''}"><span class="w-wdd"><b>${DN[dow(d.d)]}</b><small class="num">${dayLbl(d.d)}</small></span><div class="w-wdb"><span class="w-name ${d.typtrain ? '' : 'w-muted'}">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}</div><span class="num w-wdk">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`).join('')}</ol>` : ''}
+      <p class="w-flow-note">Пробегите эту неделю, и здесь появится ваш шанс пробежать за ${esc(kzGoalTxt())}. Каждая тренировка его двигает.</p>
+      ${nav('<button class="w-btn primary" data-act="flownext">Дальше</button>')}`;
+    } else if (flow === 'pay') body = `<h2 id="w-flow-h">Весь план до старта — 2&nbsp;000&nbsp;₽</h2>
+      <p class="w-flow-lead">24 недели тренировок в ваших темпах в календаре S10 и Premium до ${kzPaidTo()}. Один платёж, без автопродления.</p>
+      ${nav(`<a class="w-btn primary" data-act="kpay" href="${SITE}/money2?paysite=1&amp;kazan=1">Оплатить 2&nbsp;000&nbsp;₽</a>`)}
+      <p class="w-flow-note">После оплаты вернитесь на эту страницу: останется заполнить календарь.</p>`;
+    else if (flow === 'fill') {
+      const f = fillPreview();
+      body = `<h2 id="w-flow-h">Заполним календарь</h2>
+      <p class="w-flow-lead">Тренировки встанут в ваш дневник S10 с темпами в цифрах. Прошедшие дни и дни, где задача уже стоит, не трогаем.</p>
+      <div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${Object.keys(SPANS).map((k) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${spanLabel(k)}</button>`).join('')}</div>
+      <p class="w-flow-hint num">${f?.write.length ? `${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}, ${range(f.write[0].d, last(f.write).d)}` : 'Записывать нечего: эти дни уже заполнены'}</p>
+      ${nav(`<button class="w-btn primary" data-act="fillask" ${f?.write.length && !fill.busy && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button>`)}
+      ${f ? fillConfirmHTML(f) : ''}
+      ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}`;
+    }
+    return `<section class="w-card w-flow" aria-labelledby="w-flow-h">${bar}${body}</section>`;
+  }
   function setKazanGoal(g) {
-    if (MODE !== 'kazan' || !KAZAN.goals.includes(g) || g === kazanGoal) return;
+    if (MODE !== 'kazan' || !kzOk(g)) return;
+    g = kzNorm(g); if (g === kazanGoal) return;
     kazanGoal = g; store.set(`goal.${id}`, { g, at: new Date().toISOString() }); // the browser's until a fill or a save
     volume = null; // the goal sets the volume: a first-week volume typed for the old goal goes
     setRace(kazanRace()); rp = null; // a re-plan proposal was made for the old goal
@@ -1704,6 +1794,7 @@
     syncRace();
     // the diary to the plan's end, for «Не трогать…» and the counts (the first load covered 6 weeks or the race)
     if (raceEnd && raceEnd > today && !loadedWeeks.has(monday(raceEnd))) loadRange(add(today, 1), raceEnd).then(render, () => {});
+    if (flow && kzFilled()) { flow = null; store.set(`flow.${id}`, 'done'); tab = 'week'; } // the first fill ends the way in
     const W = week(wk), cur = wk === monday(today), C = chance();
     const daysToRace = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : null;
     const pct = W.plan ? Math.min(100, (W.done / W.plan) * 100) : 0;
@@ -1715,7 +1806,7 @@
       <div class="w-head">
         ${MODE === 'kazan' ? `<h1 class="w-h1k"><span class="w-nw">Казанский марафон,</span> <span class="w-nw">${kazanDay()}</span></h1>` : `<h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>`}
       </div>
-      <div class="w-duo">
+      ${flow ? flowHTML() : `<div class="w-duo">
       <section class="w-card w-hero" aria-label="Сегодня и итоги недели">
         <div class="w-hero-l">${todayCard(W)}
           ${daysToRace != null // owner, 09.11.2026: under today's workout, the race and its goal larger, the days small
@@ -1724,7 +1815,7 @@
         <div class="w-stats">
           <div class="w-stat w-stat-wide"><span class="w-lb">Объём недели</span><span class="v num">${n1(W.done)}<small>из ${n1(W.plan)} км</small></span>
             ${W.plan ? `<div class="w-track" role="img" aria-label="${n1(W.done)} из ${n1(W.plan)} километров"><i style="width:${pct}%"></i></div><div class="w-track-l num" aria-hidden="true"><span>0</span><span>${n1(W.plan)} км</span></div>` : '<span class="s">на этой неделе ничего не запланировано</span>'}</div>
-          <div class="w-stat w-stat-full w-stat-r"><span class="w-lb">Вероятность достижения цели</span><span class="v num">${C?.pct != null ? `${C.pct}<small>%</small>` : '—'}</span>${C?.pct != null ? chanceBar(C.pct) : ''}<span class="s">${!race ? 'нет старта' : C.none ? 'не от чего считать' : C.pct == null ? 'нет цели' : `${esc(fmtGoal(C.goal, C.D))}, ${chanceLevel(C.pct)}`} · <button class="w-link" data-act="ready">подробнее</button></span></div>
+          <div class="w-stat w-stat-full w-stat-r"><span class="w-lb">Вероятность достижения цели</span>${C?.wait ? `<span class="s w-chance-wait">Появится после первой недели тренировок. Каждая тренировка его двигает.</span>` : `<span class="v num">${C?.pct != null ? `${C.pct}<small>%</small>` : '—'}</span>${C?.pct != null ? chanceBar(C.pct) : ''}<span class="s">${!race ? 'нет старта' : C.pct == null ? 'нет цели' : `${esc(fmtGoal(C.goal, C.D))}, ${chanceLevel(C.pct)}`} · <button class="w-link" data-act="ready">подробнее</button></span>`}</div>
         </div>
       </section>
       ${calHTML()}
@@ -1734,7 +1825,7 @@
       <div class="w-tabbar" role="tablist" aria-label="Разделы">
         ${[['week', 'Неделя'], ['plan', 'План до старта'], ['paces', 'Мои темпа']].map(([k, l]) => `<button role="tab" id="tab-${k}" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" aria-controls="w-panel" data-act="tab" data-k="${k}">${l}</button>`).join('')}
       </div>
-      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? chanceCard(C) + planCard() : pacesCard()}</div>
+      <div role="tabpanel" id="w-panel" aria-labelledby="tab-${tab}" class="w-panel">${tab === 'week' ? weekSection(W) : tab === 'plan' ? chanceCard(C) + planCard() : pacesCard()}</div>`}
       <p class="w-foot">${`Данные из вашего дневника S10, обновлены ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}.`} <a href="https://t.me/+wP4aOZ4910I2MTk6" target="_blank" rel="noopener">Чат «Моя неделя» в Telegram: вопросы и отзывы</a></p>
     </main>${onb ? onbHTML() : ''}${menuOpen ? `<div class="w-navwrap" role="dialog" aria-modal="true" aria-label="Меню S10"><header class="w-top">${topBar(true)}</header><nav class="w-sitemenu" aria-label="Меню S10"><ul>${menuLinks()}</ul></nav></div>` : ''}`;
     if (onb && !onb.focused) { onb.focused = true; root.querySelector('.w-dlg input, .w-dlg select')?.focus(); }
@@ -1933,7 +2024,14 @@
   .w-hint{margin-top:4px}.w-hint>span{display:block}
   .w-undo{color:var(--muted);font-size:13px;margin-top:6px}.w-undo .w-link,.w-flash .w-link{font-size:inherit;padding:0}
   .w-main>.w-confirm{margin:0}
-  .w-kgoal{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-top:10px}.w-kgoal .w-seg button{min-width:72px;padding:0 12px}.w-head h1.w-h1k{white-space:normal}
+  .w-flow{max-width:760px;padding:24px 28px 28px}.w-flow h2{font-size:26px;line-height:1.25;font-weight:500;margin:20px 0 8px;text-wrap:balance}
+  .w-flow-bar{list-style:none;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted)}.w-flow-bar li{display:flex;align-items:center;gap:6px}.w-flow-bar li span{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--control);font-size:12px}
+  .w-flow-bar li.now{color:var(--text);font-weight:500}.w-flow-bar li.now span{background:var(--accent);border-color:var(--accent);color:#fff}.w-flow-bar li.done span{background:var(--accent-bg);border-color:var(--accent-bg);color:var(--accent)}
+  .w-flow-lead{font-size:16px;max-width:60ch;margin-bottom:18px}.w-flow-hint{color:var(--muted);margin-top:10px}.w-flow-note{color:var(--muted);margin-top:16px;max-width:60ch}
+  .w-flow-goal{display:flex;flex-direction:column;gap:6px;width:max-content}.w-flow-goal input{width:180px;height:64px;padding:0 16px;border:2px solid var(--accent);border-radius:10px;background:var(--field);font-size:34px;font-weight:500}
+  .w-flow-acts{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.w-flow-acts .w-btn{min-height:48px;padding:0 24px;font-size:16px}.w-flow .w-roles{margin-top:4px}.w-flow .w-span{margin-top:4px}.w-flow .w-flow-days{margin-top:4px}
+  @media (max-width:640px){.w-flow{padding:20px 16px 24px}.w-flow h2{font-size:22px}.w-flow-acts .w-btn{flex:1 1 auto}}
+  .w-kgoal{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-top:10px}.w-kgoal input{width:96px;height:40px;padding:0 10px;border:1px solid var(--control);border-radius:8px;background:var(--field);font-size:17px;font-weight:500}.w-kgoal input:hover{border-color:var(--text)}.w-head h1.w-h1k{white-space:normal}
   .w-goal-acts{font-size:14px;color:var(--faint)}.w-goal .w-confirm.w-goal-ask{margin:8px 0 0}
   .w-sum b{font-size:24px;font-weight:500;line-height:1.2}
   .w-acts{display:flex;gap:10px;flex-wrap:wrap}
@@ -2067,7 +2165,9 @@
       if (act === 'onbok' || act === 'onbnone') return finishOnb(act === 'onbok');
       if (act === 'onbopen') { onb = newOnb(true, false, true); return render(); }
       if (act === 'goaladd') return openGoal();
-      if (act === 'kgoal') return setKazanGoal(a.dataset.g);
+      if (act === 'flownext') { if (flow === 'goal') { const t = root.querySelector('[data-p=kflow]'), g = kzRead(t?.value); if (!g) { t.setCustomValidity('Например 3:40'); t.reportValidity(); return; } t.setCustomValidity(''); setKazanGoal(g); } return flowNext(); }
+      if (act === 'flowback') return flowBack();
+      if (act === 'kpay') {  return; }
       if (act === 'racereset') { raceAsk = 'ask'; return render(); }
       if (act === 'raceresetno') { raceAsk = ''; return render(); }
       if (act === 'raceresetyes') { if (raceAsk !== 'busy') await resetRace(); return; }
@@ -2122,6 +2222,8 @@
   root.addEventListener('error', (e) => { if (e.target.matches?.('.w-ava img')) e.target.remove(); }, true);
   root.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && menuOpen) return toggleMenu(false);
+    if (e.key === 'Enter' && e.target.matches?.('[data-p=kflow]')) { e.preventDefault(); return root.querySelector('[data-act=flownext]')?.click(); }
+    if (e.key === 'Enter' && e.target.matches?.('[data-p=kgoal]')) { e.preventDefault(); return e.target.blur(); } // the goal is read on change
     if (e.key === 'Escape' && onb?.manual) { onb = null; return render(); }
     const c = e.target.closest('.w-cd');
     if (c && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -2150,6 +2252,7 @@
       // never a partial set: the other three come from the current paces, or from a new athlete's defaults
       PACE_OWN = { ...(pacesOk(PACE) ? PACE : NEWBIE_PACES), [t.dataset.k]: fmtSec(v) }; paceSrc = 'own'; paceGuess = false; store.set(`paceGuess.${id}`, false); store.set(`paceOwn.${id}`, PACE_OWN); store.set(`paceSrc.${id}`, 'own'); reprice(); if (PL?.base) { PL.rows = null; pickWorks(); } return render();
     }
+    if (pk === 'kgoal') { const g = kzRead(t.value); if (!g) { t.setCustomValidity('Например 3:40'); t.reportValidity(); return; } t.setCustomValidity(''); return setKazanGoal(g); }
     if (pk === 'volume') { const v = +t.value.replace(',', '.'); volume = v > 0 ? v : null; return render(); }
     if (t.dataset.g) { const k = t.dataset.g; gen[k] = k === 'weeks' ? Math.max(1, Math.min(30, +t.value || gen.weeks)) : t.value; if (k !== 'prompt') render(); return; }
     if (t.dataset.alt != null) { const r = PL.rows[+t.dataset.r]; r.src = t.dataset.alt; Object.assign(r, t.dataset.alt === 'alt' ? r.alt : r.gen); return render(); }
@@ -2166,6 +2269,7 @@
   root.addEventListener('input', (e) => {
     const t = e.target, f = t.dataset.f;
     if (t.tagName === 'TEXTAREA') fit(t);
+    if (t.dataset.p === 'kflow') { const g = kzRead(t.value), h = root.querySelector('#w-fg-s'); t.setCustomValidity(''); if (h) h.textContent = g ? flowGoalHint(g) : 'Например 3:40: марафон от 2:00 до 7:00'; return; } // live, no redraw
     if (t.dataset.g === 'prompt') { gen.prompt = t.value; gen.touched = true; return; }
     if (t.dataset.o && onb) { // the start window keeps what is typed without redrawing (focus stays)
       const k = t.dataset.o;

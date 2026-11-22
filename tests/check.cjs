@@ -431,7 +431,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.close(); }
   { const p = await open({ path: '?tab=plan', init: hook(`${NEWBIE}`) });
     await p.fill('[data-o=d]', '2027-03-07'); await p.fill('[data-o=goal]', '3:00'); await p.click('[data-act=onbok]'); await wait(500);
-    check('new athlete with a goal and no race result: no probability from paces taken from that goal', (await p.innerText('.w-stat-r')).includes('не от чего считать'));
+    const st = await p.innerText('.w-stat-r'); // owner, 22.11.2026: no scaring «не от чего считать», the figure comes after the first runs of the plan
+    check('new athlete with a goal and no race result: no figure yet, «Появится после первой недели тренировок», nothing about 12 weeks', st.includes('Появится после первой недели тренировок') && !/%|не от чего|12 недел/.test(st), st);
     await p.close(); }
   { const p = await open({ path: '?tab=plan', init: hook(`${NEWBIE}`) });
     await p.fill('[data-o=d]', '2027-03-07'); await p.selectOption('[data-o=dist]', { label: '10 км' }); await p.fill('[data-o=goal]', '450'); await p.click('[data-act=onbok]'); await wait(300);

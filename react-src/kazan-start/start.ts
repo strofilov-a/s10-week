@@ -44,9 +44,6 @@ export function mountKazanStart(page: El): () => void {
   if (kml && tpl && !kml.shadowRoot) { kml.attachShadow({ mode: 'open' }).appendChild(document.importNode((tpl as HTMLTemplateElement).content, true)); tpl.remove(); }
   const kmlDays = kml && kml.shadowRoot ? kml.shadowRoot.querySelector('[data-countdown]') : null;
   if (kmlDays) kmlDays.textContent = left > 0 ? `До старта ${left} ${plural(left, 'день', 'дня', 'дней')}` : left === 0 ? 'Старт сегодня' : 'Марафон прошёл';
-  // its price, by their ladder (data-ladder: [from, price], from that Monday, Moscow time), as their own page sets it
-  const kmlPrice = kml && kml.shadowRoot && kml.shadowRoot.querySelector('[data-price]');
-  if (kmlPrice) { const day = msk.toISOString().slice(0, 10); let price = 0; try { (JSON.parse(kml.dataset.ladder || '[]') as Array<[string, number]>).forEach(([from, p]) => { if (!price || from <= day) price = p; }); } catch (e) { price = 0; } if (price) kmlPrice.textContent = price.toLocaleString('ru-RU').replace(/\s/g, '\u00a0'); }
 
   /* the plan's four stages (plans/kazan-2027.md: База −24…−18, ПАНО −17…−10, Race Specific −9…−4, Taper −3…−1) */
   const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];

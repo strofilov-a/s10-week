@@ -48,7 +48,7 @@ async function site(page, FX) {
   const idOf = (u) => (u.match(/[?&]id=(\d+)/) || [])[1];
   await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
   const json = (route, body) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
-  await page.route(/\/(apiweb|student\?|t7\/plan-templates)/, async (route) => {
+  await page.route(/\/(apiweb|apiapp|student\?|t7\/plan-templates)/, async (route) => {
     const req = route.request(), u = req.url();
     if (req.method() === 'POST') {
       if (u.includes('generate.php')) return route.fulfill({ status: 200, contentType: 'text/plain; charset=utf-8', body: FX.generated });
@@ -66,6 +66,7 @@ async function site(page, FX) {
     }
     writes.reads.push(u.replace(/^https?:\/\/[^/]+/, ''));
     if (u.includes('/student/self/info')) return json(route, FX.me);
+    if (u.includes('/apiapp/me')) return route.fulfill({ status: 200, contentType: 'text/html', body: `<br><b>Notice</b>: a PHP notice first<br>${JSON.stringify(FX.app || { id: FX.me?.id, subscriptionExpiredAt: 0 })}` }); // Premium paid until (unix s)
     if (u.includes('task.php?action=main')) return json(route, FX.mainOf?.[idOf(u)] || FX.main);
     if (u.includes('studentMainStart')) return json(route, FX.startParam);
     if (u.includes('planresults.php')) return json(route, FX.results);
@@ -92,9 +93,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const rsrv = await serveRelease(); RBASE = `http://127.0.0.1:${rsrv.address().port}`;
   const browser = await chromium.launch();
   // `init`: a script run before the page's own (e.g. KZMAIN: the demo snapshot's main race made the Kazan marathon)
-  const open = async (query = '', init = null) => {
+  const open = async (query = '', init = null, flowOn = false) => {
     const p = await browser.newPage({ viewport: { width: 1280, height: 900 } }); p.errors = [];
     p.on('pageerror', (x) => p.errors.push(x.message)); if (init) await p.addInitScript(init);
+    if (!flowOn) await p.addInitScript(() => { try { localStorage.setItem('s10week.kazan.flow.1000000001', '"done"'); } catch {} }); // the usual page, past the newcomer's way
     await p.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await p.goto(BASE + query); await p.waitForFunction(() => document.querySelector('#s10-week .w-tabbar, #s10-week .w-dlg, main h1'), null, { timeout: 20000 }).catch(() => {}); await wait(300); return p;
   };
@@ -122,22 +124,32 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // 2. the Kazan mode: the race fixed, the goal picked on the page
   const pct = (p) => p.$eval('.w-stat-r .v', (x) => parseInt(x.innerText, 10));
-  const goal = async (p, g) => { await p.click(`[data-act=kgoal][data-g="${g}"]`); await wait(250); };
+  const goal = async (p, g) => { await p.fill('[data-p=kgoal]', g.split(':').length === 3 ? g.replace(/:00$/, '') : g); await p.press('[data-p=kgoal]', 'Enter'); await wait(250); };
+  const goalIn = (p) => p.$eval('[data-p=kgoal]', (x) => [x.value, document.getElementById('w-kg-s')?.innerText || '']).catch(() => ['', '']);
   if (DEMO) { const p = await open('?kazan');
     const h1 = await p.$eval('h1', (x) => x.innerText).catch(() => '');
     check('kazan: h1 «Казанский марафон» and «2 мая»', h1.includes('Казанский марафон') && h1.includes('2 мая') && h1.includes('2027'), h1);
-    const btns = await p.$$eval('[data-act=kgoal]', (l) => l.map((x) => [x.dataset.g, x.getAttribute('aria-pressed'), x.innerText.trim()]));
-    check('kazan: goal picker, 3:30 pressed by default', btns.map((b) => b[0]).join() === '3:00:00,3:30:00,4:00:00' && btns.map((b) => b[1]).join() === 'false,true,false' && btns.map((b) => b[2]).join() === '3:00,3:30,4:00', JSON.stringify(btns));
+    const gi = await goalIn(p);
+    check('kazan: the goal is a field (any time), 3:30 by default, «план на 3:30» beside it', gi[0] === '3:30' && gi[1] === 'план на 3:30', JSON.stringify(gi));
     check('kazan: no start window', !(await p.$('.w-dlg')));
     const c330 = await pct(p);
-    const box = async () => p.$eval('[data-act=kgoal][data-g="3:30:00"]', (x) => { const r = x.getBoundingClientRect(); return [r.x, r.y, r.width].map(Math.round).join(); });
+    const box = async () => p.$eval('[data-p=kgoal]', (x) => { const r = x.getBoundingClientRect(); return [r.x, r.y, r.width].map(Math.round).join(); });
     const b0 = await box();
     await goal(p, '3:00:00'); const c300 = await pct(p);
-    const pressed = await p.$$eval('[data-act=kgoal]', (l) => l.map((x) => x.getAttribute('aria-pressed')).join());
+    const pressed = (await goalIn(p)).join(' · ');
     const b1 = await box();
     await goal(p, '4:00:00'); const c400 = await pct(p);
-    check('kazan: switching goal moves «Вероятность достижения цели»', c300 < c330 && c330 < c400 && pressed === 'true,false,false', `3:00 ${c300}%, 3:30 ${c330}%, 4:00 ${c400}%`);
-    check('kazan: the goal picker does not jump on click', b0 === b1, `${b0} → ${b1}`);
+    check('kazan: switching goal moves «Вероятность достижения цели»', c300 < c330 && c330 < c400 && pressed === '3:00 · план на 3:00', `3:00 ${c300}%, 3:30 ${c330}%, 4:00 ${c400}%`);
+    check('kazan: the goal field does not jump when the goal changes', b0 === b1, `${b0} → ${b1}`);
+    { // owner, 22.11.2026: any goal; the plan by its band (3:15 and 3:45 go to the slower plan), the paces from the goal itself
+      const bands = [];
+      for (const g of ['2:50', '3:14', '3:15', '3:40', '3:44', '3:45', '4:30']) { await goal(p, g); bands.push(`${g}=${(await goalIn(p))[1].replace('план на ', '')}`); }
+      await goal(p, '3:40'); await p.click('[data-act=tab][data-k=paces]'); await wait(250); const t42 = await p.inputValue('input[data-k="42"]'); await p.click('[data-act=tab][data-k=week]'); await wait(200);
+      check('kazan: any goal; plan 3:00 before 3:15, 3:30 from 3:15 to 3:45, 4:00 from 3:45; 3:40 → T42 5:13', bands.join(' ') === '2:50=3:00 3:14=3:00 3:15=3:30 3:40=3:30 3:44=3:30 3:45=4:00 4:30=4:00' && t42 === '5:13', `${bands.join(' ')}; T42 ${t42}`);
+      await p.fill('[data-p=kgoal]', 'abc'); await p.press('[data-p=kgoal]', 'Enter'); await wait(200);
+      const bad = await p.$eval('[data-p=kgoal]', (x) => x.validationMessage);
+      check('kazan: a goal that is not a marathon time is refused, the goal stays', !!bad && (await goalIn(p))[1] === 'план на 3:30', bad);
+      await goal(p, '4:00'); }
     const race = (await p.$eval('.w-goal', (x) => x.innerText).catch(() => '')).replace(/\s+/g, ' '); // nowrap parts read with no-break spaces
     check('kazan: the summary names Казань, 2 мая', race.includes('Казань') && race.includes('2 мая') && !race.includes('цель'), race);
     await p.click('[data-act=tab][data-k=paces]'); await wait(250);
@@ -275,10 +287,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const refDay = (d) => Object.values(ref).flatMap((w) => w.lay.days).find((x) => x.d === d);
   const weekOfDay = (d) => Object.values(ref).find((w) => d >= w.lay.mon && d <= add(w.lay.mon, 6))?.week;
   const K = 0.85; // the default goal 3:30
+  const flowDone = (p, FX) => p.addInitScript((id) => { try { localStorage.setItem(`s10week.kazan.flow.${id}`, '"done"'); } catch {} }, String(FX?.me?.id || ''));
   const fxAt = (day, mod = (x) => x) => { const x = JSON.parse(BASE_FX); x.me.nowmsk = Date.parse(`${day}T09:00:00Z`) / 1000; return mod(x); };
   const kOpen = async (FX, q = '?tab=plan') => {
     const p = await browser.newPage({ viewport: { width: 1280, height: 900 } }); p.errors = []; p.on('pageerror', (x) => p.errors.push(x.message));
-    const w = await site(p, FX); await p.goto(`${RBASE}/solo/kazan${q}`);
+    await flowDone(p, FX); const w = await site(p, FX); await p.goto(`${RBASE}/solo/kazan${q}`);
     await p.waitForFunction(() => document.querySelector('#s10-week .w-tabbar'), null, { timeout: 20000 }).catch(() => {}); await wait(300); return [p, w];
   };
   // a fill; the question «… станет главным стартом …» (Task 5) answered «Да» when it comes, its race-day write left out
@@ -337,7 +350,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const tasksOf = (w, from = 0) => w.slice(from).filter((x) => x.url.includes('task.php')).map((x) => decodeTasks(x.body));
   const kAsk = async (p) => { await p.click('[data-act=fillask]'); await wait(200); await p.click('[data-act=fillyes]'); await wait(150); };
   const filled = (p) => p.waitForFunction(() => !document.querySelector('[data-act=fillyes], [data-act=kmainyes]') && document.querySelector('.w-flash'), null, { timeout: 20000 }).catch(() => {}).then(() => wait(500));
-  const pressedGoal = (p) => p.$eval('[data-act=kgoal][aria-pressed=true]', (x) => x.dataset.g).catch(() => '');
+  const pressedGoal = (p) => p.$eval('[data-p=kgoal]', (x) => `${x.value}:00`).catch(() => '');
   const cfText = (p) => p.$eval('#w-cf-h', (x) => x.innerText.replace(/\s+/g, ' ').trim()).catch(() => '');
   const askText = (p) => p.$eval('[data-act=kmainyes]', (x) => x.closest('.w-confirm')?.querySelector('p')?.innerText.replace(/\s+/g, ' ').trim() || '').catch(() => ''); // short words are held with no-break spaces
   { const [p, w] = await kOpen(NOV());
@@ -369,7 +382,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const FX = NOV((x) => { x.main = { main: { ...KZ } }; x.diary.diaryTasksInfo.push({ date: KZ.d, type: 6, comment: KZ.task, target: 42, main6: 1, location: KZ.location, prediction: KZ.prediction, tracks: [] }); return x; });
     const [p, w] = await kOpen(FX);
     const sum = (await p.$eval('.w-goal', (x) => x.innerText).catch(() => '')).replace(/\s+/g, ' ');
-    const seeded = await pressedGoal(p); await goal(p, '3:30:00'); // final review, Important 1: 3:20 opens at the nearest, 3:30
+    const seeded = await pressedGoal(p); await goal(p, '3:30:00'); // owner, 22.11.2026: any goal, so 3:20 opens at 3:20
     await p.click('[data-act=fillask]'); await wait(200); const cf = await cfText(p); await p.click('[data-act=fillyes]'); await wait(150);
     const asked = !!(await p.$('[data-act=kmainyes]')); await filled(p);
     const tw = tasksOf(w), up = tw[0]?.[0] || {}, rest = tw.slice(1).flat();
@@ -377,7 +390,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     check('kazan, main race already Kazan 3:20 → goal 3:30: the day keeps task/location/prekm, prediction 03:30:00', !asked && sum.includes('1 мая') && tw[0]?.length === 1 && up.d === KZ.d && up.task === KZ.task && up.location === KZ.location && up.prekm === KZ.prekm && +up.typtrain === 6 && +up.main6 === 1 && up.prediction === '03:30:00'
       && rest.length > 0 && rest.every((t) => t.d !== KZ.d && t.d !== '2027-05-02') && tw2.length > 0 && tw2.every((t) => t.d !== KZ.d) && !p.errors.length,
       `asked ${asked}; summary «${sum}»; first ${JSON.stringify(tw[0])}; then ${rest.length} days; a second fill (goal unchanged) touches the race day: ${tw2.some((t) => t.d === KZ.d)}; ${p.errors.join('; ')}`);
-    check('kazan, diary goal 3:20: the picker opens at the nearest 3:30; the confirm says «Цель на старт 1 мая сменится: 3:20 → 3:30.»', seeded === '3:30:00' && cf.includes('Цель на старт 1 мая сменится: 3:20 → 3:30.'), `picker ${seeded}; «${cf}»`);
+    check('kazan, diary goal 3:20: the goal opens at 3:20; set to 3:30, the confirm says «Цель на старт 1 мая сменится: 3:20 → 3:30.»', seeded === '3:20:00' && cf.includes('Цель на старт 1 мая сменится: 3:20 → 3:30.'), `picker ${seeded}; «${cf}»`);
     await p.close(); }
   // final review, Important 1: a diary goal that is one of the three opens the picker at it and is never rewritten
   { const KZ = { d: '2027-05-02', task: 'ГОНКА', prekm: '42.2', typtrain: 6, prediction: '04:00:00', location: 'Казань' };
@@ -439,7 +452,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const newCtx = () => browser.newContext({ viewport: { width: 1280, height: 900 } });
   const ctxOpen = async (ctx, FX, where = '/solo/kazan', q = '?tab=plan') => {
     const p = await ctx.newPage(); p.errors = []; p.on('pageerror', (x) => p.errors.push(x.message));
-    const w = await site(p, FX); await p.goto(`${RBASE}${where}${q}`);
+    await flowDone(p, FX); const w = await site(p, FX); await p.goto(`${RBASE}${where}${q}`);
     await p.waitForFunction(() => document.querySelector('#s10-week .w-tabbar'), null, { timeout: 20000 }).catch(() => {}); await wait(300); return [p, w];
   };
   const planHead = (p) => p.$eval('#w-plan2-h', (x) => x.innerText).catch(() => '');
@@ -469,7 +482,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       JSON.stringify(vs2.map((x) => ({ id: x.id, name: x.name, goal: x.student?.kazanGoal, active: x.active }))));
     await p.evaluate((id) => localStorage.setItem(`s10week.kazan.goal.${id}`, JSON.stringify('4:00:00')), ID); await p.close(); // another goal in this browser
     const [r, wr] = await ctxOpen(ctx, FX);
-    const pressed = await r.$eval('[data-act=kgoal][aria-pressed=true]', (x) => x.dataset.g).catch(() => ''), hr = await planHead(r), mr = await planMeta(r);
+    const pressed = await pressedGoal(r), hr = await planHead(r), mr = await planMeta(r);
     check('kazan reload: the stored Kazan version reopens, its goal 3:00 over the browser\'s 4:00; nothing written', pressed === '3:00:00' && /«Казань 3:00»/.test(hr) && /в вашем профиле/.test(mr) && !wr.length && !r.errors.length, `goal ${pressed}; «${hr}» (${mr}); writes ${wr.length}; ${r.errors.join('; ')}`);
     await r.close();
     FX.versions = FX.versions.map(({ active, ...x }) => (x.id === VAL ? { ...x, active: true } : x)); // Solo's version active again (another device)
@@ -506,7 +519,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   { const ctx = await newCtx(), FX = NOV();
     const [s0] = await ctxOpen(ctx, FX, '/solo/plan');
     await s0.evaluate((id) => { localStorage.setItem(`s10week.plan.${id}`, JSON.stringify({ src: 'version', id: 'mvfb1nc2kau0dr' })); localStorage.setItem('s10week.layout', JSON.stringify(['easy', 'w1', 'easy', 'rest', 'w2', 'easy', 'long'])); localStorage.setItem('s10week.fillSpan', '"race"'); localStorage.setItem('s10week.tab', '"plan"'); }, ID);
-    const before = await lsAll(s0); await s0.close();
+    const before = Object.fromEntries(Object.entries(await lsAll(s0)).filter(([x]) => !x.startsWith('s10week.kazan.'))); await s0.close();
     const [k, w] = await ctxOpen(ctx, FX);
     const role0 = await k.$eval('select[data-p=role][data-i="1"]', (x) => x.value).catch(() => '');
     await k.selectOption('select[data-p=role][data-i="0"]', 'rest').catch(() => {}); await wait(200);
@@ -604,6 +617,61 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       `${JSON.stringify(vs2.map((x) => ({ id: x.id, name: x.name, active: x.active, undo: !!x.undo, same: km(x) === km(v0) })))}; «${head}»; ${p.errors.join('; ')}`);
     await p.close(); }
 
+  // 12. the newcomer's way (owner, 22.11.2026: «конвейер», one step at a time): goal → days → first week → 2 000 ₽ →
+  // the fill, then the usual page; Premium paid to the race skips the payment; a coach never sees it
+  if (DEMO) { const p = await open('?kazan&newbie&free', null, true);
+    const step = () => p.evaluate(() => ({ h: document.querySelector('.w-flow h2')?.innerText || '', now: document.querySelector('.w-flow-bar [aria-current=step]')?.innerText.replace(/\s+/g, ' ') || '', tabs: !!document.querySelector('.w-tabbar'), hero: !!document.querySelector('.w-hero'), text: document.querySelector('.w-flow')?.innerText || '' }));
+    const next = async () => { await p.click('[data-act=flownext]'); await wait(300); };
+    const s1 = await step();
+    await p.fill('[data-p=kflow]', '340'); await wait(100); const hint = await p.innerText('#w-fg-s');
+    await next(); const s2 = await step();
+    await p.click('[data-act=flowback]'); await wait(200); const back = [await step(), await p.inputValue('[data-p=kflow]')]; await next();
+    await p.selectOption('select[data-p=role][data-i="0"]', 'rest'); await wait(150); await next(); const s3 = await step();
+    const days3 = await p.$$eval('.w-flow-days > li', (l) => l.length);
+    await next(); const s4 = await step(), payHref = await p.$eval('[data-act=kpay]', (a) => a.getAttribute('href')).catch(() => '');
+    await p.click('[data-act=kpay]'); await wait(300); const s5 = await step(), payDone = !!(await p.$('.w-flow-bar li:nth-child(4).done'));
+    await p.click('[data-act=fillask]'); await wait(200); await p.click('[data-act=fillyes]'); await wait(200); const asked = !!(await p.$('[data-act=kmainyes]')); await p.click('[data-act=kmainyes]').catch(() => {});
+    await p.waitForFunction(() => document.querySelector('.w-tabbar'), null, { timeout: 20000 }).catch(() => {}); await wait(400);
+    const end = { tabs: !!(await p.$('.w-tabbar')), flow: !!(await p.$('.w-flow')), goal: (await goalIn(p)).join(' · '), ls: await p.evaluate(() => localStorage.getItem('s10week.kazan.flow.1000000001')), mon: await p.evaluate(() => JSON.parse(localStorage.getItem('s10week.kazan.layout') || '[]')[0]) };
+    check('kazan way: one step at a time, no summary or tabs: «За сколько хотите пробежать марафон?» first', s1.now === '1 Цель' && /За сколько хотите пробежать/.test(s1.h) && !s1.tabs && !s1.hero, JSON.stringify(s1));
+    check('kazan way: the goal 340 → «Темп марафона 5:13 … план на 3:30, для целей от 3:15 до 3:45», live', hint === 'Темп марафона 5:13 на километр · план на 3:30, для целей от 3:15 до 3:45', hint);
+    check('kazan way: «Дальше» → the days, «Назад» → the goal kept (3:40)', s2.now === '2 Дни' && /В какие дни/.test(s2.h) && back[0].now === '1 Цель' && back[1] === '3:40', `${JSON.stringify(s2)} | ${JSON.stringify(back)}`);
+    check('kazan way: the first week, its 7 days, the chance promised after it (no «не от чего», no 12 weeks)', s3.now === '3 Первая неделя' && days3 === 7 && /цель 3:40/.test(s3.text) && /Пробегите эту неделю, и здесь появится ваш шанс пробежать за 3:40/.test(s3.text) && !/не от чего|12 недел/.test(s3.text), `${days3} days; ${JSON.stringify(s3).slice(0, 300)}`);
+    check('kazan way: the payment, 2 000 ₽ with Premium to 3 May 2027, ruble payment marked Kazan; no 750 ₽', s4.now === '4 Оплата' && /Весь план до старта — 2\s000\s₽/.test(s4.h) && /Premium до 3 мая 2027/.test(s4.text) && /Оплатить 2\s000\s₽/.test(s4.text) && !/750/.test(s4.text) && payHref === 'https://s10.run/money2?paysite=1&kazan=1', `${payHref}; ${JSON.stringify(s4).slice(0, 300)}`);
+    check('kazan way: paid (demo) → «Заполним календарь», the payment step marked done', s5.now === '5 Календарь' && /Заполним календарь/.test(s5.h) && payDone, JSON.stringify(s5).slice(0, 200));
+    check('kazan way: the fill asks to make Kazan the main race, then the usual page opens with the goal 3:40; the way is over in this browser; the Monday chosen kept', asked && end.tabs && !end.flow && end.goal === '3:40 · план на 3:30' && end.ls === '"done"' && end.mon === 'rest' && !p.errors.length, `${asked} ${JSON.stringify(end)} ${p.errors.join('; ')}`);
+    await p.close(); }
+  { const FX = NOV((x) => { x.versions = []; x.app = { id: x.me.id, subscriptionExpiredAt: Date.parse('2027-05-03T23:59:59+03:00') / 1000 }; return x; }); // paid 2 000 ₽ already
+    const p = await browser.newPage({ viewport: { width: 1280, height: 900 } }); p.errors = []; p.on('pageerror', (x) => p.errors.push(x.message));
+    const w = await site(p, FX); await p.goto(`${RBASE}/solo/kazan`); await p.waitForSelector('.w-flow', { timeout: 20000 }).catch(() => {}); await wait(300);
+    const first = await p.$eval('.w-flow h2', (x) => x.innerText).catch(() => '');
+    await p.click('[data-act=flownext]'); await wait(200); await p.click('[data-act=flownext]'); await wait(200); await p.click('[data-act=flownext]'); await wait(300);
+    const h = await p.$eval('.w-flow h2', (x) => x.innerText).catch(() => ''), paid = await p.$eval('.w-flow-bar li:nth-child(4)', (x) => x.className).catch(() => '');
+    check('kazan way, release: Premium paid to the race (/apiapp/me after a PHP notice) skips the payment: the first week → «Заполним календарь»', /За сколько/.test(first) && /Заполним календарь/.test(h) && paid === 'done' && !p.errors.length, `${first} → ${h}; pay step ${paid}; ${p.errors.join('; ')}`);
+    await p.close();
+    const FX2 = NOV((x) => { x.versions = []; x.app = { id: x.me.id, subscriptionExpiredAt: Date.parse('2026-12-20T23:59:59+03:00') / 1000 }; return x; }); // a monthly Premium: not the Kazan payment
+    const q = await browser.newPage({ viewport: { width: 1280, height: 900 } }); q.errors = []; await site(q, FX2);
+    await q.addInitScript((id) => localStorage.setItem(`s10week.kazan.flow.${id}`, '"pay"'), String(FX2.me.id));
+    await q.goto(`${RBASE}/solo/kazan`); await q.waitForSelector('.w-flow', { timeout: 20000 }).catch(() => {}); await wait(300);
+    const hq = await q.$eval('.w-flow h2', (x) => x.innerText).catch(() => '');
+    check('kazan way, release: a monthly Premium (to 20 Dec) is not the Kazan payment: back on the site, the payment step', /Весь план до старта/.test(hq), hq);
+    await q.close();
+    const ATH = '2000000002', FX3 = NOV((x) => { x.versions = []; x.mainOf = { [ATH]: { main: null } }; return x; }); // a coach opening an athlete
+    const r = await browser.newPage({ viewport: { width: 1280, height: 900 } }); await site(r, FX3); await r.goto(`${RBASE}/solo/kazan?id=${ATH}`); await r.waitForSelector('.w-tabbar', { timeout: 20000 }).catch(() => {}); await wait(300);
+    check('kazan way: a coach with ?id= gets the usual page, never the way', !!(await r.$('.w-tabbar')) && !(await r.$('.w-flow')));
+    await r.close(); }
+  // the chance for a newcomer (owner, 22.11.2026): no form to start from → from the plan, after the first runs; before them
+  // a promise, not «не от чего считать … 12 недель»
+  { const plain = (x) => { x.results = []; x.startParam = { param: {} }; return x; };
+    const [p] = await kOpen(NOV(plain), '?tab=plan');
+    const st = (await p.innerText('.w-stat-r')).replace(/\s+/g, ' '), card = (await p.innerText('.w-ready')).replace(/\s+/g, ' ');
+    check('chance, no race result or S10 forecast, runs in the diary: a figure from the plan, no «Форма сейчас», nothing about 12 weeks', /\d+ ?%/.test(st) && !/не от чего|12 недел/.test(st + card) && !/Форма сейчас/.test(card) && /К старту/.test(card) && !p.errors.length, `${st} | ${card.slice(0, 200)}`);
+    await p.close();
+    const [q] = await kOpen(NOV((x) => { plain(x); x.diary.diaryTasksInfo = []; return x; }), '?tab=plan');
+    const st2 = (await q.innerText('.w-stat-r')).replace(/\s+/g, ' '), card2 = (await q.innerText('.w-ready')).replace(/\s+/g, ' ');
+    check('chance, a newcomer before the first run: «Появится после первой недели тренировок», the card promises it for 3:30', /Появится после первой недели тренировок/.test(st2) && !/%/.test(st2) && /Пробегите первую неделю по плану, и здесь появится ваш шанс пробежать за 3:30/.test(card2) && !/не от чего|12 недел/.test(st2 + card2), `${st2} | ${card2.slice(0, 200)}`);
+    await q.close(); }
+
   // final review, Minor 4: the race date is written once, in KAZAN (the plan text and comments aside)
   if (DEMO) { const src = fs.readFileSync(path.join(ROOT, 'solo.js'), 'utf8').replace(/const KAZAN_PLAN_MD = `[\s\S]*?`;/, '').split('\n').map((l) => l.replace(/^\s*\/\/.*$/, '').replace(/\s\/\/ .*$/, ''));
     const dated = src.map((l, i) => [i + 1, l]).filter(([, l]) => /(?<!\d)2027(?!\d)|(?<![\d.])(30|1|2) (мая|апреля)|04-30|05-0[12]/.test(l) && !/^\s*const KAZAN = \{/.test(l)).map(([i, l]) => `${i}: ${l.trim().slice(0, 80)}`);
@@ -611,7 +679,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   if (DEMO) { const p = await open(''); // the Solo page stays as it was
     const h1 = await p.$eval('h1', (x) => x.innerText).catch(() => '');
-    check('solo: /demo/ without ?kazan unchanged (no goal picker, «Моя неделя»)', h1.startsWith('Моя неделя') && !(await p.$('[data-act=kgoal]')) && !!(await p.$('[data-act=goaladd]')), h1);
+    check('solo: /demo/ without ?kazan unchanged (no goal picker, «Моя неделя»)', h1.startsWith('Моя неделя') && !(await p.$('[data-p=kgoal]')) && !!(await p.$('[data-act=goaladd]')), h1);
     await p.close(); }
 
   // 10. logged out (Task 7): the Kazan block instead of «войдите в S10»; the only request is self/info
@@ -620,8 +688,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.goto(`${RBASE}/solo/kazan?id=7`); await p.waitForSelector('main h1', { timeout: 20000 }).catch(() => {}); await wait(500);
     const body = await p.innerText('body'), href = await p.$eval('main a', (a) => a.getAttribute('href')).catch(() => ''), btn = await p.$eval('main a', (a) => a.innerText).catch(() => '');
     const back = decodeURIComponent((href.match(/^\/login\?back=(.*)$/) || [])[1] || '');
-    check('kazan logged out: the block (heading, lines, «Premium S10»), no «войдите в S10»',
-      body.includes('Подготовка к Казанскому марафону') && /2 мая 2027 · (до старта \d+ (неделя|недели|недель)|старт на этой неделе|старт сегодня)/.test(body) && body.includes('Цель на выбор: 3:00, 3:30 или 4:00') && body.includes('План с вашими темпами — сразу в календаре S10') && body.includes('Premium S10') && !body.includes('войдите в S10'), body.replace(/\s+/g, ' ').slice(0, 300));
+    check('kazan logged out: the block (heading, lines, «2 000 ₽ … Premium S10 до 3 мая»), no «войдите в S10»',
+      body.includes('Подготовка к Казанскому марафону') && /2 мая 2027 · (до старта \d+ (неделя|недели|недель)|старт на этой неделе|старт сегодня)/.test(body) && body.includes('Цель любая: темпа считаются от неё') && body.includes('План с вашими темпами — сразу в календаре S10') && body.includes('2 000 ₽: весь план и Premium S10 до 3 мая 2027') && !body.includes('войдите в S10'), body.replace(/\s+/g, ' ').slice(0, 300));
     check('kazan logged out: «Войти и начать» goes to /login?back= with the full /solo/kazan address; the only request is self/info',
       btn.trim() === 'Войти и начать' && back === `${RBASE}/solo/kazan?id=7` && w.reads.length === 1 && w.reads[0].includes('/student/self/info') && w.length === 0 && p.errors.length === 0, `${btn} ${back} ${JSON.stringify(w.reads)} ${p.errors.join(';')}`);
     await p.close(); }
@@ -635,13 +703,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   if (REACT) { // 11. <SoloKazan /> in a React app: mounts the Kazan mode, unmount leaves nothing, a second mount draws it once
     const [p] = await kOpen(NOV());
-    const h1 = await p.$eval('#s10-week h1', (x) => x.innerText.replace(/\s+/g, ' ')).catch(() => ''), picker = !!(await p.$('[data-act=kgoal]'));
+    const h1 = await p.$eval('#s10-week h1', (x) => x.innerText.replace(/\s+/g, ' ')).catch(() => ''), picker = !!(await p.$('[data-p=kgoal]'));
     await p.evaluate(() => window.__s10.unmount()); await wait(200);
     const gone = await p.evaluate(() => ({ pages: document.querySelectorAll('#s10-week').length, overflow: document.documentElement.style.overflow, bg: document.documentElement.style.background, host: document.getElementById('app').innerHTML }));
     await p.evaluate(() => window.__s10.mount()); await p.waitForFunction(() => document.querySelector('#s10-week .w-tabbar'), null, { timeout: 20000 }).catch(() => {}); await wait(400);
     const h1b = await p.$eval('#s10-week h1', (x) => x.innerText.replace(/\s+/g, ' ')).catch(() => ''), n = (await p.$$('#s10-week')).length;
     check('react: <SoloKazan /> mounts Kazan, unmount leaves nothing, remount once',
-      h1.startsWith('Казанский марафон') && picker && !gone.pages && !gone.overflow && !gone.bg && !gone.host && n === 1 && h1b === h1 && !!(await p.$('[data-act=kgoal]')) && !p.errors.length,
+      h1.startsWith('Казанский марафон') && picker && !gone.pages && !gone.overflow && !gone.bg && !gone.host && n === 1 && h1b === h1 && !!(await p.$('[data-p=kgoal]')) && !p.errors.length,
       `«${h1}» picker ${picker}; after unmount ${JSON.stringify(gone)}; again ${n} «${h1b}»; ${p.errors.join('; ')}`);
     await p.close(); }
 

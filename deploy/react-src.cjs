@@ -27,7 +27,7 @@ once(/^\/\* S10 «Моя неделя»[\s\S]*?\*\/\n\(async \(\) => \{\n/, `/* 
    week, the paces, the master plan laid over the dates to the race, «Заполнить календарь», «Запланировать неделю».
    mountSoloPlan(host, opts) draws the page into host and returns the cleanup; SoloPlan.tsx calls both (SoloKazan.tsx
    with mode 'kazan'). */
-import { get, post, generatePlanText } from './api';
+import { get, getLoose, post, generatePlanText } from './api';
 import { storeFor } from './storage';
 import { urlState } from './urlState';
 
@@ -60,7 +60,7 @@ once(/\n\}\)\(\);\s*$/, `
 once("  const MODE = /\\/solo\\/kazan\\/?$/.test(location.pathname) ? 'kazan' : 'solo';\n", "  const MODE = opts.mode === 'kazan' ? 'kazan' : 'solo';\n");
 // 2. requests and storage come from their modules
 once('  const ORIGIN = location.origin;\n', '');
-once(/  async function get\(u\) \{[\s\S]*?\n  \}\n  async function post\(u, fd\) \{[\s\S]*?\n  \}\n  async function generatePlanText\(body, onProgress\) \{[\s\S]*?\n  \}\n/, '');
+once(/  async function get\(u\) \{[\s\S]*?\n  \}\n  async function getLoose\(u\) \{[\s\S]*?\n  \}\n  async function post\(u, fd\) \{[\s\S]*?\n  \}\n  async function generatePlanText\(body, onProgress\) \{[\s\S]*?\n  \}\n/, '');
 // the store keeps the release's prefix by mode: Solo «s10week.…», Kazan «s10week.kazan.…» (storage.ts)
 once(/  const store = \{ get\(k, d\) \{.*key: \(k\) => \(MODE === 'kazan' \? 's10week\.kazan\.' : 's10week\.'\) \+ k \};\n/, "  const store = storeFor(MODE === 'kazan' ? 'kazan.' : '');\n");
 // 3. the address goes through urlState

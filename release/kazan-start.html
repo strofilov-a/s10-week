@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Казанский марафон 2027 — план подготовки · S10 Solo</title>
-<meta name="description" content="План к Казанскому марафону 2 мая 2027 на 24 недели от Юрия Строфилова. Выберите цель 3:00, 3:30 или 4:00, и S10 Solo заполнит календарь тренировками в ваших темпах.">
+<meta name="description" content="План к Казанскому марафону 2 мая 2027 на 24 недели от Юрия Строфилова. Укажите свою цель, и S10 Solo заполнит календарь тренировками в ваших темпах.">
 <meta property="og:title" content="Казанский марафон 2027 — план подготовки">
-<meta property="og:description" content="24 недели до 2 мая. Цель 3:00, 3:30 или 4:00, тренировки в ваших темпах в календаре S10.">
+<meta property="og:description" content="24 недели до 2 мая. Цель любая, тренировки в ваших темпах в календаре S10.">
 <meta name="theme-color" content="#FFFFFF">
 <script>
   document.documentElement.classList.add('js');
@@ -130,7 +130,8 @@ h2 { font-size: var(--step-head); }
 
 /* ---------- header ---------- */
 .rail { position: sticky; top: 0; z-index: 30; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 var(--m); background: var(--bg); }
-.mark { font: 700 1.375rem/1 var(--display); letter-spacing: -0.03em; text-decoration: none; }
+.mark { display: block; line-height: 0; text-decoration: none; border-radius: 8px; }
+.mark img { display: block; width: 56px; height: 56px; border-radius: 8px; }
 .rail-act { display: flex; align-items: center; gap: 24px; font-size: var(--step-small); }
 .rail-act .btn { font-size: var(--step-small); min-height: 40px; padding: 0 18px; }
 
@@ -377,18 +378,6 @@ h2 { font-size: var(--step-head); }
 .band cite { font-style: normal; }
 
 /* ---------- pricing: two plans, two fields ---------- */
-.plans { display: grid; grid-template-columns: 5fr 7fr; }
-.plan { min-height: 90svh; padding: 40px var(--m); display: flex; flex-direction: column; }
-.plan h2 { font-size: clamp(2.75rem, 5vw, 5rem); }
-.plan .who { margin-top: 16px; max-width: 26ch; font-size: var(--step-lead); line-height: 1.3; }
-.plan .inc { margin-top: 28px; max-width: 46ch; }
-.plan .foot { margin-top: auto; padding-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
-.plan .price { font: 700 clamp(4rem, 10vw, 10rem)/.8 var(--display); letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
-.plan .price small { font: 400 var(--step-body)/1.3 var(--font); letter-spacing: 0; margin-left: .5em; display: inline-block; }
-.plan.free { background: var(--surface); color: var(--ink); }
-.plan.pro { background: var(--light); color: var(--on-light); }
-.plan.pro .btn { background: var(--accent); color: var(--on-accent); }
-.plan.free .btn { background: var(--ink); color: var(--bg); }
 
 /* ---------- questions: filled tiles, one open at a time ---------- */
 .faq { margin-top: var(--section); }
@@ -528,13 +517,6 @@ html.js [data-rise].in { opacity: 1; transform: none; }
   .pc-rest { min-width: 0; font-size: 1.125rem; }
 
   .band .quote { margin-left: 0; }
-  .plans { grid-template-columns: 1fr; }
-  .plans .pro { order: -1; }
-  .plan { min-height: 70svh; padding: 32px 20px 20px; }
-  .plan h2 { font-size: 12vw; }
-  .plan .price { font-size: 24vw; }
-  .plan .foot { flex-direction: column; align-items: stretch; }
-  .plan .btn { width: 100%; }
 
   .faq-h { position: static; margin-bottom: 24px; }
   .faq-h, .faq-list { grid-column: 1 / -1; }
@@ -586,18 +568,17 @@ html.js [data-rise].in { opacity: 1; transform: none; }
 <body>
 
 <header class="rail" id="top">
-  <a class="mark" href="#top">S10 Solo</a>
+  <a class="mark" href="#top" aria-label="S10 Казань, в начало страницы"><img src="data:image/png;base64,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" width="56" height="56" alt="S10 Казань"></a>
   <div class="rail-act">
     <a class="link" href="#how">Как это работает</a>
     <a class="link" href="#goal">Цели</a>
-    <a class="link" href="#price">Цена</a>
     <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Начать</a>
   </div>
 </header>
 
 <main>
 <!--kml-->
-<div class="kml" id="kml" data-ladder='[["2026-11-16",2000],["2026-11-23",2125],["2026-11-30",2250],["2026-12-07",2375],["2026-12-14",2500],["2026-12-21",2625],["2026-12-28",2750],["2027-01-04",2875],["2027-01-11",3000]]'><template shadowrootmode="open"><style>
+<div class="kml" id="kml"><template shadowrootmode="open"><style>
 /* The first three blocks of github.com/Stro-812/kazan-marathon-landing, their own CSS. GENERATED by
    deploy/kazan-intro.cjs: html, :root, body and main map to .kml-root, .kml-body, .kml-main inside the shadow root. */
 :host { all: initial; display: block; }
@@ -1568,9 +1549,9 @@ header.nav.is-open :is(.nav__links, .nav__actions) { --ink: var(--s10-text); --m
   <section class="hero wrap" aria-labelledby="h1">
     <div class="hero-text">
       <h2 class="h1" id="h1">Казанский марафон — план до старта</h2>
-      <p class="hero-sent" data-rise>Готовый план на 24 недели от Юрия Строфилова. Выберите цель — 3:00, 3:30 или 4:00, — и Solo заполнит ваш календарь S10 тренировками в ваших темпах.</p>
+      <p class="hero-sent" data-rise>Готовый план на 24 недели от Юрия Строфилова. Укажите свою цель, например 3:40, и Solo заполнит ваш календарь S10 тренировками в ваших темпах.</p>
       <div class="row" data-rise style="--i:1">
-        <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Попробовать 3 дня бесплатно</a>
+        <a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Начать подготовку</a>
         <a class="link" href="#plan">Посмотреть план</a>
       </div>
       <p class="hero-note dot" data-rise style="--i:2"><span>2 мая 2027 · Казань · 42,2 км</span><span id="days"></span></p>
@@ -1791,29 +1772,15 @@ header.nav.is-open :is(.nav__links, .nav__actions) { --ink: var(--s10-text); --m
     <blockquote class="quote" data-rise style="--i:1">«Когда вы регулярно тратите на что-то час-полтора в день, имеет смысл делать это осознанно. Именно так добиваются результатов» — <cite>Юрий Строфилов, основатель S10.run</cite></blockquote>
   </section>
 
-  <section class="plans" id="price" aria-label="Цена">
-    <div class="plan free">
-      <h2>Регистрация</h2>
-      <p class="who">Аккаунт S10. План к Казани откроется сразу после входа.</p>
-      <p class="inc">Зарегистрироваться можно бесплатно. Заполнять календарь планом будет с Premium, первые 3 дня бесплатно.</p>
-      <div class="foot"><div class="price num">0&nbsp;₽</div><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Зарегистрироваться</a></div>
-    </div>
-    <div class="plan pro">
-      <h2>Premium</h2>
-      <p class="who">Для тех, кто готовится к Казани с Solo. <b>Первые 3 дня бесплатно.</b></p>
-      <p class="inc">S10 Solo заполняет календарь планом до 2 мая. Глубокий анализ тренировок, Telegram-бот и приложения для iOS и Android, челленджи каждую неделю и больше 100 подкастов.</p>
-      <div class="foot"><div class="price num">750&nbsp;₽<small>в месяц<br>или 9 €</small></div><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Попробовать 3 дня бесплатно</a></div>
-    </div>
-  </section>
 
   <section class="faq wrap grid" id="faq" aria-labelledby="fq-h">
     <div class="faq-h"><h2 id="fq-h">Частые вопросы</h2></div>
     <div class="faq-list">
       <details name="faq" open><summary>Подготовка уже идёт. Не поздно?<i></i></summary><p>Нет. Solo начнёт с ближайшей недели плана, а если вы пропустили больше трёх недель, первые две сделает легче.</p></details>
-      <details name="faq"><summary>Чем отличаются цели?<i></i></summary><p>Ключевые работы одни и те же. От цели зависят темпа, длина длительных и лёгкого бега. Цель можно сменить в любой момент.</p></details>
+      <details name="faq"><summary>Чем отличаются цели?<i></i></summary><p>Цель может быть любой. Темпа считаются от неё, а объём берётся из плана на 3:00, 3:30 или 4:00, ближайшего к вашей цели. Ключевые работы одни и те же. Цель можно сменить в любой момент.</p></details>
       <details name="faq"><summary>У меня другой главный старт<i></i></summary><p>Перед заполнением Solo спросит, сделать ли Казанский марафон главным стартом. Прежний старт останется в дневнике обычным соревнованием.</p></details>
       <details name="faq"><summary>Solo не испортит мой календарь?<i></i></summary><p>Прошедшие дни и сегодня он не трогает, а дни, где уже стоит задача, оставляет как есть. Заполнение можно отменить.</p></details>
-      <details name="faq"><summary>Сколько это стоит?<i></i></summary><p>Регистрация бесплатна. Заполнение календаря — в Premium: первые 3 дня бесплатно, дальше 750 ₽ или 9 € в месяц.</p></details>
+      <details name="faq"><summary>Сколько это стоит?<i></i></summary><p>2 000 ₽ один раз. В них весь план до старта в вашем календаре S10 и Premium до 3 мая 2027. Регистрация бесплатна.</p></details>
       <details name="faq"><summary>Дата марафона точная?<i></i></summary><p>Организатор пока не объявил её официально. План стоит на 2 мая 2027; если дата сдвинется, мы обновим план.</p></details>
     </div>
   </section>
@@ -1828,7 +1795,7 @@ header.nav.is-open :is(.nav__links, .nav__actions) { --ink: var(--s10-text); --m
 <footer>
   <div class="foot-mark" aria-hidden="true"><span>S</span><span>o</span><span>l</span><span>o</span></div>
   <div class="foot-links">
-    <nav aria-label="Ссылки"><a class="link" href="https://s10.run/premium">Premium</a><a class="link" href="https://t.me/+wP4aOZ4910I2MTk6">Вопросы в Telegram</a><a class="link" href="https://s10.run/">S10.run</a><a class="link" href="#faq">Частые вопросы</a></nav>
+    <nav aria-label="Ссылки"><a class="link" href="https://t.me/+wP4aOZ4910I2MTk6">Вопросы в Telegram</a><a class="link" href="https://s10.run/">S10.run</a><a class="link" href="#faq">Частые вопросы</a></nav>
     <p class="contact">S10 Solo · подготовка к Казанскому марафону</p>
   </div>
   <div class="foot-last"><span>© 2026 · <a class="link" href="https://s10.run/post/3578/">Персональные данные</a></span><a class="btn" href="https://s10.run/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan">Начать</a></div>
@@ -2020,9 +1987,6 @@ header.nav.is-open :is(.nav__links, .nav__actions) { --ink: var(--s10-text); --m
   // the Kazan hero on top (deploy/kazan-intro.cjs) lives in a shadow root; its countdown, in its own words
   const kml = $('#kml'), kmlDays = kml && kml.shadowRoot && kml.shadowRoot.querySelector('[data-countdown]');
   if (kmlDays) kmlDays.textContent = left > 0 ? `До старта ${left} ${plural(left, 'день', 'дня', 'дней')}` : left === 0 ? 'Старт сегодня' : 'Марафон прошёл';
-  // its price, by their ladder (data-ladder: [from, price], from that Monday, Moscow time), as their own page sets it
-  const kmlPrice = kml && kml.shadowRoot && kml.shadowRoot.querySelector('[data-price]');
-  if (kmlPrice) { const day = msk.toISOString().slice(0, 10); let price = 0; try { JSON.parse(kml.dataset.ladder || '[]').forEach(([from, p]) => { if (!price || from <= day) price = p; }); } catch (e) { price = 0; } if (price) kmlPrice.textContent = price.toLocaleString('ru-RU').replace(/\s/g, '\u00a0'); }
 
   /* the plan's four stages (plans/kazan-2027.md: База −24…−18, ПАНО −17…−10, Race Specific −9…−4, Taper −3…−1) */
   const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];

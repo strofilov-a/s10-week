@@ -46,10 +46,10 @@ const srv = http.createServer((q, r) => {
       }, LOGIN);
       check(`${name}: the students' block: three made-up cards, said to be examples, no template left`, kml.cases && kml.cases.join(', ') === 'Ильдар Хасанов, Марина Соколова, Алексей Зайцев' && /^Примеры/.test(kml.note || '') && !kml.stub, `${kml.cases} | ${kml.note}`);
       check(`${name}: the Kazan blocks on top: hero, «Что входит», the curator, the students, their pictures and one h1`, kml.root && kml.blocks === 'hero includes coach cases' &&kml.h1.length === 1 && kml.h1[0] === 'Казанский марафон, 2 мая 2027' && kml.imgs.length === 2 && kml.imgs.every((w) => w > 0) && kml.links && /Roboto/.test(kml.font), JSON.stringify(kml));
-      { // the price of the Moscow day by their ladder: 2 000 ₽ from 16.11.2026, +125 ₽ each Monday, 3 000 ₽ from 11.01.2027
-        const day = new Date(Date.now() + 3 * 36e5).toISOString().slice(0, 10), L = [['2026-11-16', 2000], ['2026-11-23', 2125], ['2026-11-30', 2250], ['2026-12-07', 2375], ['2026-12-14', 2500], ['2026-12-21', 2625], ['2026-12-28', 2750], ['2027-01-04', 2875], ['2027-01-11', 3000]];
-        const want = L.filter(([f]) => f <= day).pop()?.[1] ?? 2000;
-        check(`${name}: their price of the day, by their ladder`, kml.price.replace(/\s/g, '') === String(want), `${kml.price} ₽ on ${day}, want ${want}`);
+      check(`${name}: their price is fixed, 2 000 ₽ (owner, 22.11.2026: no ladder)`, kml.price.replace(/\s/g, '') === '2000', kml.price);
+      { // owner, 22.11.2026: the Kazan logo on top, no Premium / free price cards (they came from the Solo promo page), 2 000 ₽
+        const top = await page.evaluate(() => { const i = document.querySelector('header.rail .mark img'); return { logo: !!i && i.naturalWidth > 0 && i.alt === 'S10 Казань', price: !!document.getElementById('price'), text: document.body.innerText }; });
+        check(`${name}: the S10 Kazan logo in the top bar; no price cards, no 750 ₽, no 3 free days; «Сколько это стоит?» says 2 000 ₽`, top.logo && !top.price && !/750|9 €|3 дня бесплатно/.test(top.text) && /2 000 ₽ один раз/.test(await page.evaluate(() => document.getElementById('faq').textContent)), JSON.stringify({ ...top, text: (top.text.match(/.{0,40}(750|9 €|3 дня бесплатно).{0,40}/) || [''])[0] }));
       }
       check(`${name}: their countdown says what ours says`, kml.days === (await page.textContent('#days')).replace(/^ · до старта/, 'До старта'), `${kml.days} | ${await page.textContent('#days')}`);
       const over = await page.evaluate(async () => { const r = document.getElementById('kml').shadowRoot, ph = r.querySelector('#coach img'); ph.scrollIntoView({ block: 'center', behavior: 'instant' }); await new Promise((ok) => setTimeout(ok, 600)); const q = ph.getBoundingClientRect(); const hit = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); return hit && hit.id; });
@@ -67,7 +67,7 @@ const srv = http.createServer((q, r) => {
     const live = await page.evaluate(() => ['plan', 'how', 'feats'].map((id) => document.getElementById(id).classList.contains('is-live')));
     check(`${name}: the three scroll scenes are live`, live.every(Boolean), live.join(' '));
     const hrefs = await page.evaluate(() => [...document.querySelectorAll('a.btn, a.cta')].map((a) => a.href));
-    check(`${name}: every action goes to the login and back to ${KZ ? '/solo/kazan' : '/solo/plan'}`, hrefs.length >= 5 && hrefs.every((x) => x === LOGIN), `${hrefs.length} actions`);
+    check(`${name}: every action goes to the login and back to ${KZ ? '/solo/kazan' : '/solo/plan'}`, hrefs.length >= (KZ ? 4 : 5) && hrefs.every((x) => x === LOGIN), `${hrefs.length} actions`);
 
     // with a mouse the race circle flies into 6 December as the calendar pins; on touch nothing follows the scroll: the
     // circle stays in the hero and 6 December pops in on a timer as the calendar comes into view (owner, 09.11.2026)

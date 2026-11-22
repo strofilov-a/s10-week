@@ -50,11 +50,11 @@ function stand(kind) {
     if (p === '/login-ok') { S.in = true; return go(u.searchParams.get('back')); }
     if (p === '/money') return go('/pay/'); // the install package: /money → /pay/ once the owner says so
     if (/^\/(money2|money_stripe)$/.test(p) && u.searchParams.get('paysite') === '1') { // the bank: the payment goes through
-      S.paid = p + u.search; FX.me.isPremium = true;
+      S.paid = p + u.search; FX.me.isPremium = true; if (u.searchParams.get('kazan') === '1') S.kazanPaid = true; // Kazan: 2 000 ₽ = Premium to 3 May 2027
       return send(200, TYPES['.html'], '<!doctype html><meta charset="utf-8"><h1>Оплата прошла</h1>'); }
     if (p === '/money2') return send(200, TYPES['.html'], money2());
     if (p === '/money_stripe') return send(200, TYPES['.html'], stripe());
-    if (p === '/apiapp/me') return S.in ? json({ id: FX.me.id, subscriptionExpiredAt: Date.parse(`${FX.me.isPremium ? '2026-12-22' : '2026-11-19'}T00:00:00+03:00`) / 1000, email: 'athlete@example.com', role: 'STUDENT' }) : send(401, 'application/json', 'null');
+    if (p === '/apiapp/me') return S.in ? json({ id: FX.me.id, subscriptionExpiredAt: Date.parse(`${S.kazanPaid ? '2027-05-03' : FX.me.isPremium ? '2026-12-22' : '2026-11-19'}T00:00:00+03:00`) / 1000, email: 'athlete@example.com', role: 'STUDENT' }) : send(401, 'application/json', 'null');
     if (/^\/(apiweb|student$|t7\/plan-templates)/.test(p) || p === '/student') {
       const s = u.href;
       if (s.includes('/student/self/info')) return S.in ? json(FX.me) : send(200, 'application/json', 'null');
@@ -109,15 +109,22 @@ async function journey(browser, kind, device) {
   await p.waitForURL(/\/login\?/, { timeout: 8000 }).catch(() => {});
   check(`${tag}: the login opens with the way back to ${PLAN}`, (await p.textContent('#back').catch(() => '')) === PLAN && !!(await p.$('#enter')), p.url());
 
-  // 2. logged in, no Premium: the plan opens, «Оформить Premium» instead of «Заполнить календарь»
+  // 2. logged in, no Premium: the plan opens, «Оформить Premium» instead of «Заполнить календарь»; Kazan (owner,
+  // 22.11.2026): the way in, step by step — the goal, the days, the first week — to «Оплатить 2 000 ₽»
   await p.click('#enter'); await p.waitForURL(PLAN, { timeout: 8000 }).catch(() => {});
   await p.waitForSelector('#s10-week', { timeout: 20000 }).catch(() => {}); await wait(1200);
   const first = await setUp(p, KZ);
-  const buy = await p.$('[data-act=buy]');
-  check(`${tag}: after the login, back on the plan; no Premium → «Оформить Premium», nothing written to the profile`, p.url().startsWith(PLAN) && !!buy && !(await p.$('[data-act=fillask]')) && !S.writes.some((w) => w.url.includes('task.php') || /studentPlans/.test(w.body)) && !errs.length,
+  const buy = await p.$(KZ ? '[data-act=kpay]' : '[data-act=buy]');
+  check(`${tag}: after the login, back on the plan; no Premium → ${KZ ? 'goal 3:40, days, first week, «Оплатить 2 000 ₽»' : '«Оформить Premium»'}, nothing written to the profile`, p.url().startsWith(PLAN) && !!buy && (!KZ || /Оплатить 2\s000\s₽/.test(await buy.innerText()) && first === 'goal 3:40, days, first week') && !(await p.$('[data-act=fillask]')) && !S.writes.some((w) => w.url.includes('task.php') || /studentPlans/.test(w.body)) && !errs.length,
     `${p.url()}; ${first}; ${(await body()).slice(0, 160)}; ${errs.join('; ')}`);
 
-  // 3. the payment: «Оформить Premium» → /money → /pay/ → ₽, a month → the bank
+  // 3. the payment: «Оформить Premium» → /money → /pay/ → ₽, a month → the bank; Kazan: straight to the ruble bank, 2 000 ₽
+  if (KZ) {
+    if (buy) { await buy.scrollIntoViewIfNeeded(); await buy.click(); }
+    await p.waitForURL(/\/money2\?/, { timeout: 8000 }).catch(() => {});
+    const paid = S.paid ? new URL(S.paid, 'https://s10.run') : null;
+    check(`${tag}: «Оплатить 2 000 ₽» goes to the ruble bank marked Kazan: /money2?paysite=1&kazan=1`, paid && paid.pathname === '/money2' && paid.searchParams.get('kazan') === '1' && /Оплата прошла/.test(await body()) && !errs.length, S.paid);
+  } else {
   if (buy) { await buy.scrollIntoViewIfNeeded(); await buy.click(); }
   await p.waitForURL(/\/pay\/$/, { timeout: 8000 }).catch(() => {});
   await p.waitForFunction(() => document.documentElement.dataset.loaded, null, { timeout: 10000 }).catch(() => {}); await wait(200);
@@ -128,6 +135,7 @@ async function journey(browser, kind, device) {
   await p.waitForURL(/\/money2\?/, { timeout: 8000 }).catch(() => {});
   const paid = S.paid ? new URL(S.paid, 'https://s10.run') : null;
   check(`${tag}: «Оплатить Premium» goes to the bank: /money2?paysite=1 with the email`, paid && paid.pathname === '/money2' && paid.searchParams.get('email') === 'athlete@example.com' && /Оплата прошла/.test(await body()), S.paid);
+  }
 
   // 4. back on the plan, now with Premium: «Заполнить календарь» writes the diary
   await p.goto(PLAN); await p.waitForSelector('#s10-week', { timeout: 20000 }).catch(() => {}); await wait(1200);
@@ -153,13 +161,17 @@ async function journey(browser, kind, device) {
   await ctx.close();
 }
 
-// what the page asks a new athlete first: Solo — the start window and the generator; Kazan — the goal (its own plan)
+// what the page asks a new athlete first: Solo — the start window and the generator; Kazan — the way in (goal, days, week)
 async function setUp(p, KZ) {
   const out = [];
   if (await p.$('.w-dlg [data-act=onbnone]')) { await p.click('[data-act=onbnone]'); await wait(300); out.push('start window'); }
   if (!(await p.$('[data-act=buy], [data-act=fillask]')) && await p.$('[data-act=tab][data-k=plan]')) { await p.click('[data-act=tab][data-k=plan]'); await wait(600); out.push('plan tab'); }
   if (!KZ && await p.$('[data-act=gen]')) { await p.click('[data-act=gen]'); await p.waitForSelector('[data-act=buy], [data-act=fillask]', { timeout: 8000 }).catch(() => {}); await wait(300); out.push('generated'); }
-  if (KZ && await p.$('[data-act=kgoal]')) out.push(`goal ${await p.$eval('[data-act=kgoal][aria-pressed=true]', (x) => x.dataset.g).catch(() => '?')}`);
+  if (KZ && await p.$('[data-p=kflow]')) { // the Kazan way in: a goal of one's own, the days as they are, the first week
+    await p.fill('[data-p=kflow]', '3:40'); await p.click('[data-act=flownext]'); await wait(300); out.push(`goal ${await p.evaluate(() => document.querySelector('.w-flow-bar [aria-current=step]')?.innerText.includes('Дни') ? '3:40' : '?')}`);
+    if (await p.$('select[data-p=role]')) { await p.click('[data-act=flownext]'); await wait(300); out.push('days'); }
+    if (await p.$('.w-flow-days')) { await p.click('[data-act=flownext]'); await wait(300); out.push('first week'); }
+  }
   return out.join(', ') || 'nothing asked';
 }
 
