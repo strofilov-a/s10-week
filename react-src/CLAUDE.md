@@ -55,14 +55,21 @@ import { KazanStart } from './kazan-start/KazanStart';
 
 `<SoloKazan />` mounts the same engine with `mode: 'kazan'`. Its constants live in one line of `engine.ts`:
 `KAZAN = { name: 'Казань', location: 'KAZAN', d: '2027-05-02', km: 42.2, goals: ['3:00:00', '3:30:00', '4:00:00'],
-scale: { '3:00:00': 1, '3:30:00': 0.85, '4:00:00': 0.7 } }`, and the owner's 24-week plan is the `KAZAN_PLAN_MD` text.
+band: [11700, 13500], scale: { '3:00:00': 1, '3:30:00': 0.85, '4:00:00': 0.7 } }`, and the owner's 24-week plan is the `KAZAN_PLAN_MD` text.
 Every date the page shows or checks comes from `d`. The race date is provisional (the organiser has not announced it):
 when it changes, the owner sends a new `engine.ts`; do not edit the date locally.
 
-- The race is fixed; instead of the plan choice and the generator the athlete picks the goal 3:00 / 3:30 / 4:00
-  (the stored plan's goal, else the one picked in this browser, else the diary's Kazan goal, else 3:30). The goal sets
-  the paces and scales easy runs and long runs; key workouts stay as in the plan; the race week has no easy runs; an
+- The race is fixed; instead of the plan choice and the generator the athlete types any goal (since 22.11.2026; the
+  stored plan's goal, else the one typed in this browser, else the diary's Kazan goal, else 3:30). The volume comes
+  from the 3:00 plan below 3:15, the 3:30 plan below 3:45, else the 4:00 one (`band`); the paces from the goal itself;
+  it scales easy runs and long runs; key workouts stay as in the plan; the race week has no easy runs; an
   athlete starting after week −21 gets two softer weeks (×0.75, ×0.9).
+- **Newcomer's way (22.11.2026):** until the athlete has a Kazan plan version with a filled calendar, the page is one
+  step at a time instead of the summary and tabs: goal → days → first week → «Оплатить 2 000 ₽»
+  (`/money2?paysite=1&kazan=1`) → «Заполнить календарь». The payment step is skipped when Premium is paid to the race
+  day: `GET /apiapp/me` `subscriptionExpiredAt` (`getLoose()` in `api.ts`, the JSON may follow PHP notices). The step
+  is kept in `localStorage` `s10week.kazan.flow.<ID>`. Never for a coach with `?id=`. The `kazan=1` payment itself is
+  the developer's part on `/money2`: 2 000 ₽ once, no autopay, Premium to 3 May 2027, then back to `/solo/kazan`.
 - Before a fill, unless the diary's main race is already Kazan (a marathon dated `d` or the two days before), the page
   asks «Казанский марафон 2 мая станет главным стартом вместо …»; «Да» writes the Kazan day as the main race
   (`typtrain 6`, `main6 1`) through the same `task.php` write as Solo's start window, then fills. Keep that question.
@@ -129,14 +136,15 @@ This is a wrapper, not a React rewrite (the owner's choice «вариант Б»
 3. In a browser, under a TEST account:
    - `/solo/plan`: the week, «План до старта», «Мои темпа»; no `NaN` anywhere; logged out → «войдите в S10» with a
      full `back`; without Premium the write buttons lead to `/money`; the AI buttons say «Осталось N из 5».
-   - `/solo/kazan`: «Казанский марафон, 2 мая 2027», the goal picker 3:00 / 3:30 / 4:00 changes paces and volume, no
-     plan choice or generator; «Заполнить календарь» asks about the main race first (answer «Отмена» on a real
+   - `/solo/kazan` with a TEST account that never filled Kazan: one step at a time (goal, days, first week, the
+     2 000 ₽ payment — do not pay on a real account —, the fill). With the way done: «Казанский марафон, 2 мая 2027»,
+     the goal field (3:40 → «план на 3:30», T42 5:13) changes paces and volume, no plan choice or generator; «Заполнить календарь» asks about the main race first (answer «Отмена» on a real
      account); logged out → the Kazan block with «Войти и начать» and a full `back`; opening `/solo/kazan` leaves the
      `s10week.…` keys of `/solo/plan` as they were.
    - `/solo/start` on desktop and a phone: three scroll scenes run, the big red circle lands on 6 December (with a
      mouse) or pops in (touch), every button goes to `/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fplan`, no
      horizontal scroll.
-   - `/solo/kazan/start` the same way: the red circle with 2 lands on 2 May, the goal picker 3:00 / 3:30 / 4:00
+   - `/solo/kazan/start` the same way: the red circle with 2 lands on 2 May, the S10 Kazan logo in the top bar, no price cards, the goal picker 3:00 / 3:30 / 4:00
      changes the paces, every button goes to `/login?back=https%3A%2F%2Fs10.run%2Fsolo%2Fkazan`, no horizontal scroll.
    - Navigate away and back to each page: no duplicated animations, listeners or content, no console errors.
 4. Report to the developer what was checked and what was not; do not claim checks that did not run.
