@@ -22,3 +22,10 @@ demo snapshot: the new athlete's path to «Заполнить календарь
 long runs; on the release build at `/solo/kazan` (a stand-in of the API that keeps what is written) the soft entry, the
 main-race question, the versions, the browser keys and the logged-out block. `REACT=1` (in `npm run react`) runs its
 release part on `<SoloKazan />` from `react-src/`, plus unmount and remount.
+
+`journey.cjs` walks one person's whole way on the release build, for S10 Solo and for Kazan, on a computer and a phone:
+the promo page → its first button → the login (a stand-in) → the plan without Premium («Оформить Premium») → `/money` →
+`/pay/` → «Оплатить Premium» in rubles → the bank (a stand-in that turns Premium on) → the plan again →
+«Заполнить календарь» → a later visit. Every request to s10.run is answered from the demo snapshot, no host name
+resolves (nothing can reach a real site), and `/money` goes to `/pay/` as the install package plans it.
+

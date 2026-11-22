@@ -429,9 +429,11 @@
   const kazanPlan = () => (KAZAN_WEEKS ? { id: 'kazan', kind: 'kazan', name: planName(), distance: 'Марафон · 42.2 км', plan: { weeks: KAZAN_WEEKS } } : null);
 
   /* ================= the chosen plan and the paces ================= */
-  // sel: { src: 'version' | 'library' | 'new' | 'kazan', id } ; the newly generated plan lives in memory until it is saved;
+  // sel: { src: 'version' | 'library' | 'new' | 'kazan', id } ; the newly generated plan is kept in this browser until it is
+  // saved to the profile (without Premium nothing goes there, so it must outlive the trip to the payment page);
   // 'kazan' = the built-in Kazan plan (Kazan mode), until a fill or a re-plan stores it as a version
-  let fresh = null;
+  let fresh = (() => { const f = store.get(`fresh.${id}`, null); return f?.plan?.weeks?.length ? f : null; })();
+  const keepFresh = () => store.set(`fresh.${id}`, fresh);
   let sel = store.get(`plan.${id}`, null);
   const findPlan = (s) => !s ? null : s.src === 'version' ? versions.find((v) => v.id === s.id) : s.src === 'library' ? library.find((v) => v.id === s.id) : s.src === 'new' ? fresh : s.src === 'kazan' ? kazanPlan() : null;
   const activeV = versions.find((v) => v.active);
@@ -835,7 +837,7 @@
   // active version (the profile save failed), the browser's copy
   const lastUndo = () => { const a = versions.find((v) => v.active); return MODE === 'kazan' && a && !isK(a) ? null : a?.undo || store.get(`undo.${id}`, null); };
   let openWeek = null;
-  const persistSel = () => { store.set(`plan.${id}`, sel && sel.src !== 'new' ? sel : null); };
+  const persistSel = () => { store.set(`plan.${id}`, sel && (sel.src !== 'new' || fresh) ? sel : null); };
   const reprice = () => { PACE = activePaces(); };
 
   // plan text from the generator: "## -5 | ПАНО | 80" then "-5, интервальная, описание, 14 км" (calc4's format)
@@ -1030,7 +1032,7 @@
     const next = [v, ...list.filter((x) => x.id !== v.id).map((x) => { if (!act) return x; const { active, ...rest } = x; return rest; })];
     const fd = new FormData(); fd.append('action', 'set'); fd.append('id', id); fd.append(`param[studentPlans${id}]`, JSON.stringify(next));
     await post('/apiweb/userparam.php', fd);
-    versions = next.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))); sel = { src: 'version', id: v.id }; persistSel(); fresh = null;
+    versions = next.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))); sel = { src: 'version', id: v.id }; fresh = null; keepFresh(); persistSel();
     return v;
   }
   // changes one saved version in the profile (re-read first), e.g. to drop the undo record after «Вернуть как было»
@@ -1109,7 +1111,7 @@
       const parsed = parsePlanText(text);
       if (!parsed.weeks.length) throw new Error('в ответе нет ни одной недели');
       fresh = { id: 'new', name: `Новый план, ${gen.distance.split(' · ')[0].toLowerCase()}`, distance: gen.distance, savedAt: new Date().toISOString(), plan: { weeks: parsed.weeks } };
-      sel = { src: 'new', id: 'new' }; chooser = false; volume = null; reprice();
+      sel = { src: 'new', id: 'new' }; keepFresh(); persistSel(); chooser = false; volume = null; reprice();
       flash = `План готов: ${parsed.weeks.length} ${plural(parsed.weeks.length, 'неделя', 'недели', 'недель')}${parsed.errors.length ? `, строк с ошибками: ${parsed.errors.length}` : ''}. Проверьте его ниже и сохраните версию, чтобы он остался.`;
     } catch (e) { gen.err = `План не получился: ${e.message}.`; }
     gen.busy = false; render();

@@ -4,7 +4,7 @@
   "description": "S10 «Моя неделя» page; package.json only for the browser checks",
   "scripts": {
     "serve": "python3 -m http.server 8766 --bind 127.0.0.1",
-    "test": "node --check solo.js && node tests/check.cjs && node deploy/build.cjs && node tests/release.cjs && node tests/landing.cjs && node tests/landing.cjs kazan && node tests/pay.cjs && node tests/links.cjs && node tests/kazan.cjs",
+    "test": "node --check solo.js && node tests/check.cjs && node deploy/build.cjs && node tests/release.cjs && node tests/landing.cjs && node tests/landing.cjs kazan && node tests/pay.cjs && node tests/links.cjs && node tests/kazan.cjs && node tests/journey.cjs",
     "build": "node deploy/build.cjs",
     "zip": "npm test && node deploy/zip.cjs",
     "live": "node deploy/live.cjs",

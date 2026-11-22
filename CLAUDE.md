@@ -58,6 +58,7 @@ The owner talks Russian; the UI is Russian. Code comments and docs are English.
 | `tests/landing.cjs` | Runs `release/solo-start.html` at `/solo/start` with every outside request blocked: scenes live, the circle lands, actions go to the login, paces follow the goal. `node tests/landing.cjs kazan`: `release/kazan-start.html` at `/solo/kazan/start` (days to go, the calendar 8 Feb – 2 May, the four stages, back to `/solo/kazan`, the goal picker). |
 | `tests/check.cjs` | Browser checks against the demo (see Testing). |
 | `tests/kazan.cjs` | The Kazan mode: the plan and its parser, goal, volume, long runs and race week on the demo; the soft entry, the main-race question, versions, browser keys and logged out on the release build at `/solo/kazan` (a stand-in of the API that keeps what is written). `REACT=1`: the release part on `<SoloKazan />`, plus unmount/remount. |
+| `tests/journey.cjs` | One person's whole way on the release build, Solo and Kazan, computer and phone: promo page → login (stand-in) → plan without Premium → `/money` → `/pay/` → bank (stand-in) → plan with Premium → «Заполнить календарь» → a later visit. No host name resolves. |
 | `tests/pay.cjs` | `release/pay` at http://s10.run:<port>/pay/ (Chromium maps s10.run to a local stand-in, so LIVE is on and the site's redirects are real): markup after the site's money2/money_stripe templates, ru and en, autopay, locked, zero and 500 ₽ prices, no email, coach, club, no paysite yet. |
 | `.github/workflows/check.yml` | Runs `tests/check.cjs` on every push and pull request. |
 | `react-src/` | The two pages as React 17 + TypeScript 4.9 sources for the developers' own app (their spec, 11.11.2026, variant «Б»: a wrapper, not a rewrite): `solo-plan/` (`SoloPlan.tsx` → `mountSoloPlan(host, opts)` in `engine.ts`, with `api.ts`, `storage.ts`, `urlState.ts`, `plan.css`; `SoloKazan.tsx` = `<SoloPlan mode="kazan" />` for `/solo/kazan`) and `solo-start/` (`SoloStart.tsx`, `markup.ts`, hand-ported `start.ts` + `stage.ts` with full cleanup, `start.css` scoped to `.s10-solo-start`, `fonts.css`) and `kazan-start/` (`KazanStart.tsx` for `/solo/kazan/start`, `markup.ts` with the three Kazan blocks' template inlined, `start.css` scoped to `.s10-kazan-start`, `fonts.css` = Roboto, `start.ts` hand-ported from landing-kazan's script, attaching the blocks' shadow root itself since innerHTML ignores `shadowrootmode`; solo-start's `stage.ts` and `fonts.css`). First built from b82aba6586 (2f8cf31, `--rev=2f8cf31`); since 11.11.2026 (owner's choice) from the current code with every fix, `&id=` included; the README lists the differences from b82aba6586. `README.md` (Russian) is their brief, `CHANGES.md` what changed since the last version sent, `CLAUDE.md` the brief for the Claude on the developer's machine. Sent: V3 (11.11.2026, `~/CLAUDE CODE/релизы/отправлено/2026-11-11 Solo V3/`); V4 with Kazan and its promo page ready, not sent (`~/CLAUDE CODE/релизы/не отправлено/2026-11-17 Solo V4 Казань/`). |
@@ -238,7 +239,9 @@ feature and fix applies, both modes share the tests. Design: `docs/superpowers/s
 - Paywall (owner, 09.11.2026; changed 11.11.2026): without premium «Заполнить календарь» is replaced by «Оформить Premium»
   to `/money`, with «750 ₽ в месяц или 9 €»; NOTHING is stored in the profile without premium (11.11: the plan used to be
   saved first): «Оформить Premium» is a plain link, «Сохранить версию» goes to `/money`, and `storePlan` returns null. The
-  other write buttons stay disabled with an «Оформить Premium» link. No free promise in Solo: the site gives Premium for the
+  other write buttons stay disabled with an «Оформить Premium» link. A generated plan is kept in the browser (`fresh.<ID>`, with `plan.<ID>` = `{src:'new'}`) until it
+  is saved to the profile, so it survives the trip to the payment page (22.11.2026: before, the athlete came back from
+  paying to «План ещё не выбран» and had to generate again). No free promise in Solo: the site gives Premium for the
   first 3 days, so the paywall is only seen once it is over (owner: no card binding, a paywall after 3 days).
 - A saved version is named by the race and its goal, «Valencia 3:20» (`planName()`; the distance when the race has no
   name; a re-plan adds «· перестроен <date>»); a coach's version keeps its name.
@@ -269,7 +272,7 @@ feature and fix applies, both modes share the tests. Design: `docs/superpowers/s
 
 ```
 npm ci && npx playwright install chromium    # once
-npm test                                     # demo (104), release (29), promo page (35), Kazan promo page (57), payment page (23), links (10), kazan (83)
+npm test                                     # demo (104), release (29), promo page (35), Kazan promo page (57), payment page (23), links (10), kazan (83), journey (38)
 npm run react                                # react-src: generate, webpack, release (32), promo (41), Kazan promo (63) and kazan (38) on the React bundle
 ```
 
