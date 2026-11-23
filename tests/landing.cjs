@@ -41,11 +41,24 @@ const srv = http.createServer((q, r) => {
         const r = document.getElementById('kml').shadowRoot; if (!r) return { root: false };
         const imgs = [...r.querySelectorAll('img')]; imgs.forEach((i) => { i.loading = 'eager'; }); await Promise.all(imgs.map((i) => i.decode().catch(() => {})));
         return { root: true, blocks: [...r.querySelectorAll('section')].map((x) => x.id || x.className.split(' ')[0]).join(' '), h1: [...document.querySelectorAll('h1'), ...r.querySelectorAll('h1')].map((h) => h.textContent.replace(/\s+/g, ' ').trim()),
-          imgs: imgs.map((i) => i.naturalWidth), links: [...r.querySelectorAll('a')].every((a) => a.href === login), font: getComputedStyle(document.querySelector('h1')).fontFamily, h1doc: document.querySelectorAll('h1').length, h1in: (() => { const h = document.querySelector('h1'), q = h && h.getBoundingClientRect(), t = r.querySelector('.hero__text').getBoundingClientRect(); return !!q && q.height > 0 && q.top >= t.top && q.bottom <= t.bottom && h.assignedSlot && h.assignedSlot.name === 'h1'; })(), days: r.querySelector('[data-countdown]').textContent, price: r.querySelector('[data-price]').textContent,
+          imgs: imgs.map((i) => i.naturalWidth), links: [...r.querySelectorAll('a')].filter((a) => !a.closest('#cases')).every((a) => a.href === login), /* the students' cards link their profiles and videos, checked below */ font: getComputedStyle(document.querySelector('h1')).fontFamily, h1doc: document.querySelectorAll('h1').length, h1in: (() => { const h = document.querySelector('h1'), q = h && h.getBoundingClientRect(), t = r.querySelector('.hero__text').getBoundingClientRect(); return !!q && q.height > 0 && q.top >= t.top && q.bottom <= t.bottom && h.assignedSlot && h.assignedSlot.name === 'h1'; })(), days: r.querySelector('[data-countdown]').textContent, price: r.querySelector('[data-price]').textContent,
           cases: [...r.querySelectorAll('#cases h3')].map((h) => h.textContent), note: (r.querySelector('#cases .section-head p') || {}).textContent, stub: /Имя Фамилия|Заглушка/.test(r.innerHTML) };
       }, LOGIN);
-      check(`${name}: the students' block: three made-up cards, said to be examples, no template left`, kml.cases && kml.cases.join(', ') === 'Ильдар Хасанов, Марина Соколова, Алексей Зайцев' && /^Примеры/.test(kml.note || '') && !kml.stub, `${kml.cases} | ${kml.note}`);
-      check(`${name}: the Kazan blocks on top: hero, «Что входит», the curator, the students, their pictures and one h1, in the document, shown in their hero`, kml.root && kml.blocks === 'hero includes coach cases' && kml.h1.length === 1 && kml.h1[0] === 'План подготовки к Казанскому марафону 2027' && kml.h1doc === 1 && kml.h1in && kml.imgs.length === 2 && kml.imgs.every((w) => w > 0) && kml.links && /Roboto/.test(kml.font), JSON.stringify(kml));
+      check(`${name}: the students' block: the owner's three real students (23.11.2026), no «examples» note, no template left`, kml.cases && kml.cases.join(', ') === 'Михаил Хомич, Сергей Коченихин, Виталий Станкевич' && !kml.note && !kml.stub, `${kml.cases} | ${kml.note}`);
+      { // owner, 23.11.2026: «Стало» counts down from the old time when the block comes into view, then the gain and the video link
+        const cs = await page.evaluate(async () => {
+          const r = document.getElementById('kml').shadowRoot, sec = r.getElementById('cases');
+          sec.scrollIntoView({ block: 'start', behavior: 'instant' }); await new Promise((ok) => setTimeout(ok, 3400));
+          const cards = [...sec.querySelectorAll('.case')];
+          return { anim: sec.classList.contains('is-animated'), nums: cards.map((c) => c.querySelector('.case__num').textContent), done: cards.filter((c) => c.classList.contains('is-done')).length,
+            seen: cards.every((c) => +getComputedStyle(c).opacity > 0.99 && +getComputedStyle(c.querySelector('.case__foot')).opacity > 0.99),
+            photos: [...sec.querySelectorAll('.case__photo img')].map((i) => i.naturalWidth), out: [...sec.querySelectorAll('a')].every((a) => a.target === '_blank' && /noopener/.test(a.rel)),
+            profiles: [...sec.querySelectorAll('.case__name a')].every((a) => /^https:\/\/s10\.run\/student\?\d+/.test(a.href)), videos: [...sec.querySelectorAll('.case__more')].every((a) => /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//.test(a.href)) };
+        });
+        check(`${name}: the students' cards count down to 2:59, 2:57, 2:54, all done and shown; photos loaded; profiles and videos open in a new tab`, cs.anim && cs.nums.join(' ') === '2:59 2:57 2:54' && cs.done === 3 && cs.seen && cs.photos.length === 3 && cs.photos.every((w) => w > 0) && cs.out && cs.profiles && cs.videos, JSON.stringify(cs));
+        await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' })); await page.waitForTimeout(400);
+      }
+      check(`${name}: the Kazan blocks on top: hero, «Что входит», the curator, the students, their pictures and one h1, in the document, shown in their hero`, kml.root && kml.blocks === 'hero includes coach cases' && kml.h1.length === 1 && kml.h1[0] === 'План подготовки к Казанскому марафону 2027' && kml.h1doc === 1 && kml.h1in && kml.imgs.length === 5 && kml.imgs.every((w) => w > 0) && kml.links && /Roboto/.test(kml.font), JSON.stringify(kml));
       if (name === 'desktop' && !REACT) { // owner's SEO brief, 23.11.2026
         const raw = fs.readFileSync(FILE, 'utf8'), C = 'https://s10.run/solo/kazan/start';
         const meta = (k) => (raw.match(new RegExp(`<meta (?:property|name)="${k}" content="([^"]*)"`)) || [])[1];
@@ -176,6 +189,14 @@ const srv = http.createServer((q, r) => {
       const again = await page.evaluate(() => ({ t: window.__s10.triggers(), live: ['plan', 'how', 'feats'].every((id) => document.getElementById(id).classList.contains('is-live')), weeks: document.querySelectorAll('#how-weeks .wk, #how-weeks .ph').length, days: document.querySelectorAll('#cal-grid .d').length }));
       check(`${name}: react: mounted again: the same triggers, scenes live, the calendar once`, again.t === n1 && again.live && again.weeks === (KZ ? 4 : 12) && again.days === 84 && !errors.length, JSON.stringify(again) + ` first ${n1}`);
     }
+    await page.close();
+  }
+  if (KZ) { // reduced motion: the students' block stands as written at once, no count-down
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
+    await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
+    await page.goto(url, { waitUntil: 'load' }); await page.waitForTimeout(600);
+    const rm = await page.evaluate(() => { const sec = document.getElementById('kml').shadowRoot.getElementById('cases'); return { anim: sec.classList.contains('is-animated'), nums: [...sec.querySelectorAll('.case__num')].map((n) => n.textContent).join(' '), seen: [...sec.querySelectorAll('.case, .case__delta, .case__foot')].every((e) => +getComputedStyle(e).opacity > 0.99) }; });
+    check('reduced motion: the students\' block is whole at once (2:59, 2:57, 2:54, gains and video links shown)', !rm.anim && rm.nums === '2:59 2:57 2:54' && rm.seen, JSON.stringify(rm));
     await page.close();
   }
   await browser.close(); srv.close();

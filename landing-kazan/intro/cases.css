@@ -1,0 +1,157 @@
+/* «Результаты учеников на марафонах»: the owner's block (s10-student-results.zip, 23.11.2026), as he sent it. It lives in
+   the Kazan shadow root beside intro.css (linked after it in the <template>; build.cjs and react-src.cjs inline it);
+   every rule is under #cases, so it beats intro.css's .card/.case rules and touches no other block. */
+
+#cases {
+  --case-ink: #212121;
+  --case-muted: #666;
+  --case-faded: #9a9a9a;
+  --case-line: #e3e5ee;
+  --case-blue: #004aad;
+  --case-green: #2e7d32;
+  --case-green-soft: #e8f3e9;
+  --case-ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+/* ---------- карточка ---------- */
+#cases .case {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: #fff;
+  border: 1px solid var(--case-line);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 40, 100, .06);
+  transition: transform .3s var(--case-ease), box-shadow .3s ease, border-color .3s ease;
+}
+
+#cases .case__who { display: flex; align-items: center; gap: 16px; }
+
+/* фото: круг с белым зазором и тонким кольцом; при наведении кольцо синее, фото приближается внутри круга */
+#cases .case__photo {
+  flex: none;
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--case-line);
+  transition: box-shadow .3s ease;
+}
+#cases .case__photo img {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform .45s var(--case-ease);
+}
+
+#cases .case__name { margin: 0; font-size: 20px; line-height: 26px; font-weight: 500; letter-spacing: -.015em; }
+#cases .case__name a {
+  color: inherit;
+  text-decoration: none;
+  background: linear-gradient(var(--case-blue), var(--case-blue)) 0 100% / 0 1px no-repeat;
+  transition: background-size .2s, color .2s;
+}
+#cases .case__name a:hover { color: var(--case-blue); background-size: 100% 1px; }
+
+#cases .case__profile { margin: 0; font-size: 14px; line-height: 21.7px; }
+#cases .case__profile a { color: var(--case-blue); text-decoration: none; }
+/* intro.css underlines a class-less link in a paragraph with a gradient (p a:not([class])); not here, as in the owner's demo */
+#cases .case__profile a { background: none; }
+#cases .case__profile a:hover { text-decoration: underline; }
+
+/* ---------- было / стало ---------- */
+#cases .case__results { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0; }
+#cases .case__results dt { color: var(--case-muted); font-size: 13px; font-weight: 500; line-height: 20px; }
+#cases .case__results dd { margin: 0; }
+#cases .case__before,
+#cases .case__after {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;   /* цифры одной ширины — отсчёт не «прыгает» */
+  color: var(--case-ink);
+}
+#cases .case__after { color: var(--case-green); }
+#cases .case__delta {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--case-green-soft);
+  color: var(--case-green);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+#cases .case__results .case__race { margin-top: 6px; color: var(--case-muted); font-size: 14px; line-height: 20px; }
+
+/* ---------- ссылка на видео ---------- */
+#cases .case__foot { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--case-line); }
+#cases .case__more { display: inline-flex; align-items: center; gap: 10px; color: var(--case-blue); font-weight: 500; font-size: 16px; text-decoration: none; }
+#cases .case__play {
+  display: grid; place-items: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--case-blue);
+  transition: transform .2s;
+}
+#cases .case__more:hover .case__play { transform: scale(1.08); }
+#cases .case__more:hover .case__more-text { text-decoration: underline; }
+
+/* ---------- наведение (только где есть мышь) ---------- */
+@media (hover: hover) {
+  #cases .case:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 20px 44px rgba(0, 74, 173, .16), 0 4px 12px rgba(0, 40, 100, .06);
+    border-color: #cdd6f2;
+  }
+  #cases .case:hover .case__photo { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--case-blue); }
+  #cases .case:hover .case__photo img { transform: scale(1.18); }
+}
+
+/* ---------- анимация появления ----------
+   Класс .is-animated ставит cases.js. Без JS (и для поисковиков) блок виден сразу, в финальном виде. */
+#cases.is-animated .case {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .7s ease, transform .7s var(--case-ease);
+}
+#cases.is-animated .case.is-in { opacity: 1; transform: none; }
+#cases.is-animated .case.is-done {
+  transition: transform .3s var(--case-ease), box-shadow .3s ease, border-color .3s ease;
+}
+@media (hover: hover) {
+  #cases.is-animated .case.is-done:hover { transform: translateY(-6px) scale(1.02); }
+}
+
+#cases.is-animated .case__photo {
+  opacity: 0;
+  transform: scale(.8);
+  transition: opacity .5s ease .15s, transform .6s cubic-bezier(.3, 1.4, .5, 1) .15s, box-shadow .3s ease;
+}
+#cases.is-animated .case.is-in .case__photo { opacity: 1; transform: none; }
+
+#cases.is-animated .case__after { color: var(--case-ink); transition: color .5s ease; }
+#cases.is-animated .case.is-done .case__after { color: var(--case-green); }
+#cases.is-animated .case__before { transition: color .5s ease; }
+#cases.is-animated .case.is-done .case__before { color: var(--case-faded); }
+
+#cases.is-animated .case__delta {
+  opacity: 0;
+  transform: scale(.5);
+  transition: opacity .3s ease, transform .45s cubic-bezier(.3, 1.7, .5, 1);
+}
+#cases.is-animated .case.is-done .case__delta { opacity: 1; transform: none; }
+
+#cases.is-animated .case__foot { opacity: 0; transition: opacity .5s ease .1s; }
+#cases.is-animated .case.is-done .case__foot { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  #cases .case,
+  #cases .case__photo,
+  #cases .case__photo img { transition: none !important; }
+}

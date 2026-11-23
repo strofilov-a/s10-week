@@ -45,6 +45,40 @@ export function mountKazanStart(page: El): () => void {
   const kmlDays = kml && kml.shadowRoot ? kml.shadowRoot.querySelector('[data-countdown]') : null;
   if (kmlDays) kmlDays.textContent = left > 0 ? `До старта ${left} ${plural(left, 'день', 'дня', 'дней')}` : left === 0 ? 'Старт сегодня' : 'Марафон прошёл';
 
+  /* «Результаты учеников» in that shadow root (the owner's block and script, 23.11.2026), as the page runs it: the cards
+     rise one by one, «Стало» counts down from the old time to the new, turns green, the gain pops up, the video link
+     shows; once a mount. Without it or with reduced motion the block stands as written. Starts when the block's top is a
+     fifth of the screen up (35% in view never comes for three cards in a column on a landscape phone) */
+  const cases = kml && kml.shadowRoot ? kml.shadowRoot.querySelector<HTMLElement>('#cases') : null;
+  const caseCards = cases ? $$<HTMLElement>('.case', cases) : [];
+  if (cases && caseCards.length && !reduced && 'IntersectionObserver' in window) {
+    const frames: number[] = [];
+    off.push(() => frames.forEach((f) => cancelAnimationFrame(f)));
+    const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const hm = (v: number) => Math.floor(v / 60) + ':' + String(v % 60).padStart(2, '0');
+    cases.classList.add('is-animated');
+    caseCards.forEach((c) => { const dd = $('.case__after', c); if (dd) $('.case__num', dd).textContent = dd.dataset.from || ''; });
+    const countDown = (card: El) => {
+      const dd = $('.case__after', card);
+      if (!dd) { card.classList.add('is-done'); return; }
+      const num = $('.case__num', dd), from = toMin(dd.dataset.from || '0:00'), to = toMin(dd.dataset.to || '0:00');
+      const ms = Math.min(1700, 700 + (from - to) * 30); // a bigger gain counts longer
+      let t0: number | undefined;
+      const step = (t: number) => {
+        if (!alive) return;
+        if (t0 === undefined) t0 = t;
+        const p = Math.min(1, (t - t0) / ms);
+        num.textContent = hm(Math.round(from - (from - to) * (1 - Math.pow(1 - p, 3))));
+        if (p < 1) frames.push(requestAnimationFrame(step)); else card.classList.add('is-done');
+      };
+      frames.push(requestAnimationFrame(step));
+    };
+    const play = () => caseCards.forEach((c, i) => later(() => { c.classList.add('is-in'); later(() => countDown(c), 450); }, i * 180));
+    const cio = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { cio.disconnect(); play(); } }, { rootMargin: '0px 0px -20% 0px' });
+    cio.observe($('.cases', cases) || cases);
+    off.push(() => cio.disconnect());
+  }
+
   /* the plan's four stages (plans/kazan-2027.md: База −24…−18, ПАНО −17…−10, Race Specific −9…−4, Taper −3…−1) */
   const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
   const mon = (n: number, plus = 0) => new Date(2027, 3, 26 - (n - 1) * 7 + plus); // the Monday of plan week −n (+ days: by the calendar, so no clock change shifts a date)

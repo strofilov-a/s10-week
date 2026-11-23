@@ -24,29 +24,12 @@ const sections = [...page.matchAll(/<section\b[\s\S]*?<\/section>/g)].map((m) =>
 const pick = (re, name) => sections.find((s) => re.test(s.slice(0, 200))) || fail(`no ${name} block`);
 const hero = pick(/class="hero hero--photo"/, 'hero'), includes = pick(/id="includes"/, 'includes'), coach = pick(/id="coach"/, 'coach');
 if (!/hero__lead/.test(hero) || !/Что входит/.test(includes) || !/Личный рекорд/.test(coach)) fail('the blocks are not what they were');
-// «Результаты учеников на марафонах»: their cards are a template («Имя Фамилия», a dashed «Заглушка» note). The owner
-// asked for names and results to be made up (20.11.2026); they are, and the block says under its heading that they
-// are examples (an invented result must not pass for a real one; taste-skill's rule too). Real students, with their
-// consent: change CASES and run this again
-const CASES = [
-  ['Ильдар Хасанов', '3:07:40', '2:58:15', 'Впервые быстрее трёх часов.'],
-  ['Марина Соколова', '4:12:05', '3:49:30', ''],
-  ['Алексей Зайцев', '4:58:20', '4:29:10', ''],
-];
-const EXAMPLE_NOTE = 'Примеры: имена и результаты условные.';
-let k = 0;
-const cases = pick(/id="cases"/, 'cases')
-  .replace(/\s*<p class="draft-note"[^>]*>[\s\S]*?<\/p>/, '')
-  .replace(/(<h2 id="cases-h">[\s\S]*?<\/h2>)/, `$1 <p class="case__year">${EXAMPLE_NOTE}</p>`)
-  .replace(/<article class="card case" data-placeholder>[\s\S]*?<\/article>/g, (card) => {
-    const [name, before, after, note] = CASES[k++] || fail('more cards than CASES');
-    return card.replace(' data-placeholder', '')
-      .replace(/(case__photo--empty" aria-hidden="true">)[^<]*/, `$1${name.split(' ').map((w) => w[0]).join('')}`)
-      .replace(/<h3>[^<]*<\/h3>/, `<h3>${name}</h3>`)
-      .replace(/(<dt>Было<\/dt><dd>)[^<]*/, `$1${before}`).replace(/(<dd class="case__after">)[^<]*/, `$1${after}`)
-      .replace(/<p class="case__note">[^<]*<\/p>/, note ? `<p class="case__note">${note}</p>` : '');
-  });
-if (k !== CASES.length || /Имя Фамилия|Заглушка|data-placeholder|Короткая цитата/.test(cases)) fail('the cases block did not take the names');
+// «Результаты учеников на марафонах»: their cards were a template; since 23.11.2026 the block is the owner's own with
+// three real students (s10-student-results.zip): its markup is landing-kazan/intro/cases.html (photos in
+// intro/students/, styles in intro/cases.css, the count-down in the page's script), taken as it is instead of theirs
+const cases = fs.readFileSync(path.join(OUT, 'intro', 'cases.html'), 'utf8').trim();
+if (!/^<section class="section" id="cases"/.test(cases) || /PHOTO_DIR/.test(cases)) fail('intro/cases.html is not the students block');
+pick(/id="cases"/, 'cases'); // theirs is still there: the page keeps its place in the order
 const IMG = {};
 let html = [hero, includes, coach, cases].join('\n')
   .replace(/href="[^"]*"(?=[^>]*data-goal="buy_click")/g, `href="${LOGIN}"`)
@@ -111,7 +94,7 @@ const scoped = `/* The first three blocks of github.com/Stro-812/kazan-marathon-
 :host { all: initial; display: block; }
 ${block(false).replace(/\n{3,}/g, '\n\n').trim()}\n`;
 
-const links = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+const links = [...html.replace(cases, '').matchAll(/href="([^"]+)"/g)].map((m) => m[1]); // the students' cards link their profiles and videos
 if (!links.length || links.some((h) => h !== LOGIN)) fail('a link that is not the login: ' + links.join(' '));
 const imgs = [...html.matchAll(/intro\/img\/([\w-]+\.webp)/g)].map((m) => m[1]);
 fs.mkdirSync(path.join(OUT, 'intro', 'img'), { recursive: true });
@@ -120,7 +103,7 @@ fs.writeFileSync(path.join(OUT, 'intro', 'intro.css'), scoped);
 
 const ROOTATTR = (page.match(/<html lang="ru"([^>]*)>/) || [])[1] || fail('no <html> attributes');
 const block3 = `<!--kml-->
-<div class="kml" id="kml" data-ladder='${JSON.stringify(C.ladder.map((x) => [x.from, x.price]))}'><template shadowrootmode="open"><link rel="stylesheet" href="intro/intro.css"><div class="kml-root"${ROOTATTR}><div class="kml-body"><div class="kml-main">
+<div class="kml" id="kml" data-ladder='${JSON.stringify(C.ladder.map((x) => [x.from, x.price]))}'><template shadowrootmode="open"><link rel="stylesheet" href="intro/intro.css"><link rel="stylesheet" href="intro/cases.css"><div class="kml-root"${ROOTATTR}><div class="kml-body"><div class="kml-main">
 ${html}
 </div></div></div></template><h1 id="hero-h" slot="h1">${H1}</h1></div>
 <!--/kml-->`;
