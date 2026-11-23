@@ -55,6 +55,13 @@ let html = [hero, includes, coach, cases].join('\n')
   .replace(/ src="intro\/img\/hero-\d+\.webp"/, ' src="intro/img/hero-1200.webp"');
 if (/s10\.run\/\.\.\./.test(html)) fail('a placeholder link left in the blocks');
 if (!/data-price/.test(html)) fail('no price in the hero');
+// The page's one h1 (owner's SEO brief, 23.11.2026): a shadow root's h1 is not in the document, so the hero gets a
+// <slot name="h1"> in its place and H1 below goes into the host, where the hero shows it; the date moves to the lead
+const H1 = 'План подготовки к\u00a0Казанскому марафону\u00a02027';
+if (!/<h1[^>]*>[\s\S]*?<\/h1>/.test(hero)) fail('no h1 in the hero');
+html = html.replace(/<h1[^>]*>[\s\S]*?<\/h1>/, '<slot name="h1"></slot>')
+  .replace(/(<section class="hero[^"]*"[^>]*?) aria-labelledby="[^"]*"/, `$1 aria-label="${H1.replace(/\u00a0/g, ' ')}"`)
+  .replace(/(<p class="hero__lead">)/, '$1Старт 2 мая\u00a02027. ');
 // their price ladder, from the config their own script carries ({from, price}: from that Monday, Moscow time)
 const C = JSON.parse((page.match(/const C = (\{[\s\S]*?\});/) || [])[1] || fail('no price ladder in their page'));
 if (!Array.isArray(C.ladder) || !C.ladder.length || C.ladder.some((x) => !/^\d{4}-\d\d-\d\d$/.test(x.from) || !(x.price > 0))) fail('the price ladder is not {from, price}');
@@ -115,7 +122,7 @@ const ROOTATTR = (page.match(/<html lang="ru"([^>]*)>/) || [])[1] || fail('no <h
 const block3 = `<!--kml-->
 <div class="kml" id="kml" data-ladder='${JSON.stringify(C.ladder.map((x) => [x.from, x.price]))}'><template shadowrootmode="open"><link rel="stylesheet" href="intro/intro.css"><div class="kml-root"${ROOTATTR}><div class="kml-body"><div class="kml-main">
 ${html}
-</div></div></div></template></div>
+</div></div></div></template><h1 id="hero-h" slot="h1">${H1}</h1></div>
 <!--/kml-->`;
 const idx = path.join(OUT, 'index.html'), src = fs.readFileSync(idx, 'utf8');
 if (!/<!--kml-->[\s\S]*?<!--\/kml-->/.test(src)) fail('landing-kazan/index.html: no <!--kml--> … <!--/kml--> place');

@@ -84,6 +84,17 @@
 .s10-kazan-start h1, .s10-kazan-start h2, .s10-kazan-start h3, .s10-kazan-start p { margin: 0; }
 .s10-kazan-start h1, .s10-kazan-start h2, .s10-kazan-start .h1 { font-family: var(--display); font-weight: 700; letter-spacing: -0.04em; line-height: .92; }
 .s10-kazan-start h2 { font-size: var(--step-head); }
+/* The page's one h1 (owner's SEO brief, 23.11.2026: «в живом DOM ровно один видимый h1»). It belongs to the Kazan hero on
+   top, which lives in a shadow root: there the h1 cannot be found by document.querySelectorAll, so it stays a child of
+   #kml and the hero shows it through <slot name="h1">. The shadow root's own h1 rules (intro.css, .hero--photo h1) do
+   not reach a slotted element, so they are repeated here; their variables still come from the shadow root. */
+.s10-kazan-start .kml > h1 {
+  margin: 0; max-width: 13ch; font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em;
+  font-size: clamp(40px, 4.6vw, 64px); line-height: 1.05; text-wrap: balance; overflow-wrap: break-word;
+  hyphens: auto; -webkit-hyphens: auto; hyphenate-limit-chars: 10 4 4;
+  font-stretch: var(--display-stretch, 100%); font-variation-settings: var(--display-axes, normal);
+}
+@media (max-width: 639px) { .s10-kazan-start .kml > h1 { font-size: clamp(32px, 9.4vw, 40px); } }
 .s10-kazan-start [id] { scroll-margin-top: 80px; }
 .s10-kazan-start ::selection { background: var(--accent); color: var(--on-accent); }
 .s10-kazan-start :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; } /* ink, not the blue: the ring must show on a blue button */
@@ -119,6 +130,8 @@
 .s10-kazan-start .hero { position: relative; overflow-x: clip; /* a circle past the right edge never widens a touch screen's page */ min-height: calc(100svh - 64px); display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: center; padding-block: 48px; }
 .s10-kazan-start .hero-text { grid-column: 1 / 8; position: relative; z-index: 2; }
 .s10-kazan-start .hero .h1 { font-size: var(--step-display); max-width: 11ch; } /* an h2: the page's h1 is the Kazan hero's above */
+.s10-kazan-start .about { padding-block: clamp(40px, 6vw, 88px) 0; }
+.s10-kazan-start .about-p { max-width: 60ch; font-size: var(--step-body); line-height: 1.55; }
 .s10-kazan-start .hero-sent { margin-top: 32px; max-width: 38ch; font-size: var(--step-lead); line-height: 1.35; }
 .s10-kazan-start .hero .row { display: flex; align-items: center; gap: 24px; margin-top: 40px; flex-wrap: wrap; }
 .s10-kazan-start .hero .btn { min-height: 56px; padding: 0 30px; }

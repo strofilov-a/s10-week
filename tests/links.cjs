@@ -10,6 +10,8 @@ const results = []; const check = (n, ok, i = '') => { results.push(!!ok); conso
 const KNOWN = Object.fromEntries(['/', '/login', '/logout', '/profile', '/student', '/students', '/trainerlist', '/answers', '/about',
   '/money', '/money2', '/money_stripe', '/clubPayment', '/calc3', '/solo/plan', '/solo/kazan', '/pay/', '/post/3578/', '/tilda/85144/offer_tinkoff',
   '/premium', // the site's own header links it the same way
+  '/solo/kazan/start', // the Kazan promo page's own address (its canonical and og:url): the brief installs it there
+  '/favicon.ico', // the site's icon, which the Kazan promo page uses (served, checked 23.11.2026)
 ].map((p) => [p, true]));
 const SRC = { 'solo.js': 'solo.js', 'landing-v2': 'landing-v2/index.html', 'landing-kazan': 'landing-kazan/index.html', 'pay': 'pay/index.html' };
 for (const [name, file] of Object.entries(SRC)) {

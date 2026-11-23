@@ -41,11 +41,34 @@ const srv = http.createServer((q, r) => {
         const r = document.getElementById('kml').shadowRoot; if (!r) return { root: false };
         const imgs = [...r.querySelectorAll('img')]; imgs.forEach((i) => { i.loading = 'eager'; }); await Promise.all(imgs.map((i) => i.decode().catch(() => {})));
         return { root: true, blocks: [...r.querySelectorAll('section')].map((x) => x.id || x.className.split(' ')[0]).join(' '), h1: [...document.querySelectorAll('h1'), ...r.querySelectorAll('h1')].map((h) => h.textContent.replace(/\s+/g, ' ').trim()),
-          imgs: imgs.map((i) => i.naturalWidth), links: [...r.querySelectorAll('a')].every((a) => a.href === login), font: getComputedStyle(r.querySelector('h1')).fontFamily, days: r.querySelector('[data-countdown]').textContent, price: r.querySelector('[data-price]').textContent,
+          imgs: imgs.map((i) => i.naturalWidth), links: [...r.querySelectorAll('a')].every((a) => a.href === login), font: getComputedStyle(document.querySelector('h1')).fontFamily, h1doc: document.querySelectorAll('h1').length, h1in: (() => { const h = document.querySelector('h1'), q = h && h.getBoundingClientRect(), t = r.querySelector('.hero__text').getBoundingClientRect(); return !!q && q.height > 0 && q.top >= t.top && q.bottom <= t.bottom && h.assignedSlot && h.assignedSlot.name === 'h1'; })(), days: r.querySelector('[data-countdown]').textContent, price: r.querySelector('[data-price]').textContent,
           cases: [...r.querySelectorAll('#cases h3')].map((h) => h.textContent), note: (r.querySelector('#cases .section-head p') || {}).textContent, stub: /Имя Фамилия|Заглушка/.test(r.innerHTML) };
       }, LOGIN);
       check(`${name}: the students' block: three made-up cards, said to be examples, no template left`, kml.cases && kml.cases.join(', ') === 'Ильдар Хасанов, Марина Соколова, Алексей Зайцев' && /^Примеры/.test(kml.note || '') && !kml.stub, `${kml.cases} | ${kml.note}`);
-      check(`${name}: the Kazan blocks on top: hero, «Что входит», the curator, the students, their pictures and one h1`, kml.root && kml.blocks === 'hero includes coach cases' &&kml.h1.length === 1 && kml.h1[0] === 'Казанский марафон, 2 мая 2027' && kml.imgs.length === 2 && kml.imgs.every((w) => w > 0) && kml.links && /Roboto/.test(kml.font), JSON.stringify(kml));
+      check(`${name}: the Kazan blocks on top: hero, «Что входит», the curator, the students, their pictures and one h1, in the document, shown in their hero`, kml.root && kml.blocks === 'hero includes coach cases' && kml.h1.length === 1 && kml.h1[0] === 'План подготовки к Казанскому марафону 2027' && kml.h1doc === 1 && kml.h1in && kml.imgs.length === 2 && kml.imgs.every((w) => w > 0) && kml.links && /Roboto/.test(kml.font), JSON.stringify(kml));
+      if (name === 'desktop' && !REACT) { // owner's SEO brief, 23.11.2026
+        const raw = fs.readFileSync(FILE, 'utf8'), C = 'https://s10.run/solo/kazan/start';
+        const meta = (k) => (raw.match(new RegExp(`<meta (?:property|name)="${k}" content="([^"]*)"`)) || [])[1];
+        const desc = meta('description') || '';
+        check('SEO: without scripts the page has its h1, canonical, Open Graph, Twitter, icons, JSON-LD and the plan paragraph',
+          /<h1 id="hero-h" slot="h1">План подготовки к\u00a0Казанскому марафону\u00a02027<\/h1>/.test(raw) && raw.includes(`<link rel="canonical" href="${C}">`)
+          && meta('og:url') === C && meta('og:type') === 'website' && meta('og:locale') === 'ru_RU' && meta('og:site_name') === 'S10.run'
+          && /^https:\/\/.+\/og\.png$/.test(meta('og:image') || '') && meta('og:image:width') === '1200' && meta('og:image:height') === '630' && !!meta('og:image:alt')
+          && meta('twitter:card') === 'summary_large_image' && meta('twitter:image') === meta('og:image') && !!meta('twitter:title') && !!meta('twitter:description')
+          && /rel="apple-touch-icon" sizes="180x180"/.test(raw) && /sizes="32x32"/.test(raw) && /application\/ld\+json/.test(raw) && /class="about-p"[^>]*>План рассчитан на 24/.test(raw),
+          meta('og:image'));
+        check('SEO: the description starts with the plan, is at most 155 characters, says 2 000 ₽ once and no 750 ₽ or free days', desc.startsWith('План подготовки к Казанскому марафону 2027') && desc.length <= 155 && /2 000 ₽ один раз/.test(desc) && !/750|9 €|бесплатн/.test(desc), `${desc.length}: ${desc}`);
+        const ld = await page.evaluate(() => { try { return JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent); } catch (e) { return { err: e.message }; } });
+        const node = (t) => (ld['@graph'] || []).find((n) => n['@type'] === t) || {};
+        const faqPage = await page.evaluate(() => [...document.querySelectorAll('#faq details')].map((d) => [d.querySelector('summary').textContent.trim(), d.querySelector('p').textContent.trim()]));
+        const faqLd = (node('FAQPage').mainEntity || []).map((q) => [q.name, q.acceptedAnswer && q.acceptedAnswer.text]);
+        check('SEO: JSON-LD parses: the page, its author, the plan at 2 000 ₽, the six questions word for word, no SportsEvent',
+          !ld.err && node('WebPage').url === C && node('WebPage').inLanguage === 'ru' && node('Person').name === 'Юрий Строфилов'
+          && node('Product').offers && node('Product').offers.price === '2000' && node('Product').offers.priceCurrency === 'RUB'
+          && faqLd.length === 6 && JSON.stringify(faqLd) === JSON.stringify(faqPage) && !raw.includes('SportsEvent'), ld.err || JSON.stringify(faqLd).slice(0, 200));
+        const rd = await page.evaluate(() => ({ grid: document.getElementById('cal-grid').getAttribute('aria-hidden'), sum: (document.getElementById('cal-sum') || {}).textContent || '', about: document.querySelector('.about-p').getBoundingClientRect().height }));
+        check('SEO: the calendar grid is hidden from readers, one sentence says what it shows; the plan paragraph is on the page', rd.grid === 'true' && /^Календарь последних 12 недель/.test(rd.sum) && rd.about > 0, JSON.stringify(rd));
+      }
       check(`${name}: their price is fixed, 2 000 ₽ (owner, 22.11.2026: no ladder)`, kml.price.replace(/\s/g, '') === '2000', kml.price);
       { // owner, 22.11.2026: the Kazan logo on top, no Premium / free price cards (they came from the Solo promo page), 2 000 ₽
         const top = await page.evaluate(() => { const i = document.querySelector('header.rail .mark img'); return { logo: !!i && i.naturalWidth > 0 && i.alt === 'S10 Казань', price: !!document.getElementById('price'), text: document.body.innerText }; });
