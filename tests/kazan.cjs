@@ -619,10 +619,17 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // 12. the newcomer's way (owner, 22.11.2026: «конвейер», one step at a time): goal → days → first week → 2 000 ₽ →
   // the fill, then the usual page; Premium paid to the race skips the payment; a coach never sees it
-  if (DEMO) { const p = await open('?kazan&newbie&free', null, true);
+  if (DEMO) { const p = await open('?kazan&newbie&free', null, true); let sepCheck = () => {};
     const step = () => p.evaluate(() => ({ h: document.querySelector('.w-flow h2')?.innerText || '', now: document.querySelector('.w-flow-bar [aria-current=step]')?.innerText.replace(/\s+/g, ' ') || '', tabs: !!document.querySelector('.w-tabbar'), hero: !!document.querySelector('.w-hero'), text: document.querySelector('.w-flow')?.innerText || '' }));
     const next = async () => { await p.click('[data-act=flownext]'); await wait(300); };
     const s1 = await step();
+    { // owner, 22.11.2026: the phone's keyboard is digits with a separator, and any separator reads; the bib follows live; the quick goals
+      const seen = []; 
+      for (const v of ['3.45', '3,45', '3 45', '3-45', '3ч45м', '345']) { await p.fill('[data-p=kflow]', v); await wait(60); seen.push(`${v}=${await p.textContent('#w-bib-g')}`); }
+      await p.click('[data-act=kchip][data-g="4:30"]'); await wait(100); const chip = [await p.inputValue('[data-p=kflow]'), await p.textContent('#w-bib-g'), await p.getAttribute('[data-act=kchip][data-g="4:30"]', 'aria-pressed')];
+      const mode = await p.getAttribute('[data-p=kflow]', 'inputmode');
+      sepCheck = () => check('kazan way: goal with any separator (3.45, 3,45, 3 45, 3-45, 3ч45м, 345) reads 3:45; the keyboard is digits (inputmode decimal); a quick goal fills the field and the bib', seen.every((x) => x.endsWith('=3:45')) && chip.join() === '4:30,4:30,true' && mode === 'decimal', `${seen.join(' ')} | ${chip} | ${mode}`);
+    }
     await p.fill('[data-p=kflow]', '340'); await wait(100); const hint = await p.innerText('#w-fg-s');
     await next(); const s2 = await step();
     await p.click('[data-act=flowback]'); await wait(200); const back = [await step(), await p.inputValue('[data-p=kflow]')]; await next();
@@ -633,12 +640,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.click('[data-act=fillask]'); await wait(200); await p.click('[data-act=fillyes]'); await wait(200); const asked = !!(await p.$('[data-act=kmainyes]')); await p.click('[data-act=kmainyes]').catch(() => {});
     await p.waitForFunction(() => document.querySelector('.w-tabbar'), null, { timeout: 20000 }).catch(() => {}); await wait(400);
     const end = { tabs: !!(await p.$('.w-tabbar')), flow: !!(await p.$('.w-flow')), goal: (await goalIn(p)).join(' · '), ls: await p.evaluate(() => localStorage.getItem('s10week.kazan.flow.1000000001')), mon: await p.evaluate(() => JSON.parse(localStorage.getItem('s10week.kazan.layout') || '[]')[0]) };
-    check('kazan way: one step at a time, no summary or tabs: «За сколько хотите пробежать марафон?» first', s1.now === '1 Цель' && /За сколько хотите пробежать/.test(s1.h) && !s1.tabs && !s1.hero, JSON.stringify(s1));
+    check('kazan way: one step at a time, no summary or tabs: «За сколько хотите пробежать марафон?» first', s1.now === 'Цель' && /За сколько хотите пробежать/.test(s1.h) && !s1.tabs && !s1.hero, JSON.stringify(s1));
     check('kazan way: the goal 340 → «Темп марафона 5:13 … план на 3:30, для целей от 3:15 до 3:45», live', hint === 'Темп марафона 5:13 на километр · план на 3:30, для целей от 3:15 до 3:45', hint);
-    check('kazan way: «Дальше» → the days, «Назад» → the goal kept (3:40)', s2.now === '2 Дни' && /В какие дни/.test(s2.h) && back[0].now === '1 Цель' && back[1] === '3:40', `${JSON.stringify(s2)} | ${JSON.stringify(back)}`);
-    check('kazan way: the first week, its 7 days, the chance promised after it (no «не от чего», no 12 weeks)', s3.now === '3 Первая неделя' && days3 === 7 && /цель 3:40/.test(s3.text) && /Пробегите эту неделю, и здесь появится ваш шанс пробежать за 3:40/.test(s3.text) && !/не от чего|12 недел/.test(s3.text), `${days3} days; ${JSON.stringify(s3).slice(0, 300)}`);
-    check('kazan way: the payment, 2 000 ₽ with Premium to 3 May 2027, ruble payment marked Kazan; no 750 ₽', s4.now === '4 Оплата' && /Весь план до старта — 2\s000\s₽/.test(s4.h) && /Premium до 3 мая 2027/.test(s4.text) && /Оплатить 2\s000\s₽/.test(s4.text) && !/750/.test(s4.text) && payHref === 'https://s10.run/money2?paysite=1&kazan=1', `${payHref}; ${JSON.stringify(s4).slice(0, 300)}`);
-    check('kazan way: paid (demo) → «Заполним календарь», the payment step marked done', s5.now === '5 Календарь' && /Заполним календарь/.test(s5.h) && payDone, JSON.stringify(s5).slice(0, 200));
+    sepCheck();
+    check('kazan way: «Дальше» → the days, «Назад» → the goal kept (3:40)', s2.now === 'Дни' && /В какие дни/.test(s2.h) && back[0].now === 'Цель' && back[1] === '3:40', `${JSON.stringify(s2)} | ${JSON.stringify(back)}`);
+    check('kazan way: the first week, its 7 days, the chance promised after it (no «не от чего», no 12 weeks)', s3.now === 'Первая неделя' && days3 === 7 && /цель 3:40/.test(s3.text) && /Пробегите эту неделю, и здесь появится ваш шанс пробежать за 3:40/.test(s3.text) && !/не от чего|12 недел/.test(s3.text), `${days3} days; ${JSON.stringify(s3).slice(0, 300)}`);
+    check('kazan way: the payment, 2 000 ₽ with Premium to 3 May 2027, ruble payment marked Kazan; no 750 ₽', s4.now === 'Оплата' && /Весь план до старта — 2\s000\s₽/.test(s4.h) && /Premium до 3 мая 2027/.test(s4.text) && /Оплатить 2\s000\s₽/.test(s4.text) && !/750/.test(s4.text) && payHref === 'https://s10.run/money2?paysite=1&kazan=1', `${payHref}; ${JSON.stringify(s4).slice(0, 300)}`);
+    check('kazan way: paid (demo) → «Заполним календарь», the payment step marked done', s5.now === 'Календарь' && /Заполним календарь/.test(s5.h) && payDone, JSON.stringify(s5).slice(0, 200));
     check('kazan way: the fill asks to make Kazan the main race, then the usual page opens with the goal 3:40; the way is over in this browser; the Monday chosen kept', asked && end.tabs && !end.flow && end.goal === '3:40 · план на 3:30' && end.ls === '"done"' && end.mon === 'rest' && !p.errors.length, `${asked} ${JSON.stringify(end)} ${p.errors.join('; ')}`);
     await p.close(); }
   { const FX = NOV((x) => { x.versions = []; x.app = { id: x.me.id, subscriptionExpiredAt: Date.parse('2027-05-03T23:59:59+03:00') / 1000 }; return x; }); // paid 2 000 ₽ already

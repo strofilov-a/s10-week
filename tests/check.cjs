@@ -388,7 +388,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const note = await p.innerText('#w-onb-pn'), kb = await p.getAttribute('[data-o=goal]', 'inputmode');
     await p.click('[data-act=onbok]'); await wait(500);
     const race = await p.evaluate(() => window.__tasks.find((t) => t.d === '2027-04-25'));
-    check('goal typed as digits «135» on a phone pad reads 1:35:00; the field asks for a keyboard with punctuation', note.includes('1:35:00') && race?.prediction === '01:35:00' && kb === 'text', `${note} ${race?.prediction} ${kb}`);
+    check('goal typed as digits «135» on a phone pad reads 1:35:00; the field asks for digits with a separator (owner, 22.11.2026)', note.includes('1:35:00') && race?.prediction === '01:35:00' && kb === 'decimal', `${note} ${race?.prediction} ${kb}`);
     await p.click('[data-act=ptab][data-k=new]').catch(() => {}); await p.click('[data-act=gen]'); await wait(3500);
     await p.click('[data-act=pversion]'); await wait(800);
     check('a saved version is named by the race and its goal: «Барселона 1:35»', (await p.evaluate(() => window.S10_FIXTURES.versions[0]?.name)) === 'Барселона 1:35' && (await p.innerText('#w-plan2-h')).includes('Барселона 1:35'), await p.evaluate(() => window.S10_FIXTURES.versions[0]?.name));

@@ -189,6 +189,14 @@ feature and fix applies, both modes share the tests. Design: `docs/superpowers/s
   `subscriptionExpiredAt`, read from its first brace: PHP notices come first) to `KAZAN.d` or later: then the payment
   step is skipped; a monthly Premium or the 3 trial days are not the Kazan payment. Demo: «Оплатить» marks it paid.
   Never for a coach with `?id=`. Tests open the usual page by setting that key to "done".
+  Design (owner, 22.11.2026: «переделаем красиво»): the step on a white sheet beside a race bib in S10 blue (`bibHTML`:
+  the goal large in its white box, pace, plan, work days, long run, first week, days to go; four pin holes; sticky),
+  a five-part progress track (no numbers; «Шаг 3 из 5: …» on a phone), quick goals 3:00…5:00 under the 48 px goal field
+  (they and typing update the bib live, no redraw), the day roles as coloured tiles (a native select over each),
+  «Что входит» with ticks on the payment, the two fill spans as cards. ≤900 px the bib is a strip above the step.
+  Earlier look (owner, 22.11.2026, «почему не по центру, слова съезжают»): one centred column of 720 px (h1, card, footer), the
+  first week as rows (day · workout · km, rest days quiet, no 4-across cards: they squeezed the words), the day roles
+  four a row (two on a phone) so «Длительная» is never cut.
 - Any goal (owner, 22.11.2026): a field instead of the three buttons (`[data-p=kgoal]`, read on change/Enter like the
   start window's goal, 2:00–7:00); the volume from the 3:00 plan below 3:15 (`KAZAN.band`), the 3:30 plan below 3:45,
   else the 4:00 one (a boundary goes to the slower plan); the paces from the goal itself.
@@ -263,7 +271,8 @@ feature and fix applies, both modes share the tests. Design: `docs/superpowers/s
   first 3 days, so the paywall is only seen once it is over (owner: no card binding, a paywall after 3 days).
 - A saved version is named by the race and its goal, «Valencia 3:20» (`planName()`; the distance when the race has no
   name; a re-plan adds «· перестроен <date>»); a coach's version keeps its name.
-- The goal field asks for a keyboard with punctuation (`inputmode="text"`), the easy-run range too (it needs «-»);
+- A goal field asks for digits with a separator (`inputmode="decimal"`, owner 22.11.2026: «любой знак препинания»): any
+  non-digit separates (`goalOf`: «3:40», «3.40», «3,40», «3 40», «3-40», «3ч40м»); the easy-run range keeps `inputmode="text"` (it needs «-»);
   a goal typed as digits reads «130» → 1:30 for a half/marathon, «2230» → 22:30 for 10 km and shorter, 5–6 digits h:mm:ss.
 - No free trial anywhere (owner, 22.11.2026: «никаких пробных 3 дня нигде»): the promo buttons say «Начать подготовку»,
   no «3 дня бесплатно» in the Premium card, the price answer or the payment page's FAQ; `tests/links.cjs` keeps it so.

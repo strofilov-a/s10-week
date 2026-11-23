@@ -1649,7 +1649,7 @@
         <label class="w-f"><span>Дата</span><input type="date" data-o="d" min="${add(today, 1)}" value="${o.d}"></label>
         <label class="w-f"><span>Дистанция</span><select data-o="dist">${DISTANCES.map((d) => `<option ${d === o.dist ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
         ${f('name', 'Название', 'placeholder="Например, Valencia"')}
-        ${f('goal', 'Цель, необязательно', 'class="num" inputmode="text" autocomplete="off" placeholder="3:20 или 22:30"')}
+        ${f('goal', 'Цель, необязательно', 'class="num" inputmode="decimal" autocomplete="off" placeholder="3:20 или 22:30"')}
       </div>` : ''}
       ${o.pace ? `${o.race ? '<h3>Темпа</h3>' : ''}<p class="w-muted"><span id="w-onb-pn">${onbPaceNote(o)}</span> Поменять можно потом.</p>
       <label class="w-f"><span>Лёгкий бег, мин/км</span><input data-o="easy" class="num" inputmode="text" autocomplete="off" value="${esc(o.P.easy)}"></label>
@@ -1662,7 +1662,7 @@
   // typed without a colon (a phone's digit pad): «130» is 1:30 for a half or a marathon, «2230» is 22:30 for 10 km and
   // shorter, five or six digits are h:mm:ss
   const goalOf = (g, km) => {
-    g = String(g).trim().replace(/\s+/g, ':');
+    g = String(g).trim().replace(/[^\d]+/g, ':').replace(/^:+|:+$/g, ''); // any separator: «3:40», «3.40», «3,40», «3 40», «3-40», «3ч40м»
     if (/^\d{3,6}$/.test(g)) {
       const n = g.length;
       g = n >= 5 ? `${g.slice(0, n - 4)}:${g.slice(n - 4, n - 2)}:${g.slice(n - 2)}` : km <= 10 || n === 3 || g[0] === '0' ? `${g.slice(0, n - 2)}:${g.slice(n - 2)}` : '';
@@ -1691,7 +1691,7 @@
   // any time (owner, 22.11.2026): typed as in the start window («3:40», «340»), its plan said beside it
   const kzGoalTxt = (g = kazanGoal) => fmtGoal(kzSec(g), 42.195);
   const kzPlanTxt = (g = kazanGoal) => `план на ${kzBand(g).replace(/:00$/, '')}`;
-  const kazanPicker = () => `<div class="w-kgoal"><label class="w-lb" for="w-kg">Цель</label><input id="w-kg" class="num" data-p="kgoal" inputmode="text" autocomplete="off" value="${kzGoalTxt()}" aria-describedby="w-kg-s"><span class="w-muted" id="w-kg-s">${kzPlanTxt()}</span></div>`;
+  const kazanPicker = () => `<div class="w-kgoal"><label class="w-lb" for="w-kg">Цель</label><input id="w-kg" class="num" data-p="kgoal" inputmode="decimal" enterkeyhint="done" autocomplete="off" value="${kzGoalTxt()}" aria-describedby="w-kg-s"><span class="w-muted" id="w-kg-s">${kzPlanTxt()}</span></div>`;
   // a typed goal: null when it is not a marathon time from 2:00 to 7:00
   const kzRead = (v) => { const g = goalOf(v, 42.195); return g && kzOk(g) ? kzNorm(g) : null; };
   /* ================= the Kazan way for a newcomer (owner, 22.11.2026: «конвейер», one step at a time) =================
@@ -1704,49 +1704,86 @@
   let flow = MODE === 'kazan' && isSelf && !kzFilled() ? store.get(`flow.${id}`, 'goal') : null;
   if (flow === 'done') flow = null; else if (flow && !FLOW.some(([k]) => k === flow)) flow = 'goal';
   if (flow === 'pay' && kazanPaid) flow = 'fill'; else if (flow === 'fill' && !kazanPaid) flow = 'pay'; // back from the payment
-  const flowGo = (k) => { flow = k; store.set(`flow.${id}`, k); fill.confirm = false; fill.err = ''; if (kazanAsk === 'ask') kazanAsk = ''; render(); root.querySelector('.w-flow')?.scrollIntoView({ block: 'start' }); };
+  const flowGo = (k) => { flow = k; flowIn = true; store.set(`flow.${id}`, k); fill.confirm = false; fill.err = ''; if (kazanAsk === 'ask') kazanAsk = ''; render(); root.querySelector('.w-flow')?.scrollIntoView({ block: 'start' }); };
   const flowNext = () => flowGo(flow === 'week' && kazanPaid ? 'fill' : FLOW[FLOW.findIndex(([k]) => k === flow) + 1][0]);
   const flowBack = () => flowGo(flow === 'fill' && kazanPaid ? 'week' : FLOW[Math.max(0, FLOW.findIndex(([k]) => k === flow) - 1)][0]);
   const kzT42 = (g) => pacesFromGoal(42.195, kzSec(g))[42];
   const flowGoalHint = (g) => `Темп марафона ${kzT42(g)} на километр · ${kzPlanTxt(g)}, для целей ${kzBand(g) === KAZAN.goals[0] ? 'быстрее 3:15' : kzBand(g) === KAZAN.goals[1] ? 'от 3:15 до 3:45' : 'от 3:45'}`;
   // the first plan week the athlete will run: the first with a day after today
   const firstWeek = (f) => f?.weeks.find((w) => w.days.some((d) => d.d > today)) || null;
+  // the bib (owner, 22.11.2026: «переделаем красиво»): the runner's race number beside the steps, in S10 blue; it fills
+  // as the athlete answers — the goal large, its pace and plan, the running days, the first week, the days to go — and
+  // follows the goal field live (flowBibLive). On a phone it is a short strip above the step.
+  const ROLE_DAYS = (r) => layout.map((x, i) => (x === r || (r === 'w' && (x === 'w1' || x === 'w2')) ? DNS[i] : null)).filter(Boolean).join(', ') || 'нет';
+  function bibHTML() {
+    const f = fillPreview(), w = firstWeek(f), left = race ? Math.round((d8(race.d) - d8(today)) / 864e5) : 0;
+    const weeks = f ? f.weeks.filter((x) => add(x.mon, 6) >= today).length : 24;
+    const row = (k, v, id = '') => `<div><dt>${k}</dt><dd class="num"${id ? ` id="${id}"` : ''}>${v}</dd></div>`;
+    return `<aside class="w-bib" aria-label="Ваш план к Казани"><i class="w-pin" aria-hidden="true"></i><i class="w-pin" aria-hidden="true"></i><i class="w-pin" aria-hidden="true"></i><i class="w-pin" aria-hidden="true"></i>
+      <div class="w-bib-top"><b>Казань</b><span class="num">${dayLong(KAZAN.d)} ${KAZAN.d.slice(0, 4)}</span></div>
+      <div class="w-bib-goal"><span>Цель</span><b class="num" id="w-bib-g">${esc(kzGoalTxt())}</b></div>
+      <dl class="w-bib-rows">${row('Темп', `${kzT42(kazanGoal)} на км`, 'w-bib-p')}${row('План', `${kzPlanTxt().replace('план ', '')}, ${weeks} ${plural(weeks, 'неделя', 'недели', 'недель')}`, 'w-bib-plan')}${row('Работы', ROLE_DAYS('w'))}${row('Длительная', ROLE_DAYS('long'))}${w ? row('Первая неделя', `${n1(w.total)} км`) : ''}${row('До старта', `${left} ${plural(left, 'день', 'дня', 'дней')}`)}</dl>
+      <div class="w-bib-foot">S10 Solo</div>
+    </aside>`;
+  }
+  // the goal field and the quick goals redraw only the bib's goal, pace and plan and the hint, never the page (focus stays)
+  function flowBibLive(g) {
+    const h = root.querySelector('#w-fg-s'); if (h) h.textContent = g ? flowGoalHint(g) : 'Например 3:40 или 3.40: марафон от 2:00 до 7:00';
+    if (!g) return;
+    const set = (sel, v) => { const e = root.querySelector(sel); if (e) e.textContent = v; };
+    set('#w-bib-g', fmtGoal(kzSec(g), 42.195)); set('#w-bib-p', `${kzT42(g)} на км`);
+    const pl = root.querySelector('#w-bib-plan'); if (pl) pl.textContent = pl.textContent.replace(/^на \d:\d\d/, kzPlanTxt(g).replace('план ', ''));
+    root.querySelectorAll('[data-act=kchip]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.g === fmtGoal(kzSec(g), 42.195))));
+  }
+  const KCHIPS = ['3:00', '3:30', '4:00', '4:30', '5:00'];
+  // the day roles as a week of tiles: each tile is its day and its role, the native select over it opens the choice
+  const ROLE_KIND = { w1: 'work', w2: 'work', long: 'long', easy: 'easy', rest: 'rest' };
+  const dayTiles = () => `<div class="w-dt-wk">${layout.map((r, i) => `<label class="w-dt" data-k="${ROLE_KIND[r] || 'easy'}"><span class="w-dt-d">${DN[i]}</span><span class="w-dt-r">${ROLE[r]}</span><select data-p="role" data-i="${i}" aria-label="${DNF[i]}">${Object.entries(ROLE).map(([k, l]) => `<option value="${k}" ${r === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`).join('')}</div>`;
+  let flowIn = false; // the step just changed: its content rises in once
   function flowHTML() {
     const i = FLOW.findIndex(([k]) => k === flow);
-    const bar = `<ol class="w-flow-bar" aria-label="Шаги">${FLOW.map(([k, l], j) => `<li class="${j < i || (k === 'pay' && kazanPaid) ? 'done' : j === i ? 'now' : ''}" ${j === i ? 'aria-current="step"' : ''}><span class="num">${j + 1}</span>${l}</li>`).join('')}</ol>`;
+    const bar = `<ol class="w-flow-bar" aria-label="Шаги">${FLOW.map(([k, l], j) => `<li class="${j < i || (k === 'pay' && kazanPaid && j !== i) ? 'done' : j === i ? 'now' : ''}" ${j === i ? 'aria-current="step"' : ''}><i aria-hidden="true"></i>${l}</li>`).join('')}</ol><p class="w-flow-now" aria-hidden="true">Шаг ${i + 1} из ${FLOW.length}: ${FLOW[i][1].toLowerCase()}</p>`;
     const nav = (next, back = true) => `<div class="w-flow-acts">${back ? '<button class="w-btn" data-act="flowback">Назад</button>' : ''}${next}</div>`;
     let body = '';
     if (flow === 'goal') body = `<h2 id="w-flow-h">За сколько хотите пробежать марафон?</h2>
       <p class="w-flow-lead">План Юрия Строфилова на 24 недели. Темпа посчитаем от вашей цели, а тренировки разложим по вашим дням.</p>
-      <label class="w-flow-goal"><span class="w-lb">Цель</span><input id="w-fg" class="num" data-p="kflow" inputmode="text" autocomplete="off" value="${kzGoalTxt()}" aria-describedby="w-fg-s"></label>
+      <label class="w-flow-goal"><span class="w-lb">Цель</span><input id="w-fg" class="num" data-p="kflow" inputmode="decimal" enterkeyhint="next" autocomplete="off" value="${kzGoalTxt()}" aria-describedby="w-fg-s"></label>
+      <div class="w-kchips" role="group" aria-label="Частые цели">${KCHIPS.map((g) => `<button type="button" class="num" data-act="kchip" data-g="${g}" aria-pressed="${g === kzGoalTxt()}">${g}</button>`).join('')}</div>
       <p class="w-flow-hint num" id="w-fg-s">${flowGoalHint(kazanGoal)}</p>
       ${nav('<button class="w-btn primary" data-act="flownext">Дальше</button>', false)}`;
     else if (flow === 'days') body = `<h2 id="w-flow-h">В какие дни удобно бегать?</h2>
-      <p class="w-flow-lead">Две работы и длительная на неделе, остальные дни лёгкие или отдых. Поменять можно в любой момент.</p>
-      ${rolesHTML()}
+      <p class="w-flow-lead">Две работы и длительная на неделе, остальные дни лёгкие или отдых. Нажмите на день, чтобы поменять.</p>
+      ${dayTiles()}
       ${nav('<button class="w-btn primary" data-act="flownext">Дальше</button>')}`;
     else if (flow === 'week') {
       const f = fillPreview(), w = firstWeek(f);
       body = `<h2 id="w-flow-h">Ваша первая неделя</h2>
       ${w ? `<p class="w-flow-lead num">${range(w.mon, add(w.mon, 6))} · ${n1(w.total)} км · цель ${esc(kzGoalTxt())}</p>
-      <ol class="w-wdays w-flow-days">${w.days.map((d) => `<li class="${d.d <= today ? 'gone' : ''}"><span class="w-wdd"><b>${DN[dow(d.d)]}</b><small class="num">${dayLbl(d.d)}</small></span><div class="w-wdb"><span class="w-name ${d.typtrain ? '' : 'w-muted'}">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}</div><span class="num w-wdk">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`).join('')}</ol>` : ''}
+      <ol class="w-flow-days">${w.days.map((d) => `<li class="${d.typtrain ? 'run' : 'rest'}"><span class="w-fd-d"><b>${DN[dow(d.d)]}</b> <span class="num">${dayLbl(d.d)}</span></span><div class="w-fd-b"><span class="w-fd-n">${d.typtrain ? glyph(LEVEL[d.typtrain], d.typtrain === 6) + TYPES[d.typtrain] : 'Отдых'}</span>${d.typtrain ? taskHTML(d.task) : ''}</div><span class="num w-fd-k">${d.prekm ? `${n1(d.prekm)} км` : ''}</span></li>`).join('')}</ol>` : ''}
       <p class="w-flow-note">Пробегите эту неделю, и здесь появится ваш шанс пробежать за ${esc(kzGoalTxt())}. Каждая тренировка его двигает.</p>
       ${nav('<button class="w-btn primary" data-act="flownext">Дальше</button>')}`;
     } else if (flow === 'pay') body = `<h2 id="w-flow-h">Весь план до старта — 2&nbsp;000&nbsp;₽</h2>
       <p class="w-flow-lead">24 недели тренировок в ваших темпах в календаре S10 и Premium до ${kzPaidTo()}. Один платёж, без автопродления.</p>
+      <ul class="w-flow-inc">
+        <li>Все недели плана в календаре S10, с темпами от цели ${esc(kzGoalTxt())}</li>
+        <li>Шанс пробежать за ${esc(kzGoalTxt())} после каждой тренировки</li>
+        <li>Перестройка плана, если пропустили тренировки</li>
+        <li>Premium S10 до ${kzPaidTo()}: анализ тренировок, Telegram-бот, приложения</li>
+      </ul>
       ${nav(`<a class="w-btn primary" data-act="kpay" href="${SITE}/money2?paysite=1&amp;kazan=1">Оплатить 2&nbsp;000&nbsp;₽</a>`)}
       <p class="w-flow-note">После оплаты вернитесь на эту страницу: останется заполнить календарь.</p>`;
     else if (flow === 'fill') {
-      const f = fillPreview();
+      const f = fillPreview(), F = { '2w': fillPreview('2w'), race: fillPreview('race') };
+      const what = (g) => (g?.write.length ? `${g.write.length} ${plural(g.write.length, 'день', 'дня', 'дней')}, ${range(g.write[0].d, last(g.write).d)}` : 'всё уже заполнено');
       body = `<h2 id="w-flow-h">Заполним календарь</h2>
       <p class="w-flow-lead">Тренировки встанут в ваш дневник S10 с темпами в цифрах. Прошедшие дни и дни, где задача уже стоит, не трогаем.</p>
-      <div class="w-seg w-span" role="radiogroup" aria-label="На сколько заполнить">${Object.keys(SPANS).map((k) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}">${spanLabel(k)}</button>`).join('')}</div>
-      <p class="w-flow-hint num">${f?.write.length ? `${f.write.length} ${plural(f.write.length, 'день', 'дня', 'дней')}, ${range(f.write[0].d, last(f.write).d)}` : 'Записывать нечего: эти дни уже заполнены'}</p>
+      <div class="w-fspan" role="radiogroup" aria-label="На сколько заполнить">${Object.keys(SPANS).map((k) => `<button role="radio" aria-checked="${fillSpan === k}" data-act="span" data-k="${k}"><b>${spanLabel(k)}</b><span class="num">${what(F[k])}</span><small>${k === '2w' ? 'Следующие две недели допишете этой же кнопкой' : 'Весь план сразу'}</small></button>`).join('')}</div>
       ${nav(`<button class="w-btn primary" data-act="fillask" ${f?.write.length && !fill.busy && pacesOk(PACE) ? '' : 'disabled'}>Заполнить календарь</button>`)}
       ${f ? fillConfirmHTML(f) : ''}
       ${fill.err ? `<p class="w-note w-err" role="alert">${esc(fill.err)}</p>` : ''}`;
     }
-    return `<section class="w-card w-flow" aria-labelledby="w-flow-h">${bar}${body}</section>`;
+    const anim = flowIn; flowIn = false;
+    return `<section class="w-flow" aria-labelledby="w-flow-h"><div class="w-flow-main">${bar}<div class="w-flow-step${anim ? ' w-in' : ''}">${body}</div></div>${bibHTML()}</section>`;
   }
   function setKazanGoal(g) {
     if (MODE !== 'kazan' || !kzOk(g)) return;
@@ -1861,7 +1898,7 @@
     root.innerHTML = `
     ${/*<demo>*/!LIVE ? '<div class="w-demo" role="note">Демо на данных от 31 октября 2026. Кнопки работают, но ничего не отправляется в S10.</div>' : /*</demo>*/''}
     <header class="w-top" ${onb || menuOpen ? 'inert' : ''}>${topBar(false)}</header>
-    <main class="w-main" ${onb || menuOpen ? 'inert' : ''}>
+    <main class="w-main${flow ? ' w-main-flow' : ''}" ${onb || menuOpen ? 'inert' : ''}>
       ${colorsOpen ? colorsPanel() : ''}
       <div class="w-head">
         ${MODE === 'kazan' ? `<h1 class="w-h1k"><span class="w-nw">Казанский марафон,</span> <span class="w-nw">${kazanDay()}</span></h1>` : `<h1>${cur ? 'Моя неделя' : 'Неделя'}, ${wLabel(wk)}</h1>`}
@@ -2085,13 +2122,52 @@
   .w-hint{margin-top:4px}.w-hint>span{display:block}
   .w-undo{color:var(--muted);font-size:13px;margin-top:6px}.w-undo .w-link,.w-flash .w-link{font-size:inherit;padding:0}
   .w-main>.w-confirm{margin:0}
-  .w-flow{max-width:760px;padding:24px 28px 28px}.w-flow h2{font-size:26px;line-height:1.25;font-weight:500;margin:20px 0 8px;text-wrap:balance}
-  .w-flow-bar{list-style:none;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted)}.w-flow-bar li{display:flex;align-items:center;gap:6px}.w-flow-bar li span{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--control);font-size:12px}
-  .w-flow-bar li.now{color:var(--text);font-weight:500}.w-flow-bar li.now span{background:var(--accent);border-color:var(--accent);color:#fff}.w-flow-bar li.done span{background:var(--accent-bg);border-color:var(--accent-bg);color:var(--accent)}
-  .w-flow-lead{font-size:16px;max-width:60ch;margin-bottom:18px}.w-flow-hint{color:var(--muted);margin-top:10px}.w-flow-note{color:var(--muted);margin-top:16px;max-width:60ch}
-  .w-flow-goal{display:flex;flex-direction:column;gap:6px;width:max-content}.w-flow-goal input{width:180px;height:64px;padding:0 16px;border:2px solid var(--accent);border-radius:10px;background:var(--field);font-size:34px;font-weight:500}
-  .w-flow-acts{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.w-flow-acts .w-btn{min-height:48px;padding:0 24px;font-size:16px}.w-flow .w-roles{margin-top:4px}.w-flow .w-span{margin-top:4px}.w-flow .w-flow-days{margin-top:4px}
-  @media (max-width:640px){.w-flow{padding:20px 16px 24px}.w-flow h2{font-size:22px}.w-flow-acts .w-btn{flex:1 1 auto}}
+  /* the Kazan way in: one centred column, the step on a white sheet, the bib beside it (sticky), S10 blue */
+  .w-main-flow>:is(.w-head,.w-flow,.w-foot){width:100%;max-width:1040px;margin-left:auto;margin-right:auto}.w-main-flow .w-head{grid-template-columns:minmax(0,1fr)}.w-main-flow .w-head h1{white-space:normal}
+  .w-flow{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+  .w-flow-main{background:var(--surface);border-radius:16px;padding:32px 40px 40px;min-width:0}
+  .w-flow h2{font-size:32px;line-height:1.15;font-weight:500;letter-spacing:-.015em;margin:28px 0 10px;text-wrap:balance}
+  .w-flow-bar{list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;font-size:13px;color:var(--muted)}
+  .w-flow-bar li{display:flex;flex-direction:column;gap:8px;min-width:0}.w-flow-bar li i{display:block;height:4px;border-radius:2px;background:var(--rule)}
+  .w-flow-bar li.done i,.w-flow-bar li.now i{background:#004aad}.w-flow-bar li.now{color:var(--text);font-weight:500}
+  .w-flow-now{display:none;margin-top:10px;font-size:13px;color:var(--muted)}
+  .w-flow-lead{font-size:17px;line-height:1.5;max-width:56ch;margin-bottom:24px}.w-flow-hint{color:var(--muted);margin-top:14px}.w-flow-note{color:var(--muted);margin-top:20px;max-width:56ch}
+  .w-flow-goal{display:flex;flex-direction:column;gap:8px;width:max-content}.w-flow-goal input{width:220px;height:84px;padding:0 20px;border:2px solid #004aad;border-radius:12px;background:var(--field);font-size:48px;font-weight:500;letter-spacing:-.02em}
+  .w-flow-goal input:focus-visible{outline:3px solid var(--accent-bg);outline-offset:0}
+  .w-kchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.w-kchips button{min-width:64px;height:40px;padding:0 14px;border:0;border-radius:20px;background:var(--soft);font-weight:500;cursor:pointer;transition:background .15s,color .15s}
+  .w-kchips button:hover{background:var(--accent-bg)}.w-kchips button[aria-pressed="true"]{background:#004aad;color:#fff}
+  .w-flow-acts{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}.w-flow-acts .w-btn{min-height:52px;padding:0 28px;font-size:16px}
+  .w-flow-step.w-in{animation:w-rise .32s ease-out both}@keyframes w-rise{from{opacity:0;transform:translateY(12px)}}
+  .w-dt-wk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .w-dt{position:relative;display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:12px;background:var(--soft);cursor:pointer;transition:background .15s,transform .15s}
+  .w-dt:hover{background:var(--accent-bg)}.w-dt:active{transform:scale(.98)}.w-dt:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+  .w-dt-d{font-size:13px;color:var(--muted)}.w-dt-r{font-size:16px;font-weight:500}
+  .w-dt[data-k="work"]{background:#fde9e7}.w-dt[data-k="work"] .w-dt-r{color:#b8251b}.w-dt[data-k="long"]{background:#e4eafc}.w-dt[data-k="long"] .w-dt-r{color:#004aad}.w-dt[data-k="rest"] .w-dt-r{color:var(--muted);font-weight:400}
+  .w-dt select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
+  .w-flow-days{list-style:none;display:grid;gap:6px;margin-top:4px}
+  .w-flow-days>li{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:4px 16px;align-items:baseline;padding:14px 16px;border-radius:12px;background:var(--soft)}
+  .w-flow-days>li.rest{background:none;padding-top:4px;padding-bottom:4px;color:var(--muted)}
+  .w-fd-d{white-space:nowrap}.w-fd-d b{font-weight:500;color:var(--text)}.w-fd-d .num{color:var(--muted)}
+  .w-fd-b{min-width:0;overflow-wrap:break-word}.w-fd-n{display:flex;align-items:center;gap:8px;font-weight:500}.w-flow-days>li.rest .w-fd-n{font-weight:400}
+  .w-fd-b .w-task,.w-fd-b ul,.w-fd-b p{margin-top:4px}.w-fd-k{font-weight:500;white-space:nowrap}
+  .w-flow-inc{list-style:none;display:grid;gap:10px;margin:4px 0 0;font-size:16px}.w-flow-inc li{position:relative;padding-left:30px}
+  .w-flow-inc li::before{content:"";position:absolute;left:2px;top:4px;width:16px;height:9px;border:solid #004aad;border-width:0 0 3px 3px;transform:rotate(-45deg)}
+  .w-fspan{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .w-fspan button{display:flex;flex-direction:column;gap:4px;text-align:left;padding:16px 18px;border:2px solid transparent;border-radius:12px;background:var(--soft);cursor:pointer;transition:background .15s,border-color .15s}
+  .w-fspan button:hover{background:var(--accent-bg)}.w-fspan button[aria-checked="true"]{border-color:#004aad;background:var(--accent-soft)}
+  .w-fspan b{font-size:17px;font-weight:500}.w-fspan small{color:var(--muted);font-size:13px}
+  .w-bib{position:sticky;top:24px;background:#004aad;color:#fff;border-radius:16px;padding:28px 28px 22px;display:flex;flex-direction:column;gap:18px}
+  .w-pin{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--ground)}.w-pin:nth-of-type(1){top:12px;left:12px}.w-pin:nth-of-type(2){top:12px;right:12px}.w-pin:nth-of-type(3){bottom:12px;left:12px}.w-pin:nth-of-type(4){bottom:12px;right:12px}
+  .w-bib-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:0 6px}.w-bib-top b{font-size:22px;font-weight:500}.w-bib-top span{color:rgba(255,255,255,.82)}
+  .w-bib-goal{background:#fff;color:#111;border-radius:10px;padding:14px 18px 10px;display:flex;flex-direction:column}.w-bib-goal span{font-size:13px;color:#595959}.w-bib-goal b{font-size:72px;line-height:1;font-weight:500;letter-spacing:-.03em}
+  .w-bib-rows{display:grid;gap:10px;padding:0 6px}.w-bib-rows div{display:flex;justify-content:space-between;gap:12px}.w-bib-rows dt{color:rgba(255,255,255,.82)}.w-bib-rows dd{font-weight:500;text-align:right;white-space:nowrap}
+  .w-bib-foot{padding:0 6px;font-size:13px;color:rgba(255,255,255,.82)}
+  @media (prefers-reduced-motion:reduce){.w-flow-step.w-in{animation:none}.w-dt,.w-kchips button,.w-fspan button{transition:none}}
+  @media (max-width:900px){.w-flow{grid-template-columns:minmax(0,1fr)}.w-bib{position:relative;top:0;order:-1;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 16px;padding:18px 26px}
+    .w-bib .w-pin{width:8px;height:8px}.w-bib-top{display:none}.w-bib-goal{grid-column:1;grid-row:1;align-self:center;padding:8px 14px 6px}.w-bib-goal b{font-size:40px}
+    .w-bib-rows{grid-column:2;grid-row:1;padding:0;gap:6px 24px;align-content:center;grid-template-columns:repeat(2,minmax(0,1fr))}.w-bib-foot{display:none}}
+  @media (max-width:640px){.w-bib-rows{grid-template-columns:minmax(0,1fr);gap:4px}.w-bib-rows div:nth-child(n+3){display:none}}
+  @media (max-width:640px){.w-flow-main{padding:20px 16px 24px;border-radius:12px}.w-flow h2{font-size:24px;margin-top:20px}.w-flow-lead{font-size:16px}.w-flow-acts .w-btn{flex:1 1 auto}.w-flow-goal input{width:180px;height:72px;font-size:40px}.w-flow-bar{font-size:0;gap:4px}.w-flow-now{display:block}.w-flow-days>li{grid-template-columns:64px minmax(0,1fr) auto;gap:4px 10px;padding:12px}.w-flow-days>li.rest{padding:4px 12px}.w-fd-d{white-space:normal}.w-fd-d .num{display:block;font-size:13px}.w-dt-wk{grid-template-columns:repeat(2,minmax(0,1fr))}.w-fspan{grid-template-columns:minmax(0,1fr)}.w-kchips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.w-kchips button{min-width:0;padding:0}}
   .w-kgoal{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-top:10px}.w-kgoal input{width:96px;height:40px;padding:0 10px;border:1px solid var(--control);border-radius:8px;background:var(--field);font-size:17px;font-weight:500}.w-kgoal input:hover{border-color:var(--text)}.w-head h1.w-h1k{white-space:normal}
   .w-goal-acts{font-size:14px;color:var(--faint)}.w-goal .w-confirm.w-goal-ask{margin:8px 0 0}
   .w-sum b{font-size:24px;font-weight:500;line-height:1.2}
@@ -2228,6 +2304,7 @@
       if (act === 'goaladd') return openGoal();
       if (act === 'flownext') { if (flow === 'goal') { const t = root.querySelector('[data-p=kflow]'), g = kzRead(t?.value); if (!g) { t.setCustomValidity('Например 3:40'); t.reportValidity(); return; } t.setCustomValidity(''); setKazanGoal(g); } return flowNext(); }
       if (act === 'flowback') return flowBack();
+      if (act === 'kchip') { const t = root.querySelector('[data-p=kflow]'); if (t) { t.value = a.dataset.g; t.setCustomValidity(''); } return flowBibLive(kzRead(a.dataset.g)); }
       if (act === 'kpay') { /*<demo>*/if (!LIVE) { e.preventDefault(); FX.me.isPremium = me.isPremium = true; FX.me.kazanPaid = kazanPaid = true; flash = 'Демо: оплата прошла, ничего не списано.'; return flowGo('fill'); }/*</demo>*/ return; }
       if (act === 'racereset') { raceAsk = 'ask'; return render(); }
       if (act === 'raceresetno') { raceAsk = ''; return render(); }
@@ -2330,7 +2407,7 @@
   root.addEventListener('input', (e) => {
     const t = e.target, f = t.dataset.f;
     if (t.tagName === 'TEXTAREA') fit(t);
-    if (t.dataset.p === 'kflow') { const g = kzRead(t.value), h = root.querySelector('#w-fg-s'); t.setCustomValidity(''); if (h) h.textContent = g ? flowGoalHint(g) : 'Например 3:40: марафон от 2:00 до 7:00'; return; } // live, no redraw
+    if (t.dataset.p === 'kflow') { t.setCustomValidity(''); return flowBibLive(kzRead(t.value)); } // live, no redraw
     if (t.dataset.g === 'prompt') { gen.prompt = t.value; gen.touched = true; return; }
     if (t.dataset.o && onb) { // the start window keeps what is typed without redrawing (focus stays)
       const k = t.dataset.o;
